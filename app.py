@@ -6,11 +6,12 @@ import plotly.express as px
 import plotly.graph_objects as go
 from datetime import datetime
 import numpy as np
+import openpyxl
 
 # Configuração da página
 st.set_page_config(
-    page_title="Leader Track - Dashboard Super Interativo",
-    page_icon="",
+    page_title="Leader Track - Dashboard Revolucionário",
+    page_icon="��",
     layout="wide"
 )
 
@@ -23,375 +24,330 @@ SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJ
 def init_supabase():
     return create_client(SUPABASE_URL, SUPABASE_KEY)
 
-# Função para buscar dados
+# CARREGAR MATRIZ DE ARQUÉTIPOS
+@st.cache_data(ttl=3600)
+def carregar_matriz_arquetipos():
+    """Carrega a matriz de arquétipos do Excel"""
+    try:
+        matriz = pd.read_excel('TABELA_GERAL_ARQUETIPOS_COM_CHAVE.xlsx')
+        st.success("✅ Matriz de arquétipos carregada com sucesso!")
+        return matriz
+    except Exception as e:
+        st.error(f"❌ Erro ao carregar matriz: {str(e)}")
+        return None
+
+# CALCULAR ARQUÉTIPOS PARA UM RESPONDENTE
+def calcular_arquetipos_respondente(respostas, matriz):
+    """Calcula percentuais de arquétipos para um respondente individual"""
+    
+    arquétipos = ['Imperativo', 'Resoluto', 'Cuidativo', 'Consultivo', 'Prescritivo', 'Formador']
+    pontos_por_arquétipo = {arq: 0 for arq in arquétipos}
+    pontos_maximos_por_arquétipo = {arq: 0 for arq in arquétipos}
+    
+    # Para cada questão respondida
+    for questao, estrelas in respostas.items():
+        if questao.startswith('Q'):
+            estrelas_int = int(estrelas)
+            
+            # Para cada arquétipo
+            for arquétipo in arquétipos:
+                # Gerar chave: ARQUETIPO + ESTRELAS + QUESTAO
+                chave = f"{arquétipo}{estrelas_int}{questao}"
+                
+                # Buscar na matriz
+                linha = matriz[matriz['CHAVE'] == chave]
+                if not linha.empty:
+                    pontos_obtidos = linha['PONTOS_OBTIDOS'].iloc[0]
+                    pontos_maximos = linha['PONTOS_MAXIMOS'].iloc[0]
+                    
+                    pontos_por_arquétipo[arquétipo] += pontos_obtidos
+                    pontos_maximos_por_arquétipo[arquétipo] += pontos_maximos
+    
+    # Calcular percentuais
+    arquétipos_percentuais = {}
+    for arquétipo in arquétipos:
+        pontos_total = pontos_por_arquétipo[arquétipo]
+        pontos_maximos = pontos_maximos_por_arquétipo[arquétipo]
+        
+        percentual = (pontos_total / pontos_maximos) * 100 if pontos_maximos > 0 else 0
+        arquétipos_percentuais[arquétipo] = percentual
+    
+    return arquétipos_percentuais
+
+# PROCESSAR DADOS INDIVIDUAIS
+def processar_dados_individuais(consolidado_arq, matriz):
+    """Processa todos os respondentes e calcula arquétipos"""
+    
+    respondentes_processados = []
+    
+    for item in consolidado_arq:
+        if isinstance(item, dict) and 'dados_json' in item:
+            dados = item['dados_json']
+            
+            # Processar autoavaliação
+            if 'autoavaliacao' in dados and 'respostas' in dados['autoavaliacao']:
+                auto = dados['autoavaliacao']
+                arquétipos_auto = calcular_arquetipos_respondente(auto['respostas'], matriz)
+                
+                respondentes_processados.append({
+                    'empresa': auto.get('empresa', 'N/A'),
+                    'codrodada': auto.get('codrodada', 'N/A'),
+                    'emailLider': auto.get('emailLider', 'N/A'),
+                    'nome': auto.get('nome', 'N/A'),
+                    'email': auto.get('email', 'N/A'),
+                    'sexo': auto.get('sexo', 'N/A'),
+                    'etnia': auto.get('etnia', 'N/A'),
+                    'estado': auto.get('estado', 'N/A'),
+                    'cidade': auto.get('cidade', 'N/A'),
+                    'cargo': auto.get('cargo', 'N/A'),
+                    'area': auto.get('area', 'N/A'),
+                    'departamento': auto.get('departamento', 'N/A'),
+                    'tipo': 'Autoavaliação',
+                    'arquétipos': arquétipos_auto
+                })
+            
+            # Processar avaliações da equipe
+            if 'avaliacoesEquipe' in dados:
+                for membro in dados['avaliacoesEquipe']:
+                    if 'respostas' in membro:
+                        arquétipos_equipe = calcular_arquetipos_respondente(membro['respostas'], matriz)
+                        
+                        respondentes_processados.append({
+                            'empresa': membro.get('empresa', 'N/A'),
+                            'codrodada': membro.get('codrodada', 'N/A'),
+                            'emailLider': membro.get('emailLider', 'N/A'),
+                            'nome': membro.get('nome', 'N/A'),
+                            'email': membro.get('email', 'N/A'),
+                            'sexo': membro.get('sexo', 'N/A'),
+                            'etnia': membro.get('etnia', 'N/A'),
+                            'estado': membro.get('estado', 'N/A'),
+                            'cidade': membro.get('cidade', 'N/A'),
+                            'cargo': membro.get('cargo', 'N/A'),
+                            'area': membro.get('area', 'N/A'),
+                            'departamento': membro.get('departamento', 'N/A'),
+                            'tipo': 'Avaliação Equipe',
+                            'arquétipos': arquétipos_equipe
+                        })
+    
+    return pd.DataFrame(respondentes_processados)
+
+# CALCULAR MÉDIAS COM FILTROS
+def calcular_medias_com_filtros(df_respondentes, filtros):
+    """Aplica filtros demográficos e calcula médias dos arquétipos"""
+    
+    df_filtrado = df_respondentes.copy()
+    
+    # Aplicar filtros
+    if filtros['empresa'] != "Todas":
+        df_filtrado = df_filtrado[df_filtrado['empresa'] == filtros['empresa']]
+    if filtros['codrodada'] != "Todas":
+        df_filtrado = df_filtrado[df_filtrado['codrodada'] == filtros['codrodada']]
+    if filtros['emaillider'] != "Todos":
+        df_filtrado = df_filtrado[df_filtrado['emailLider'] == filtros['emaillider']]
+    if filtros['estado'] != "Todos":
+        df_filtrado = df_filtrado[df_filtrado['estado'] == filtros['estado']]
+    if filtros['sexo'] != "Todos":
+        df_filtrado = df_filtrado[df_filtrado['sexo'] == filtros['sexo']]
+    if filtros['etnia'] != "Todas":
+        df_filtrado = df_filtrado[df_filtrado['etnia'] == filtros['etnia']]
+    if filtros['departamento'] != "Todos":
+        df_filtrado = df_filtrado[df_filtrado['departamento'] == filtros['departamento']]
+    if filtros['cargo'] != "Todos":
+        df_filtrado = df_filtrado[df_filtrado['cargo'] == filtros['cargo']]
+    
+    if df_filtrado.empty:
+        return None, None, None
+    
+    # Separar autoavaliação e equipe
+    df_auto = df_filtrado[df_filtrado['tipo'] == 'Autoavaliação']
+    df_equipe = df_filtrado[df_filtrado['tipo'] == 'Avaliação Equipe']
+    
+    arquétipos = ['Imperativo', 'Resoluto', 'Cuidativo', 'Consultivo', 'Prescritivo', 'Formador']
+    
+    # Calcular médias de autoavaliação
+    medias_auto = []
+    for arq in arquétipos:
+        valores = [resp['arquétipos'][arq] for resp in df_auto['arquétipos'] if arq in resp['arquétipos']]
+        media = np.mean(valores) if valores else 0
+        medias_auto.append(media)
+    
+    # Calcular médias da equipe
+    medias_equipe = []
+    for arq in arquétipos:
+        valores = [resp['arquétipos'][arq] for resp in df_equipe['arquétipos'] if arq in resp['arquétipos']]
+        media = np.mean(valores) if valores else 0
+        medias_equipe.append(media)
+    
+    return arquétipos, medias_auto, medias_equipe
+
+# GERAR GRÁFICO COMPARATIVO
+def gerar_grafico_comparativo(medias_auto, medias_equipe, arquétipos, titulo, tipo_visualizacao):
+    """Gera gráfico comparativo com dados calculados"""
+    
+    if tipo_visualizacao == "📊 Gráfico com Rótulos e Clique":
+        fig = go.Figure()
+        
+        fig.add_trace(go.Bar(
+            name='Autoavaliação',
+            x=arquétipos,
+            y=medias_auto,
+            marker_color='#1f77b4',
+            text=[f"{v:.1f}%" for v in medias_auto],
+            textposition='auto',
+            hovertemplate='<b>%{x}</b><br>Autoavaliação: %{y:.1f}%<br><extra>Clique para detalhes!</extra>'
+        ))
+        
+        fig.add_trace(go.Bar(
+            name='Média da Equipe',
+            x=arquétipos,
+            y=medias_equipe,
+            marker_color='#ff7f0e',
+            text=[f"{v:.1f}%" for v in medias_equipe],
+            textposition='auto',
+            hovertemplate='<b>%{x}</b><br>Média da Equipe: %{y:.1f}%<br><extra>Clique para detalhes!</extra>'
+        ))
+        
+        fig.update_layout(
+            title=f"📊 {titulo}",
+            xaxis_title="Arquétipos",
+            yaxis_title="Pontuação (%)",
+            yaxis=dict(range=[0, 100]),
+            barmode='group',
+            height=600,
+            hovermode='closest',
+            showlegend=True,
+            clickmode='event+select'
+        )
+    else:
+        fig = go.Figure()
+        
+        fig.add_trace(go.Bar(
+            name='Autoavaliação',
+            x=arquétipos,
+            y=medias_auto,
+            marker_color='#1f77b4',
+            hovertemplate='<b>%{x}</b><br>Autoavaliação: %{y:.1f}%<extra></extra>'
+        ))
+        
+        fig.add_trace(go.Bar(
+            name='Média da Equipe',
+            x=arquétipos,
+            y=medias_equipe,
+            marker_color='#ff7f0e',
+            hovertemplate='<b>%{x}</b><br>Média da Equipe: %{y:.1f}%<extra></extra>'
+        ))
+        
+        fig.update_layout(
+            title=f"📈 {titulo}",
+            xaxis_title="Arquétipos",
+            yaxis_title="Pontuação (%)",
+            yaxis=dict(range=[0, 100]),
+            barmode='group',
+            height=500,
+            hovermode='closest',
+            showlegend=True
+        )
+    
+    return fig
+
+# Buscar dados
 @st.cache_data(ttl=300)
 def fetch_data():
     try:
         supabase = init_supabase()
-        
-        # Buscar dados de todas as tabelas
-        relatorios = supabase.table('relatorios_gerados').select('*').execute()
         consolidado_arq = supabase.table('consolidado_arquetipos').select('*').execute()
-        consolidado_micro = supabase.table('consolidado_microambiente').select('*').execute()
-        
-        return {
-            'relatorios': relatorios.data,
-            'consolidado_arq': consolidado_arq.data,
-            'consolidado_micro': consolidado_micro.data
-        }
+        return consolidado_arq.data
     except Exception as e:
         st.error(f"Erro ao conectar com Supabase: {str(e)}")
-        return {}
+        return []
 
-# Função para extrair dados demográficos
-def extract_demographic_data(consolidado_arq, consolidado_micro):
-    demograficos = []
-    
-    # Processar dados de arquétipos
-    for item in consolidado_arq:
-        if isinstance(item, dict) and 'dados_json' in item:
-            try:
-                dados = item['dados_json']
-                
-                # Extrair dados da autoavaliação
-                if 'autoavaliacao' in dados:
-                    auto = dados['autoavaliacao']
-                    demograficos.append({
-                        'empresa': auto.get('empresa', 'N/A'),
-                        'etnia': auto.get('etnia', 'N/A'),
-                        'departamento': auto.get('departamento', 'N/A'),
-                        'sexo': auto.get('sexo', 'N/A'),
-                        'estado': auto.get('estado', 'N/A'),
-                        'cidade': auto.get('cidade', 'N/A'),
-                        'cargo': auto.get('cargo', 'N/A'),
-                        'area': auto.get('area', 'N/A'),
-                        'codrodada': auto.get('codrodada', 'N/A'),
-                        'nomeLider': auto.get('nomeLider', 'N/A'),
-                        'emailLider': auto.get('emailLider', 'N/A'),
-                        'email': auto.get('email', 'N/A'),
-                        'tipo': 'Arquétipos - Líder'
-                    })
-                
-                # Extrair dados da equipe
-                if 'avaliacoesEquipe' in dados:
-                    for membro in dados['avaliacoesEquipe']:
-                        demograficos.append({
-                            'empresa': membro.get('empresa', 'N/A'),
-                            'etnia': membro.get('etnia', 'N/A'),
-                            'departamento': membro.get('departamento', 'N/A'),
-                            'sexo': membro.get('sexo', 'N/A'),
-                            'estado': membro.get('estado', 'N/A'),
-                            'cidade': membro.get('cidade', 'N/A'),
-                            'cargo': membro.get('cargo', 'N/A'),
-                            'area': membro.get('area', 'N/A'),
-                            'codrodada': membro.get('codrodada', 'N/A'),
-                            'nomeLider': membro.get('nomeLider', 'N/A'),
-                            'emailLider': membro.get('emailLider', 'N/A'),
-                            'email': membro.get('email', 'N/A'),
-                            'tipo': 'Arquétipos - Equipe'
-                        })
-            except Exception as e:
-                continue
-    
-    # Processar dados de microambiente
-    for item in consolidado_micro:
-        if isinstance(item, dict) and 'dados_json' in item:
-            try:
-                dados = item['dados_json']
-                
-                # Extrair dados da autoavaliação
-                if 'autoavaliacao' in dados:
-                    auto = dados['autoavaliacao']
-                    demograficos.append({
-                        'empresa': auto.get('empresa', 'N/A'),
-                        'etnia': auto.get('etnia', 'N/A'),
-                        'departamento': auto.get('departamento', 'N/A'),
-                        'sexo': auto.get('sexo', 'N/A'),
-                        'estado': auto.get('estado', 'N/A'),
-                        'cidade': auto.get('cidade', 'N/A'),
-                        'cargo': auto.get('cargo', 'N/A'),
-                        'area': auto.get('area', 'N/A'),
-                        'codrodada': auto.get('codrodada', 'N/A'),
-                        'nomeLider': auto.get('nomeLider', 'N/A'),
-                        'emailLider': auto.get('emailLider', 'N/A'),
-                        'email': auto.get('email', 'N/A'),
-                        'tipo': 'Microambiente - Líder'
-                    })
-                
-                # Extrair dados da equipe
-                if 'avaliacoesEquipe' in dados:
-                    for membro in dados['avaliacoesEquipe']:
-                        demograficos.append({
-                            'empresa': membro.get('empresa', 'N/A'),
-                            'etnia': membro.get('etnia', 'N/A'),
-                            'departamento': membro.get('departamento', 'N/A'),
-                            'sexo': membro.get('sexo', 'N/A'),
-                            'estado': membro.get('estado', 'N/A'),
-                            'cidade': membro.get('cidade', 'N/A'),
-                            'cargo': membro.get('cargo', 'N/A'),
-                            'area': membro.get('area', 'N/A'),
-                            'codrodada': membro.get('codrodada', 'N/A'),
-                            'nomeLider': membro.get('nomeLider', 'N/A'),
-                            'emailLider': membro.get('emailLider', 'N/A'),
-                            'email': membro.get('email', 'N/A'),
-                            'tipo': 'Microambiente - Equipe'
-                        })
-            except Exception as e:
-                continue
-    
-    return pd.DataFrame(demograficos)
-
-# Função para processar dados de gráficos comparativos
-def process_grafico_comparativo(data):
-    graficos = []
-    for item in data:
-        if isinstance(item, dict) and 'dados_json' in item:
-            try:
-                dados = json.loads(item['dados_json'])
-                if 'arquetipos' in dados:
-                    dados['id_registro'] = item.get('id')
-                    dados['empresa'] = item.get('empresa')
-                    dados['codrodada'] = item.get('codrodada')
-                    dados['emaillider'] = item.get('emaillider')
-                    graficos.append(dados)
-            except:
-                continue
-    return graficos
-
-# Função para calcular média dos gráficos com filtros demográficos
-def calcular_media_graficos_com_filtros(graficos_filtrados, df_demograficos, filtros):
-    if not graficos_filtrados:
-        return None, None, None
-    
-    # Filtrar dados demográficos
-    df_filtrado = df_demograficos.copy()
-    
-    if filtros['estado'] != "Todos":
-        df_filtrado = df_filtrado[df_filtrado['estado'] == filtros['estado']]
-    
-    if filtros['sexo'] != "Todos":
-        df_filtrado = df_filtrado[df_filtrado['sexo'] == filtros['sexo']]
-    
-    if filtros['etnia'] != "Todas":
-        df_filtrado = df_filtrado[df_filtrado['etnia'] == filtros['etnia']]
-    
-    if filtros['departamento'] != "Todos":
-        df_filtrado = df_filtrado[df_filtrado['departamento'] == filtros['departamento']]
-    
-    if filtros['cargo'] != "Todos":
-        df_filtrado = df_filtrado[df_filtrado['cargo'] == filtros['cargo']]
-    
-    # Obter critérios dos dados demográficos filtrados
-    empresas_demograficas = set(df_filtrado['empresa'].unique())
-    rodadas_demograficas = set(df_filtrado['codrodada'].unique())
-    lideres_demograficos = set(df_filtrado['emailLider'].unique())
-    
-    # Filtrar gráficos que correspondem aos dados demográficos
-    graficos_filtrados_por_demografia = []
-    for g in graficos_filtrados:
-        # Verificar se o gráfico corresponde aos critérios demográficos
-        if (g.get('empresa') in empresas_demograficas or 
-            g.get('codrodada') in rodadas_demograficas or 
-            g.get('emaillider') in lideres_demograficos):
-            graficos_filtrados_por_demografia.append(g)
-    
-    # Se não encontrou correspondências, usar todos os gráficos
-    if not graficos_filtrados_por_demografia:
-        graficos_filtrados_por_demografia = graficos_filtrados
-    
-    # Coletar todos os arquétipos únicos
-    todos_arquetipos = set()
-    for g in graficos_filtrados_por_demografia:
-        if 'arquetipos' in g:
-            todos_arquetipos.update(g['arquetipos'])
-    
-    todos_arquetipos = sorted(list(todos_arquetipos))
-    
-    # Calcular médias
-    medias_auto = []
-    medias_equipe = []
-    
-    for arq in todos_arquetipos:
-        valores_auto = []
-        valores_equipe = []
-        
-        for g in graficos_filtrados_por_demografia:
-            if 'arquetipos' in g and 'autoavaliacao' in g and 'mediaEquipe' in g:
-                if arq in g['arquetipos']:
-                    auto_val = g['autoavaliacao'].get(arq, 0)
-                    equipe_val = g['mediaEquipe'].get(arq, 0)
-                    
-                    if auto_val > 0:
-                        valores_auto.append(auto_val)
-                    if equipe_val > 0:
-                        valores_equipe.append(equipe_val)
-        
-        # Calcular médias
-        media_auto = np.mean(valores_auto) if valores_auto else 0
-        media_equipe = np.mean(valores_equipe) if valores_equipe else 0
-        
-        medias_auto.append(media_auto)
-        medias_equipe.append(media_equipe)
-    
-    return todos_arquetipos, medias_auto, medias_equipe
-
-# Função para filtrar dados demográficos
-def filtrar_dados_demograficos(df_demograficos, filtros):
-    df_filtrado = df_demograficos.copy()
-    
-    if filtros['empresa'] != "Todas":
-        df_filtrado = df_filtrado[df_filtrado['empresa'] == filtros['empresa']]
-    
-    if filtros['codrodada'] != "Todas":
-        df_filtrado = df_filtrado[df_filtrado['codrodada'] == filtros['codrodada']]
-    
-    if filtros['emaillider'] != "Todos":
-        df_filtrado = df_filtrado[df_filtrado['emailLider'] == filtros['emaillider']]
-    
-    if filtros['estado'] != "Todos":
-        df_filtrado = df_filtrado[df_filtrado['estado'] == filtros['estado']]
-    
-    if filtros['sexo'] != "Todos":
-        df_filtrado = df_filtrado[df_filtrado['sexo'] == filtros['sexo']]
-    
-    if filtros['etnia'] != "Todas":
-        df_filtrado = df_filtrado[df_filtrado['etnia'] == filtros['etnia']]
-    
-    if filtros['departamento'] != "Todos":
-        df_filtrado = df_filtrado[df_filtrado['departamento'] == filtros['departamento']]
-    
-    if filtros['cargo'] != "Todos":
-        df_filtrado = df_filtrado[df_filtrado['cargo'] == filtros['cargo']]
-    
-    return df_filtrado
-
-# Interface principal
-st.title("🎯 Leader Track - Dashboard Super Interativo")
+# INTERFACE PRINCIPAL
+st.title("🎯 Leader Track - Dashboard Revolucionário")
 st.markdown("---")
 
-# Buscar dados
-with st.spinner("Carregando dados de todas as tabelas..."):
-    data = fetch_data()
+# Carregar matriz
+with st.spinner("Carregando matriz de arquétipos..."):
+    matriz = carregar_matriz_arquetipos()
 
-if data:
-    st.success("✅ Conectado ao Supabase!")
+if matriz is not None:
+    # Buscar dados
+    with st.spinner("Carregando dados dos respondentes..."):
+        consolidado_arq = fetch_data()
     
-    # Processar dados
-    relatorios = data.get('relatorios', [])
-    consolidado_arq = data.get('consolidado_arq', [])
-    consolidado_micro = data.get('consolidado_microambiente', [])
-    
-    graficos_comparativos = process_grafico_comparativo(relatorios)
-    df_demograficos = extract_demographic_data(consolidado_arq, consolidado_micro)
-    
-    # Métricas principais
-    col1, col2, col3, col4 = st.columns(4)
-    
-    with col1:
-        st.metric(" Total de Registros", len(relatorios))
-    
-    with col2:
-        st.metric("📈 Gráficos Comparativos", len(graficos_comparativos))
-    
-    with col3:
-        st.metric(" Dados Demográficos", len(df_demograficos) if not df_demograficos.empty else 0)
-    
-    with col4:
-        st.metric(" Última Atualização", datetime.now().strftime("%H:%M"))
-    
-    # FILTROS GLOBAIS (funcionam em todas as abas)
-    st.sidebar.header("🎛️ Filtros Globais")
-    st.sidebar.markdown("**Estes filtros funcionam em TODAS as abas!**")
-    
-    # Filtros principais
-    st.sidebar.subheader(" Filtros Principais")
-    
-    if not df_demograficos.empty:
-        empresas = ["Todas"] + sorted(df_demograficos['empresa'].unique().tolist())
-        empresa_selecionada = st.sidebar.selectbox(" Empresa", empresas)
+    if consolidado_arq:
+        st.success("✅ Conectado ao Supabase!")
         
-        codrodadas = ["Todas"] + sorted(df_demograficos['codrodada'].unique().tolist())
-        codrodada_selecionada = st.sidebar.selectbox(" Código da Rodada", codrodadas)
+        # Processar dados individuais
+        with st.spinner("Calculando arquétipos individuais..."):
+            df_respondentes = processar_dados_individuais(consolidado_arq, matriz)
         
-        emailliders = ["Todos"] + sorted(df_demograficos['emailLider'].unique().tolist())
+        # Métricas
+        col1, col2, col3, col4 = st.columns(4)
+        with col1:
+            st.metric("📊 Total de Respondentes", len(df_respondentes))
+        with col2:
+            auto_count = len(df_respondentes[df_respondentes['tipo'] == 'Autoavaliação'])
+            st.metric("👤 Autoavaliações", auto_count)
+        with col3:
+            equipe_count = len(df_respondentes[df_respondentes['tipo'] == 'Avaliação Equipe'])
+            st.metric("👥 Avaliações Equipe", equipe_count)
+        with col4:
+            st.metric("�� Última Atualização", datetime.now().strftime("%H:%M"))
+        
+        # FILTROS
+        st.sidebar.header("🎛️ Filtros Globais")
+        
+        # Filtros principais
+        st.sidebar.subheader("�� Filtros Principais")
+        empresas = ["Todas"] + sorted(df_respondentes['empresa'].unique().tolist())
+        empresa_selecionada = st.sidebar.selectbox("�� Empresa", empresas)
+        
+        codrodadas = ["Todas"] + sorted(df_respondentes['codrodada'].unique().tolist())
+        codrodada_selecionada = st.sidebar.selectbox("�� Código da Rodada", codrodadas)
+        
+        emailliders = ["Todos"] + sorted(df_respondentes['emailLider'].unique().tolist())
         emaillider_selecionado = st.sidebar.selectbox("👤 Email do Líder", emailliders)
-    else:
-        empresa_selecionada = "Todas"
-        codrodada_selecionada = "Todas"
-        emaillider_selecionado = "Todos"
-    
-    # Filtros demográficos
-    st.sidebar.subheader("📊 Filtros Demográficos")
-    
-    if not df_demograficos.empty:
-        estados = ["Todos"] + sorted(df_demograficos['estado'].unique().tolist())
+        
+        # Filtros demográficos
+        st.sidebar.subheader("📊 Filtros Demográficos")
+        estados = ["Todos"] + sorted(df_respondentes['estado'].unique().tolist())
         estado_selecionado = st.sidebar.selectbox("🗺️ Estado", estados)
         
-        generos = ["Todos"] + sorted(df_demograficos['sexo'].unique().tolist())
-        genero_selecionado = st.sidebar.selectbox(" Gênero", generos)
+        generos = ["Todos"] + sorted(df_respondentes['sexo'].unique().tolist())
+        genero_selecionado = st.sidebar.selectbox("⚧ Gênero", generos)
         
-        etnias = ["Todas"] + sorted(df_demograficos['etnia'].unique().tolist())
+        etnias = ["Todas"] + sorted(df_respondentes['etnia'].unique().tolist())
         etnia_selecionada = st.sidebar.selectbox("👥 Etnia", etnias)
         
-        departamentos = ["Todos"] + sorted(df_demograficos['departamento'].unique().tolist())
+        departamentos = ["Todos"] + sorted(df_respondentes['departamento'].unique().tolist())
         departamento_selecionado = st.sidebar.selectbox("🏢 Departamento", departamentos)
         
-        cargos = ["Todos"] + sorted(df_demograficos['cargo'].unique().tolist())
+        cargos = ["Todos"] + sorted(df_respondentes['cargo'].unique().tolist())
         cargo_selecionado = st.sidebar.selectbox("💼 Cargo", cargos)
-    else:
-        estado_selecionado = "Todos"
-        genero_selecionado = "Todos"
-        etnia_selecionada = "Todas"
-        departamento_selecionado = "Todos"
-        cargo_selecionado = "Todos"
-    
-    # Dicionário com todos os filtros
-    filtros = {
-        'empresa': empresa_selecionada,
-        'codrodada': codrodada_selecionada,
-        'emaillider': emaillider_selecionado,
-        'estado': estado_selecionado,
-        'sexo': genero_selecionado,
-        'etnia': etnia_selecionada,
-        'departamento': departamento_selecionado,
-        'cargo': cargo_selecionado
-    }
-    
-    # Aplicar filtros aos dados demográficos
-    df_demograficos_filtrado = filtrar_dados_demograficos(df_demograficos, filtros)
-    
-    # Filtrar gráficos baseado nos filtros principais
-    graficos_filtrados = []
-    for g in graficos_comparativos:
-        if (empresa_selecionada == "Todas" or g.get('empresa') == empresa_selecionada) and \
-           (codrodada_selecionada == "Todas" or g.get('codrodada') == codrodada_selecionada) and \
-           (emaillider_selecionado == "Todos" or g.get('emaillider') == emaillider_selecionado):
-            graficos_filtrados.append(g)
-    
-    # Mostrar resumo dos filtros aplicados
-    st.sidebar.markdown("---")
-    st.sidebar.subheader(" Resumo dos Filtros")
-    
-    filtros_ativos = []
-    for key, value in filtros.items():
-        if value not in ["Todas", "Todos"]:
-            filtros_ativos.append(f"{key}: {value}")
-    
-    if filtros_ativos:
-        for filtro in filtros_ativos:
-            st.sidebar.info(f"✅ {filtro}")
-    else:
-        st.sidebar.info("✅ Todos os filtros: TODOS")
-    
-    # Tabs para organizar as seções
-    tab1, tab2, tab3 = st.tabs(["🎯 Análise por Líder", "📊 Análise Demográfica", "🔄 Comparação entre Rodadas"])
-    
-    with tab1:
-        st.header(" Análise Específica por Líder")
         
-        # Seção de Gráficos Comparativos
-        if graficos_comparativos:
-            st.subheader("📊 Gráficos Comparativos de Arquétipos")
+        # Dicionário de filtros
+        filtros = {
+            'empresa': empresa_selecionada,
+            'codrodada': codrodada_selecionada,
+            'emaillider': emaillider_selecionado,
+            'estado': estado_selecionado,
+            'sexo': genero_selecionado,
+            'etnia': etnia_selecionada,
+            'departamento': departamento_selecionado,
+            'cargo': cargo_selecionado
+        }
+        
+        # Calcular médias com filtros
+        arquétipos, medias_auto, medias_equipe = calcular_medias_com_filtros(df_respondentes, filtros)
+        
+        if arquétipos:
+            # Criar título dinâmico
+            titulo_parts = []
+            for key, value in filtros.items():
+                if value not in ["Todas", "Todos"]:
+                    titulo_parts.append(f"{key}: {value}")
+            
+            titulo = " | ".join(titulo_parts) if titulo_parts else "Média Geral de Todos os Respondentes"
             
             # Opções de visualização
             st.markdown("**🎨 Escolha o tipo de visualização:**")
@@ -401,327 +357,37 @@ if data:
                 horizontal=True
             )
             
-            if graficos_filtrados:
-                # Adicionar informações de debug
-                st.info(f"📊 **Filtros Demográficos Aplicados:** {len(df_demograficos_filtrado)} registros demográficos encontrados")
-                
-                # Filtrar gráficos por demografia
-                empresas_demograficas = set(df_demograficos_filtrado['empresa'].unique())
-                rodadas_demograficas = set(df_demograficos_filtrado['codrodada'].unique())
-                lideres_demograficos = set(df_demograficos_filtrado['emailLider'].unique())
-                
-                graficos_filtrados_por_demografia = []
-                for g in graficos_filtrados:
-                    if (g.get('empresa') in empresas_demograficas or 
-                        g.get('codrodada') in rodadas_demograficas or 
-                        g.get('emaillider') in lideres_demograficos):
-                        graficos_filtrados_por_demografia.append(g)
-                
-                if not graficos_filtrados_por_demografia:
-                    graficos_filtrados_por_demografia = graficos_filtrados
-                
-                st.info(f"📈 **Gráficos Selecionados:** {len(graficos_filtrados_por_demografia)} gráficos correspondem aos filtros demográficos")
-                
-                # Calcular médias dos gráficos filtrados com filtros demográficos
-                arquétipos, medias_auto, medias_equipe = calcular_media_graficos_com_filtros(
-                    graficos_filtrados_por_demografia, df_demograficos, filtros
-                )
-                
-                if arquétipos:
-                    # Criar título dinâmico
-                    titulo_parts = []
-                    if empresa_selecionada != "Todas":
-                        titulo_parts.append(f"Empresa: {empresa_selecionada}")
-                    if codrodada_selecionada != "Todas":
-                        titulo_parts.append(f"Rodada: {codrodada_selecionada}")
-                    if emaillider_selecionado != "Todos":
-                        titulo_parts.append(f"Líder: {emaillider_selecionado}")
-                    
-                    # Adicionar filtros demográficos ao título
-                    if genero_selecionado != "Todos":
-                        titulo_parts.append(f"Gênero: {genero_selecionado}")
-                    if etnia_selecionada != "Todas":
-                        titulo_parts.append(f"Etnia: {etnia_selecionada}")
-                    if estado_selecionado != "Todos":
-                        titulo_parts.append(f"Estado: {estado_selecionado}")
-                    
-                    titulo = " | ".join(titulo_parts) if titulo_parts else "Média Geral de Todos os Relatórios"
-                    
-                    if tipo_visualizacao == "📊 Gráfico com Rótulos e Clique":
-                        # Gráfico interativo com rótulos e clique
-                        fig = go.Figure()
-                        
-                        # Adicionar barras com rótulos
-                        fig.add_trace(go.Bar(
-                            name='Autoavaliação (Média)',
-                            x=arquétipos,
-                            y=medias_auto,
-                            marker_color='#1f77b4',
-                            text=[f"{v:.1f}%" for v in medias_auto],
-                            textposition='auto',
-                            hovertemplate='<b>%{x}</b><br>Autoavaliação: %{y:.1f}%<br><extra>Clique para detalhes!</extra>',
-                            customdata=arquétipos
-                        ))
-                        
-                        fig.add_trace(go.Bar(
-                            name='Média da Equipe',
-                            x=arquétipos,
-                            y=medias_equipe,
-                            marker_color='#ff7f0e',
-                            text=[f"{v:.1f}%" for v in medias_equipe],
-                            textposition='auto',
-                            hovertemplate='<b>%{x}</b><br>Média da Equipe: %{y:.1f}%<br><extra>Clique para detalhes!</extra>',
-                            customdata=arquétipos
-                        ))
-                        
-                        fig.update_layout(
-                            title=f"📊 {titulo}",
-                            xaxis_title="Arquétipos",
-                            yaxis_title="Pontuação (%)",
-                            yaxis=dict(range=[0, 100]),
-                            barmode='group',
-                            height=600,
-                            hovermode='closest',
-                            showlegend=True,
-                            clickmode='event+select'
-                        )
-                        
-                        # Renderizar gráfico
-                        st.plotly_chart(fig, use_container_width=True, key="grafico_interativo")
-
-                        # Informação sobre interatividade
-                        st.info("💡 **Dica:** Passe o mouse sobre as barras para ver detalhes! Clique para mais informações.")
-                        
-                    else:
-                        # Gráfico simples
-                        fig = go.Figure()
-                        
-                        fig.add_trace(go.Bar(
-                            name='Autoavaliação (Média)',
-                            x=arquétipos,
-                            y=medias_auto,
-                            marker_color='#1f77b4',
-                            hovertemplate='<b>%{x}</b><br>Autoavaliação: %{y:.1f}%<extra></extra>'
-                        ))
-                        
-                        fig.add_trace(go.Bar(
-                            name='Média da Equipe',
-                            x=arquétipos,
-                            y=medias_equipe,
-                            marker_color='#ff7f0e',
-                            hovertemplate='<b>%{x}</b><br>Média da Equipe: %{y:.1f}%<extra></extra>'
-                        ))
-                        
-                        fig.update_layout(
-                            title=f"📈 {titulo}",
-                            xaxis_title="Arquétipos",
-                            yaxis_title="Pontuação (%)",
-                            yaxis=dict(range=[0, 100]),
-                            barmode='group',
-                            height=500,
-                            hovermode='closest',
-                            showlegend=True
-                        )
-                        
-                        st.plotly_chart(fig, use_container_width=True)
-                    
-                    # Informações do relatório
-                    col1, col2, col3 = st.columns(3)
-                    with col1:
-                        st.info(f"**📊 Relatórios Analisados:** {len(graficos_filtrados_por_demografia)}")
-                    with col2:
-                        total_respondentes = sum(g.get('n_avaliacoes', 0) for g in graficos_filtrados_por_demografia)
-                        st.info(f"**👥 Total de Respondentes:** {total_respondentes}")
-                    with col3:
-                        st.info(f"**📈 Arquétipos Analisados:** {len(arquétipos)}")
-                    
-                    # Tabela com as médias
-                    st.subheader("📋 Tabela de Médias")
-                    df_medias = pd.DataFrame({
-                        'Arquétipo': arquétipos,
-                        'Autoavaliação (%)': [f"{v:.1f}%" for v in medias_auto],
-                        'Média Equipe (%)': [f"{v:.1f}%" for v in medias_equipe],
-                        'Diferença (%)': [f"{auto - equipe:.1f}%" for auto, equipe in zip(medias_auto, medias_equipe)]
-                    })
-                    st.dataframe(df_medias, use_container_width=True)
-                    
-                    # Drill-down: Detalhes por arquétipo
-                    st.subheader("🔍 Detalhes por Arquétipo")
-                    
-                    arquétipo_selecionado = st.selectbox(
-                        "Selecione um arquétipo para ver detalhes:",
-                        arquétipos
-                    )
-                    
-                    if arquétipo_selecionado:
-                        # Mostrar dados detalhados do arquétipo selecionado
-                        st.write(f"**Detalhes do arquétipo: {arquétipo_selecionado}**")
-                        
-                        detalhes = []
-                        for g in graficos_filtrados_por_demografia:
-                            if 'arquetipos' in g and arquétipo_selecionado in g['arquetipos']:
-                                auto_val = g['autoavaliacao'].get(arquétipo_selecionado, 0)
-                                equipe_val = g['mediaEquipe'].get(arquétipo_selecionado, 0)
-                                
-                                detalhes.append({
-                                    'Empresa': g.get('empresa', 'N/A'),
-                                    'Rodada': g.get('codrodada', 'N/A'),
-                                    'Líder': g.get('emaillider', 'N/A'),
-                                    'Autoavaliação': f"{auto_val:.1f}%",
-                                    'Equipe': f"{equipe_val:.1f}%",
-                                    'Diferença': f"{auto_val - equipe_val:.1f}%"
-                                })
-                        
-                        if detalhes:
-                            df_detalhes = pd.DataFrame(detalhes)
-                            st.dataframe(df_detalhes, use_container_width=True)
-                        else:
-                            st.warning("Nenhum detalhe encontrado para este arquétipo.")
-            else:
-                st.warning("Nenhum gráfico encontrado com os filtros selecionados.")
-        else:
-            st.warning("Nenhum gráfico comparativo encontrado.")
-    
-    with tab2:
-        st.header("📊 Análise Demográfica Geral")
-        
-        if not df_demograficos.empty:
-            # Mostrar estatísticas dos filtros aplicados
-            st.subheader(f" Estatísticas dos Filtros Aplicados")
+            # Gerar e exibir gráfico
+            fig = gerar_grafico_comparativo(medias_auto, medias_equipe, arquétipos, titulo, tipo_visualizacao)
+            st.plotly_chart(fig, use_container_width=True)
+            
+            if tipo_visualizacao == "📊 Gráfico com Rótulos e Clique":
+                st.info("💡 **Dica:** Passe o mouse sobre as barras para ver detalhes! Clique para mais informações.")
+            
+            # Informações do relatório
             col1, col2, col3 = st.columns(3)
-            
             with col1:
-                st.metric("Total de Registros", len(df_demograficos_filtrado))
-            
+                st.info(f"**📊 Respondentes Analisados:** {len(df_respondentes)}")
             with col2:
-                st.metric("Líderes", len(df_demograficos_filtrado[df_demograficos_filtrado['tipo'].str.contains('Líder')]))
-            
+                st.info(f"**👥 Total de Avaliações:** {len(df_respondentes)}")
             with col3:
-                st.metric("Membros da Equipe", len(df_demograficos_filtrado[df_demograficos_filtrado['tipo'].str.contains('Equipe')]))
+                st.info(f"**📈 Arquétipos Analisados:** {len(arquétipos)}")
             
-            # Gráficos demográficos
-            col1, col2 = st.columns(2)
+            # Tabela com as médias
+            st.subheader("📋 Tabela de Médias")
+            df_medias = pd.DataFrame({
+                'Arquétipo': arquétipos,
+                'Autoavaliação (%)': [f"{v:.1f}%" for v in medias_auto],
+                'Média Equipe (%)': [f"{v:.1f}%" for v in medias_equipe]
+            })
+            st.dataframe(df_medias, use_container_width=True)
             
-            with col1:
-                # Distribuição por etnia
-                fig_etnia = px.pie(
-                    df_demograficos_filtrado,
-                    names='etnia',
-                    title="Distribuição por Etnia"
-                )
-                st.plotly_chart(fig_etnia, use_container_width=True)
-            
-            with col2:
-                # Distribuição por gênero
-                fig_genero = px.pie(
-                    df_demograficos_filtrado,
-                    names='sexo',
-                    title="Distribuição por Gênero"
-                )
-                st.plotly_chart(fig_genero, use_container_width=True)
-            
-            col3, col4 = st.columns(2)
-            
-            with col3:
-                # Distribuição por departamento
-                fig_dept = px.bar(
-                    df_demograficos_filtrado['departamento'].value_counts(),
-                    title="Distribuição por Departamento"
-                )
-                st.plotly_chart(fig_dept, use_container_width=True)
-            
-            with col4:
-                # Distribuição por estado
-                fig_estado = px.bar(
-                    df_demograficos_filtrado['estado'].value_counts(),
-                    title="Distribuição por Estado"
-                )
-                st.plotly_chart(fig_estado, use_container_width=True)
-            
-            # Tabela com dados filtrados
-            st.subheader(" Dados Filtrados")
-            st.dataframe(df_demograficos_filtrado, use_container_width=True)
         else:
-            st.warning("Nenhum dado demográfico encontrado.")
-    
-    with tab3:
-        st.header("🔄 Comparação entre Rodadas")
-        
-        if not df_demograficos.empty:
-            # Selecionar duas rodadas para comparar
-            rodadas_disponiveis = sorted(df_demograficos['codrodada'].unique().tolist())
-            
-            if len(rodadas_disponiveis) >= 2:
-                col1, col2 = st.columns(2)
-                
-                with col1:
-                    rodada1 = st.selectbox("Selecione a primeira rodada:", rodadas_disponiveis)
-                
-                with col2:
-                    rodada2 = st.selectbox("Selecione a segunda rodada:", rodadas_disponiveis)
-                
-                if rodada1 != rodada2:
-                    # Filtrar dados das duas rodadas (aplicando filtros globais)
-                    df_rodada1 = df_demograficos_filtrado[df_demograficos_filtrado['codrodada'] == rodada1]
-                    df_rodada2 = df_demograficos_filtrado[df_demograficos_filtrado['codrodada'] == rodada2]
-                    
-                    # Comparação demográfica
-                    st.subheader(f"📊 Comparação Demográfica: {rodada1} vs {rodada2}")
-                    
-                    col1, col2 = st.columns(2)
-                    
-                    with col1:
-                        st.metric(f"Registros {rodada1}", len(df_rodada1))
-                        st.metric(f"Líderes {rodada1}", len(df_rodada1[df_rodada1['tipo'].str.contains('Líder')]))
-                    
-                    with col2:
-                        st.metric(f"Registros {rodada2}", len(df_rodada2))
-                        st.metric(f"Líderes {rodada2}", len(df_rodada2[df_rodada2['tipo'].str.contains('Líder')]))
-                    
-                    # Gráfico comparativo de gênero
-                    fig_comparacao = go.Figure()
-                    
-                    generos_rodada1 = df_rodada1['sexo'].value_counts()
-                    generos_rodada2 = df_rodada2['sexo'].value_counts()
-                    
-                    fig_comparacao.add_trace(go.Bar(
-                        name=f'Gênero {rodada1}',
-                        x=generos_rodada1.index,
-                        y=generos_rodada1.values,
-                        marker_color='#1f77b4'
-                    ))
-                    
-                    fig_comparacao.add_trace(go.Bar(
-                        name=f'Gênero {rodada2}',
-                        x=generos_rodada2.index,
-                        y=generos_rodada2.values,
-                        marker_color='#ff7f0e'
-                    ))
-                    
-                    fig_comparacao.update_layout(
-                        title="Comparação de Gênero entre Rodadas",
-                        barmode='group'
-                    )
-                    
-                    st.plotly_chart(fig_comparacao, use_container_width=True)
-                else:
-                    st.warning("Selecione rodadas diferentes para comparar.")
-            else:
-                st.warning("É necessário ter pelo menos 2 rodadas para fazer comparação.")
-        else:
-            st.warning("Nenhum dado disponível para comparação.")
-    
-    # Dados brutos para debug
-    st.header(" Dados Completos")
-    with st.expander("Ver dados demográficos"):
-        if not df_demograficos.empty:
-            st.dataframe(df_demograficos)
-        else:
-            st.write("Nenhum dado demográfico encontrado")
-        
+            st.warning("⚠️ Nenhum dado encontrado com os filtros aplicados.")
+    else:
+        st.error("❌ Erro ao carregar dados do Supabase.")
 else:
-    st.error("❌ Não foi possível carregar os dados.")
+    st.error("❌ Erro ao carregar matriz de arquétipos.")
 
-# Informações do sistema
 st.markdown("---")
-st.markdown("**🎯 Leader Track Dashboard Super Interativo - Desenvolvido com Streamlit + Supabase**")
+st.markdown("🎯 **Leader Track Dashboard Revolucionário** - Desenvolvido com Streamlit + Supabase + Cálculo Individual")
