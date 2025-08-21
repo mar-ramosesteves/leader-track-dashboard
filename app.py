@@ -181,19 +181,27 @@ def calcular_media_graficos_com_filtros(graficos_filtrados, df_demograficos, fil
     if filtros['cargo'] != "Todos":
         df_filtrado = df_filtrado[df_filtrado['cargo'] == filtros['cargo']]
     
-    # Obter emails dos respondentes filtrados
-    emails_filtrados = set(df_filtrado['email'].tolist())
+    # Obter critérios dos dados demográficos filtrados
+    empresas_demograficas = set(df_filtrado['empresa'].unique())
+    rodadas_demograficas = set(df_filtrado['codrodada'].unique())
+    lideres_demograficos = set(df_filtrado['emailLider'].unique())
     
-    # Filtrar gráficos que têm respondentes demográficos
-    graficos_com_demograficos = []
+    # Filtrar gráficos que correspondem aos dados demográficos
+    graficos_filtrados_por_demografia = []
     for g in graficos_filtrados:
-        # Verificar se o gráfico tem respondentes que atendem aos filtros demográficos
-        # Por enquanto, vamos usar todos os gráficos e ajustar os pesos
-        graficos_com_demograficos.append(g)
+        # Verificar se o gráfico corresponde aos critérios demográficos
+        if (g.get('empresa') in empresas_demograficas or 
+            g.get('codrodada') in rodadas_demograficas or 
+            g.get('emaillider') in lideres_demograficos):
+            graficos_filtrados_por_demografia.append(g)
+    
+    # Se não encontrou correspondências, usar todos os gráficos
+    if not graficos_filtrados_por_demografia:
+        graficos_filtrados_por_demografia = graficos_filtrados
     
     # Coletar todos os arquétipos únicos
     todos_arquetipos = set()
-    for g in graficos_com_demograficos:
+    for g in graficos_filtrados_por_demografia:
         if 'arquetipos' in g:
             todos_arquetipos.update(g['arquetipos'])
     
@@ -207,7 +215,7 @@ def calcular_media_graficos_com_filtros(graficos_filtrados, df_demograficos, fil
         valores_auto = []
         valores_equipe = []
         
-        for g in graficos_com_demograficos:
+        for g in graficos_filtrados_por_demografia:
             if 'arquetipos' in g and 'autoavaliacao' in g and 'mediaEquipe' in g:
                 if arq in g['arquetipos']:
                     auto_val = g['autoavaliacao'].get(arq, 0)
@@ -226,6 +234,7 @@ def calcular_media_graficos_com_filtros(graficos_filtrados, df_demograficos, fil
         medias_equipe.append(media_equipe)
     
     return todos_arquetipos, medias_auto, medias_equipe
+
 
 # Função para filtrar dados demográficos
 def filtrar_dados_demograficos(df_demograficos, filtros):
