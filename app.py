@@ -402,11 +402,34 @@ if data:
                 horizontal=True
             )
             
-            if graficos_filtrados:
+            
+			# Adicionar informações de debug
+			st.info(f"📊 **Filtros Demográficos Aplicados:** {len(df_demograficos_filtrado)} registros demográficos encontrados")
+			
+			# Filtrar gráficos por demografia
+			empresas_demograficas = set(df_demograficos_filtrado['empresa'].unique())
+			rodadas_demograficas = set(df_demograficos_filtrado['codrodada'].unique())
+			lideres_demograficos = set(df_demograficos_filtrado['emailLider'].unique())
+			
+			graficos_filtrados_por_demografia = []
+			for g in graficos_filtrados:
+			    if (g.get('empresa') in empresas_demograficas or 
+			        g.get('codrodada') in rodadas_demograficas or 
+			        g.get('emaillider') in lideres_demograficos):
+			        graficos_filtrados_por_demografia.append(g)
+			
+			if not graficos_filtrados_por_demografia:
+			    graficos_filtrados_por_demografia = graficos_filtrados
+			
+			st.info(f"📈 **Gráficos Selecionados:** {len(graficos_filtrados_por_demografia)} gráficos correspondem aos filtros demográficos")
+			
+			
+			
+			if graficos_filtrados:
                 # Calcular médias dos gráficos filtrados com filtros demográficos
                 arquétipos, medias_auto, medias_equipe = calcular_media_graficos_com_filtros(
-                    graficos_filtrados, df_demograficos, filtros
-                )
+				    graficos_filtrados_por_demografia, df_demograficos, filtros
+				)
                 
                 if arquétipos:
                     # Criar título dinâmico
