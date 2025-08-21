@@ -167,18 +167,25 @@ def calcular_medias_com_filtros(df_respondentes, filtros):
     # Calcular médias de autoavaliação
     medias_auto = []
     for arq in arquétipos:
-        valores = [resp['arquétipos'][arq] for resp in df_auto['arquétipos'] if arq in resp['arquétipos']]
+        valores = []
+        for _, row in df_auto.iterrows():
+            if 'arquétipos' in row and isinstance(row['arquétipos'], dict) and arq in row['arquétipos']:
+                valores.append(row['arquétipos'][arq])
         media = np.mean(valores) if valores else 0
         medias_auto.append(media)
     
     # Calcular médias da equipe
     medias_equipe = []
     for arq in arquétipos:
-        valores = [resp['arquétipos'][arq] for resp in df_equipe['arquétipos'] if arq in resp['arquétipos']]
+        valores = []
+        for _, row in df_equipe.iterrows():
+            if 'arquétipos' in row and isinstance(row['arquétipos'], dict) and arq in row['arquétipos']:
+                valores.append(row['arquétipos'][arq])
         media = np.mean(valores) if valores else 0
         medias_equipe.append(media)
     
     return arquétipos, medias_auto, medias_equipe
+
 
 # GERAR GRÁFICO COMPARATIVO
 def gerar_grafico_comparativo(medias_auto, medias_equipe, arquétipos, titulo, tipo_visualizacao):
