@@ -10,8 +10,8 @@ import openpyxl
 
 # Configuração da página
 st.set_page_config(
-    page_title="Leader Track - Dashboard Revolucionário com Drill-Down",
-    page_icon="��",
+    page_title="Leader Track - Dashboard Revolucionário com Drill-Down Corrigido",
+    page_icon="",
     layout="wide"
 )
 
@@ -74,35 +74,28 @@ def calcular_arquetipos_respondente(respostas, matriz):
     
     return arquétipos_percentuais
 
-# IDENTIFICAR QUESTÕES DE IMPACTO
-def identificar_questoes_impacto(arquétipo_clicado, matriz):
-    """Identifica questões onde o arquétipo tem PONTOS_MAXIMOS = 200"""
+# CALCULAR % TENDÊNCIA POR QUESTÃO (CORRIGIDA)
+def calcular_tendencia_questao_corrigida(questao, media_estrelas_arredondada, arquétipo, matriz):
+    """Calcula % tendência para uma questão baseado na média arredondada"""
+    chave = f"{arquétipo}{media_estrelas_arredondada}{questao}"
+    linha = matriz[matriz['CHAVE'] == chave]
+    if not linha.empty:
+        return linha['% Tendência'].iloc[0] * 100  # Multiplicar por 100
+    return 0
+
+# GERAR DRILL-DOWN (CORRIGIDA)
+def gerar_drill_down_corrigida(arquétipo_clicado, df_respondentes_filtrado, matriz):
+    """Gera detalhamento das questões com lógica corrigida"""
+    
+    # Identificar questões de impacto (onde PONTOS_MAXIMOS = 200)
     questoes_impacto = matriz[
         (matriz['ARQUETIPO'] == arquétipo_clicado) & 
         (matriz['PONTOS_MAXIMOS'] == 200)
     ]['COD_AFIRMACAO'].unique().tolist()
-    return sorted(questoes_impacto)
-
-# CALCULAR % TENDÊNCIA POR QUESTÃO
-def calcular_tendencia_questao(questao, estrelas_resposta, arquétipo, matriz):
-    """Calcula % tendência para uma questão específica"""
-    chave = f"{arquétipo}{estrelas_resposta}{questao}"
-    linha = matriz[matriz['CHAVE'] == chave]
-    if not linha.empty:
-        return linha['% Tendência'].iloc[0]
-    return 0
-
-# GERAR DRILL-DOWN
-def gerar_drill_down(arquétipo_clicado, df_respondentes_filtrado, matriz):
-    """Gera detalhamento das questões quando clica na barra"""
-    
-    # Identificar questões de impacto
-    questoes_impacto = identificar_questoes_impacto(arquétipo_clicado, matriz)
     
     if not questoes_impacto:
         return None
     
-    # Calcular médias de % tendência para cada questão
     questoes_detalhadas = []
     
     for questao in questoes_impacto:
@@ -110,24 +103,32 @@ def gerar_drill_down(arquétipo_clicado, df_respondentes_filtrado, matriz):
         linha_questao = matriz[matriz['COD_AFIRMACAO'] == questao].iloc[0]
         afirmacao = linha_questao['AFIRMACAO']
         
-        # Calcular média de % tendência para esta questão
-        tendencias = []
+        # Calcular média de estrelas para esta questão
+        estrelas_questao = []
         for _, respondente in df_respondentes_filtrado.iterrows():
             if 'respostas' in respondente and questao in respondente['respostas']:
                 estrelas = int(respondente['respostas'][questao])
-                tendencia = calcular_tendencia_questao(questao, estrelas, arquétipo_clicado, matriz)
-                tendencias.append(tendencia)
+                estrelas_questao.append(estrelas)
         
-        media_tendencia = np.mean(tendencias) if tendencias else 0
-        questoes_detalhadas.append({
-            'questao': questao,
-            'afirmacao': afirmacao,
-            'media_tendencia': media_tendencia,
-            'n_respostas': len(tendencias)
-        })
+        if estrelas_questao:
+            # Calcular média e arredondar
+            media_estrelas = np.mean(estrelas_questao)
+            media_arredondada = round(media_estrelas)
+            
+            # Buscar % tendência baseado na média arredondada
+            tendencia = calcular_tendencia_questao_corrigida(questao, media_arredondada, arquétipo_clicado, matriz)
+            
+            questoes_detalhadas.append({
+                'questao': questao,
+                'afirmacao': afirmacao,
+                'media_estrelas': media_estrelas,
+                'media_arredondada': media_arredondada,
+                'tendencia': tendencia,
+                'n_respostas': len(estrelas_questao)
+            })
     
     # Ordenar por % tendência (maior para menor)
-    questoes_detalhadas.sort(key=lambda x: x['media_tendencia'], reverse=True)
+    questoes_detalhadas.sort(key=lambda x: x['tendencia'], reverse=True)
     
     return questoes_detalhadas
 
@@ -215,7 +216,7 @@ def calcular_medias_com_filtros(df_respondentes, filtros):
         df_filtrado = df_filtrado[df_filtrado['cargo'] == filtros['cargo']]
     
     if df_filtrado.empty:
-        return None, None, None
+        return None, None, None, df_filtrado
     
     # Separar autoavaliação e equipe
     df_auto = df_filtrado[df_filtrado['tipo'] == 'Autoavaliação']
@@ -245,7 +246,7 @@ def calcular_medias_com_filtros(df_respondentes, filtros):
     
     return arquétipos, medias_auto, medias_equipe, df_filtrado
 
-# GERAR GRÁFICO COMPARATIVO COM DRILL-DOWN
+# GERAR GRÁFICO COMPARATIVO
 def gerar_grafico_comparativo(medias_auto, medias_equipe, arquétipos, titulo, tipo_visualizacao):
     """Gera gráfico comparativo com dados calculados"""
     
@@ -329,7 +330,7 @@ def fetch_data():
         return []
 
 # INTERFACE PRINCIPAL
-st.title("🎯 Leader Track - Dashboard Revolucionário com Drill-Down")
+st.title("🎯 Leader Track - Dashboard Revolucionário com Drill-Down Corrigido")
 st.markdown("---")
 
 # Carregar matriz
@@ -359,18 +360,18 @@ if matriz is not None:
             equipe_count = len(df_respondentes[df_respondentes['tipo'] == 'Avaliação Equipe'])
             st.metric("👥 Avaliações Equipe", equipe_count)
         with col4:
-            st.metric("�� Última Atualização", datetime.now().strftime("%H:%M"))
+            st.metric(" Última Atualização", datetime.now().strftime("%H:%M"))
         
         # FILTROS
         st.sidebar.header("🎛️ Filtros Globais")
         
         # Filtros principais
-        st.sidebar.subheader("�� Filtros Principais")
+        st.sidebar.subheader(" Filtros Principais")
         empresas = ["Todas"] + sorted(df_respondentes['empresa'].unique().tolist())
-        empresa_selecionada = st.sidebar.selectbox("�� Empresa", empresas)
+        empresa_selecionada = st.sidebar.selectbox(" Empresa", empresas)
         
         codrodadas = ["Todas"] + sorted(df_respondentes['codrodada'].unique().tolist())
-        codrodada_selecionada = st.sidebar.selectbox("�� Código da Rodada", codrodadas)
+        codrodada_selecionada = st.sidebar.selectbox(" Código da Rodada", codrodadas)
         
         emailliders = ["Todos"] + sorted(df_respondentes['emailLider'].unique().tolist())
         emaillider_selecionado = st.sidebar.selectbox("👤 Email do Líder", emailliders)
@@ -431,8 +432,8 @@ if matriz is not None:
             if tipo_visualizacao == "📊 Gráfico com Rótulos e Clique":
                 st.info("💡 **Dica:** Clique nas barras para ver as questões detalhadas!")
                 
-                # DRILL-DOWN INTERATIVO
-                st.subheader("🔍 Drill-Down por Arquétipo")
+                # DRILL-DOWN INTERATIVO CORRIGIDO
+                st.subheader("🔍 Drill-Down por Arquétipo (Corrigido)")
                 
                 # Seleção manual do arquétipo para drill-down
                 arquétipo_selecionado = st.selectbox(
@@ -445,13 +446,13 @@ if matriz is not None:
                 if arquétipo_selecionado:
                     st.markdown(f"### 📋 Questões que Impactam: **{arquétipo_selecionado}**")
                     
-                    # Gerar drill-down
-                    questoes_detalhadas = gerar_drill_down(arquétipo_selecionado, df_filtrado, matriz)
+                    # Gerar drill-down corrigido
+                    questoes_detalhadas = gerar_drill_down_corrigida(arquétipo_selecionado, df_filtrado, matriz)
                     
                     if questoes_detalhadas:
                         # Criar gráfico das questões
                         questoes = [q['questao'] for q in questoes_detalhadas]
-                        tendencias = [q['media_tendencia'] for q in questoes_detalhadas]
+                        tendencias = [q['tendencia'] for q in questoes_detalhadas]
                         
                         fig_questoes = go.Figure()
                         fig_questoes.add_trace(go.Bar(
@@ -460,7 +461,8 @@ if matriz is not None:
                             marker_color='#2E86AB',
                             text=[f"{v:.1f}%" for v in tendencias],
                             textposition='auto',
-                            hovertemplate='<b>%{x}</b><br>% Tendência: %{y:.1f}%<extra></extra>'
+                            hovertemplate='<b>%{x}</b><br>% Tendência: %{y:.1f}%<br>Média: %{customdata:.1f} estrelas<extra></extra>',
+                            customdata=[q['media_estrelas'] for q in questoes_detalhadas]
                         ))
                         
                         fig_questoes.update_layout(
@@ -477,16 +479,22 @@ if matriz is not None:
                         st.subheader("📋 Detalhamento das Questões")
                         
                         df_questoes = pd.DataFrame(questoes_detalhadas)
-                        df_questoes['% Tendência'] = df_questoes['media_tendencia'].apply(lambda x: f"{x:.1f}%")
+                        df_questoes['% Tendência'] = df_questoes['tendencia'].apply(lambda x: f"{x:.1f}%")
                         df_questoes['Questão'] = df_questoes['questao']
                         df_questoes['Afirmação'] = df_questoes['afirmacao']
+                        df_questoes['Média Estrelas'] = df_questoes['media_estrelas'].apply(lambda x: f"{x:.1f}")
+                        df_questoes['Média Arredondada'] = df_questoes['media_arredondada']
                         df_questoes['Nº Respostas'] = df_questoes['n_respostas']
                         
                         st.dataframe(
-                            df_questoes[['Questão', 'Afirmação', '% Tendência', 'Nº Respostas']],
+                            df_questoes[['Questão', 'Afirmação', '% Tendência', 'Média Estrelas', 'Média Arredondada', 'Nº Respostas']],
                             use_container_width=True,
                             hide_index=True
                         )
+                        
+                        # Informações adicionais
+                        st.info(f"**📊 Informações:** Média calculada com {len(df_filtrado)} respondentes filtrados. % Tendência baseado na média arredondada de estrelas.")
+                        
                     else:
                         st.warning(f"⚠️ Nenhuma questão de impacto encontrada para {arquétipo_selecionado}")
             
@@ -516,4 +524,4 @@ else:
     st.error("❌ Erro ao carregar matriz de arquétipos.")
 
 st.markdown("---")
-st.markdown("🎯 **Leader Track Dashboard Revolucionário com Drill-Down** - Desenvolvido com Streamlit + Supabase + Cálculo Individual")
+st.markdown("🎯 **Leader Track Dashboard Revolucionário com Drill-Down Corrigido** - Desenvolvido com Streamlit + Supabase + Cálculo Individual")
