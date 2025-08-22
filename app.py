@@ -697,6 +697,85 @@ if matriz_arq is not None and matriz_micro is not None:
     
     if consolidado_arq and consolidado_micro:
         st.success("✅ Conectado ao Supabase!")
+                
+        
+        # DEBUG TEMPORÁRIO - Verificar dados
+        st.write("🔍 DEBUG - Verificando dados:")
+        st.write(f"�� Total de registros arquétipos: {len(consolidado_arq)}")
+        st.write(f"�� Total de registros microambiente: {len(consolidado_micro)}")
+        
+        # Verificar se há dados da incicle
+        if consolidado_micro:
+            empresas_micro = set()
+            for item in consolidado_micro:
+                if isinstance(item, dict) and 'dados_json' in item:
+                    dados = item['dados_json']
+                    if 'autoavaliacao' in dados:
+                        empresa = dados['autoavaliacao'].get('empresa', 'N/A')
+                        empresas_micro.add(empresa)
+                    if 'avaliacoesEquipe' in dados:
+                        for membro in dados['avaliacoesEquipe']:
+                            empresa = membro.get('empresa', 'N/A')
+                            empresas_micro.add(empresa)
+            
+            st.write(f"🏢 Empresas encontradas no microambiente: {sorted(list(empresas_micro))}")
+            
+            # Verificar especificamente a incicle
+            dados_incicle = []
+            for item in consolidado_micro:
+                if isinstance(item, dict) and 'dados_json' in item:
+                    dados = item['dados_json']
+                    if 'autoavaliacao' in dados and dados['autoavaliacao'].get('empresa') == 'incicle':
+                        dados_incicle.append(item)
+                    if 'avaliacoesEquipe' in dados:
+                        for membro in dados['avaliacoesEquipe']:
+                            if membro.get('empresa') == 'incicle':
+                                dados_incicle.append(item)
+            
+            st.write(f"🎯 Registros da incicle encontrados: {len(dados_incicle)}")
+            
+            if dados_incicle:
+                st.write("✅ Dados da incicle encontrados no Supabase!")
+                # Mostrar estrutura do primeiro registro
+                primeiro_registro = dados_incicle[0]
+                st.write("📋 Estrutura do primeiro registro:")
+                st.json(primeiro_registro['dados_json'])
+            else:
+                st.write("❌ Nenhum registro da incicle encontrado!")
+        
+        # Processar dados individuais
+        with st.spinner("Calculando arquétipos individuais..."):
+            df_arquetipos = processar_dados_arquetipos(consolidado_arq, matriz_arq)
+        
+        with st.spinner("Calculando microambiente individual..."):
+            df_microambiente = processar_dados_microambiente(consolidado_micro, matriz_micro, pontos_max_dimensao, pontos_max_subdimensao)
+        
+        # DEBUG - Verificar dados processados
+        st.write("🔍 DEBUG - Dados processados:")
+        st.write(f"📊 Total arquétipos processados: {len(df_arquetipos)}")
+        st.write(f"🏢 Total microambiente processados: {len(df_microambiente)}")
+        
+        if len(df_microambiente) > 0:
+            empresas_processadas = df_microambiente['empresa'].unique()
+            st.write(f"🏢 Empresas após processamento: {sorted(empresas_processadas)}")
+            
+            # Verificar dados da incicle após processamento
+            df_incicle = df_microambiente[df_microambiente['empresa'] == 'incicle']
+            st.write(f"🎯 Registros da incicle após processamento: {len(df_incicle)}")
+            
+            if len(df_incicle) > 0:
+                st.write("✅ Dados da incicle processados com sucesso!")
+                st.write(f"👤 Autoavaliações: {len(df_incicle[df_incicle['tipo'] == 'Autoavaliação'])}")
+                st.write(f"👥 Avaliações da equipe: {len(df_incicle[df_incicle['tipo'] == 'Avaliação Equipe'])}")
+            else:
+                st.write("❌ Dados da incicle não foram processados!")
+
+
+
+
+
+
+        
         
         # Processar dados individuais
         with st.spinner("Calculando arquétipos individuais..."):
