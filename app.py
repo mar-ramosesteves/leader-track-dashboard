@@ -136,33 +136,26 @@ def calcular_microambiente_respondente(respostas, matriz, pontos_max_dimensao, p
     pontos_por_dimensao_ideal = {dim: 0 for dim in dimensoes}
     pontos_por_subdimensao_ideal = {sub: 0 for sub in subdimensoes}
     
-    # Processar respostas Real
-    for questao, estrelas in respostas_real.items():
-        # Buscar na matriz para Real
-        chave_real = f"{questao}_I{estrelas}_R{estrelas}"
-        linha_real = matriz[matriz['CHAVE'] == chave_real]
-        
-        if not linha_real.empty:
-            dimensao = linha_real['DIMENSAO'].iloc[0]
-            subdimensao = linha_real['SUBDIMENSAO'].iloc[0]
-            pontos_real = linha_real['PONTUACAO_REAL'].iloc[0]
+    # Processar respostas com combinação Real + Ideal
+    for questao in respostas_real:
+        if questao in respostas_ideal:
+            estrelas_real = respostas_real[questao]
+            estrelas_ideal = respostas_ideal[questao]
             
-            pontos_por_dimensao_real[dimensao] += pontos_real
-            pontos_por_subdimensao_real[subdimensao] += pontos_real
-    
-    # Processar respostas Ideal
-    for questao, estrelas in respostas_ideal.items():
-        # Buscar na matriz para Ideal
-        chave_ideal = f"{questao}_I{estrelas}_Q{estrelas}"
-        linha_ideal = matriz[matriz['CHAVE'] == chave_ideal]
-        
-        if not linha_ideal.empty:
-            dimensao = linha_ideal['DIMENSAO'].iloc[0]
-            subdimensao = linha_ideal['SUBDIMENSAO'].iloc[0]
-            pontos_ideal = linha_ideal['PONTUACAO_IDEAL'].iloc[0]
+            # Chave com combinação Real + Ideal
+            chave = f"{questao}_I{estrelas_ideal}_R{estrelas_real}"
+            linha = matriz[matriz['CHAVE'] == chave]
             
-            pontos_por_dimensao_ideal[dimensao] += pontos_ideal
-            pontos_por_subdimensao_ideal[subdimensao] += pontos_ideal
+            if not linha.empty:
+                dimensao = linha['DIMENSAO'].iloc[0]
+                subdimensao = linha['SUBDIMENSAO'].iloc[0]
+                pontos_real = linha['PONTUACAO_REAL'].iloc[0]
+                pontos_ideal = linha['PONTUACAO_IDEAL'].iloc[0]
+                
+                pontos_por_dimensao_real[dimensao] += pontos_real
+                pontos_por_dimensao_ideal[dimensao] += pontos_ideal
+                pontos_por_subdimensao_real[subdimensao] += pontos_real
+                pontos_por_subdimensao_ideal[subdimensao] += pontos_ideal
     
     # Calcular percentuais por dimensão (Real)
     dimensoes_percentuais_real = {}
@@ -201,50 +194,30 @@ def calcular_microambiente_respondente(respostas, matriz, pontos_max_dimensao, p
     
     # Testar primeira questão
     questao_teste = "Q01"
-    estrelas_teste_real = respostas_real[questao_teste]
-    estrelas_teste_ideal = respostas_ideal[questao_teste]
-    
-    chave_real_teste = f"{questao_teste}_I{estrelas_teste_real}_R{estrelas_teste_real}"
-    chave_ideal_teste = f"{questao_teste}_I{estrelas_teste_ideal}_Q{estrelas_teste_ideal}"
-    
-    st.write("DEBUG - Chave Real teste:", chave_real_teste)
-    st.write("DEBUG - Chave Ideal teste:", chave_ideal_teste)
-    
-    # Verificar se existe na matriz
-    linha_real_teste = matriz[matriz['CHAVE'] == chave_real_teste]
-    linha_ideal_teste = matriz[matriz['CHAVE'] == chave_ideal_teste]
-    
-    st.write("DEBUG - Encontrou Real?", not linha_real_teste.empty)
-    st.write("DEBUG - Encontrou Ideal?", not linha_ideal_teste.empty)
-    
-    if not linha_real_teste.empty:
-        st.write("DEBUG - Dimensão Real:", linha_real_teste['DIMENSAO'].iloc[0])
-        st.write("DEBUG - Pontuação Real:", linha_real_teste['PONTUACAO_REAL'].iloc[0])
-    
-    if not linha_ideal_teste.empty:
-        st.write("DEBUG - Dimensão Ideal:", linha_ideal_teste['DIMENSAO'].iloc[0])
-        st.write("DEBUG - Pontuação Ideal:", linha_ideal_teste['PONTUACAO_IDEAL'].iloc[0])
+    if questao_teste in respostas_real and questao_teste in respostas_ideal:
+        estrelas_teste_real = respostas_real[questao_teste]
+        estrelas_teste_ideal = respostas_ideal[questao_teste]
+        
+        chave_teste = f"{questao_teste}_I{estrelas_teste_ideal}_R{estrelas_teste_real}"
+        
+        st.write("DEBUG - Chave teste:", chave_teste)
+        
+        # Verificar se existe na matriz
+        linha_teste = matriz[matriz['CHAVE'] == chave_teste]
+        
+        st.write("DEBUG - Encontrou na matriz?", not linha_teste.empty)
+        
+        if not linha_teste.empty:
+            st.write("DEBUG - Dimensão:", linha_teste['DIMENSAO'].iloc[0])
+            st.write("DEBUG - Pontuação Real:", linha_teste['PONTUACAO_REAL'].iloc[0])
+            st.write("DEBUG - Pontuação Ideal:", linha_teste['PONTUACAO_IDEAL'].iloc[0])
     
     # Verificar colunas da matriz
     st.write("DEBUG - Colunas da matriz:", matriz.columns.tolist())
     st.write("DEBUG - Primeiras 5 chaves da matriz:", matriz['CHAVE'].head().tolist())
     
-    # DEBUG - Verificar chaves Ideal
-    st.write("DEBUG - Verificando chaves Ideal...")
-    for questao, estrelas in list(respostas_ideal.items())[:3]:
-        chave_ideal = f"{questao}_I{estrelas}_Q{estrelas}"
-        linha_ideal = matriz[matriz['CHAVE'] == chave_ideal]
-        st.write(f"DEBUG - Questão {questao}, estrelas {estrelas}:")
-        st.write(f"DEBUG - Chave gerada: {chave_ideal}")
-        st.write(f"DEBUG - Encontrou na matriz: {not linha_ideal.empty}")
-        if not linha_ideal.empty:
-            st.write(f"DEBUG - Dimensão: {linha_ideal['DIMENSAO'].iloc[0]}")
-            st.write(f"DEBUG - Pontuação: {linha_ideal['PONTUACAO_IDEAL'].iloc[0]}")
-        st.write("---")
-    
     return (dimensoes_percentuais_real, dimensoes_percentuais_ideal, 
             subdimensoes_percentuais_real, subdimensoes_percentuais_ideal)
-
 # ==================== FUNÇÕES COMPARTILHADAS ====================
 
 # PROCESSAR DADOS INDIVIDUAIS (ARQUÉTIPOS)
