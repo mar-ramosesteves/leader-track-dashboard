@@ -229,9 +229,21 @@ def calcular_microambiente_respondente(respostas, matriz, pontos_max_dimensao, p
     st.write("DEBUG - Colunas da matriz:", matriz.columns.tolist())
     st.write("DEBUG - Primeiras 5 chaves da matriz:", matriz['CHAVE'].head().tolist())
     
+    # DEBUG - Verificar chaves Ideal
+    st.write("DEBUG - Verificando chaves Ideal...")
+    for questao, estrelas in list(respostas_ideal.items())[:3]:
+        chave_ideal = f"{questao}_I{estrelas}_Q{estrelas}"
+        linha_ideal = matriz[matriz['CHAVE'] == chave_ideal]
+        st.write(f"DEBUG - Questão {questao}, estrelas {estrelas}:")
+        st.write(f"DEBUG - Chave gerada: {chave_ideal}")
+        st.write(f"DEBUG - Encontrou na matriz: {not linha_ideal.empty}")
+        if not linha_ideal.empty:
+            st.write(f"DEBUG - Dimensão: {linha_ideal['DIMENSAO'].iloc[0]}")
+            st.write(f"DEBUG - Pontuação: {linha_ideal['PONTUACAO_IDEAL'].iloc[0]}")
+        st.write("---")
+    
     return (dimensoes_percentuais_real, dimensoes_percentuais_ideal, 
             subdimensoes_percentuais_real, subdimensoes_percentuais_ideal)
-
 
 # ==================== FUNÇÕES COMPARTILHADAS ====================
 
