@@ -303,7 +303,7 @@ def processar_dados_microambiente(consolidado_micro, matriz, pontos_max_dimensao
     
     return pd.DataFrame(respondentes_processados)
 
-# CALCULAR MÉDIAS COM FILTROS (ARQUÉTIPOS)
+# CALCULAR MÉDIAS COM FILTROS (ARQUÉTIPOS) - ATUALIZADA
 def calcular_medias_arquetipos(df_respondentes, filtros):
     """Aplica filtros demográficos e calcula médias dos arquétipos"""
     
@@ -326,6 +326,10 @@ def calcular_medias_arquetipos(df_respondentes, filtros):
         df_filtrado = df_filtrado[df_filtrado['departamento'] == filtros['departamento']]
     if filtros['cargo'] != "Todos":
         df_filtrado = df_filtrado[df_filtrado['cargo'] == filtros['cargo']]
+    
+    # Aplicar filtro de tipo de avaliação
+    if filtros['tipo_avaliacao'] != "Todos":
+        df_filtrado = df_filtrado[df_filtrado['tipo'] == filtros['tipo_avaliacao']]
     
     if df_filtrado.empty:
         return None, None, None, df_filtrado
@@ -358,7 +362,8 @@ def calcular_medias_arquetipos(df_respondentes, filtros):
     
     return arquétipos, medias_auto, medias_equipe, df_filtrado
 
-# CALCULAR MÉDIAS COM FILTROS (MICROAMBIENTE) - CORRIGIDA
+
+# CALCULAR MÉDIAS COM FILTROS (MICROAMBIENTE) - ATUALIZADA
 def calcular_medias_microambiente(df_respondentes, filtros):
     """Aplica filtros demográficos e calcula médias do microambiente"""
     
@@ -381,6 +386,10 @@ def calcular_medias_microambiente(df_respondentes, filtros):
         df_filtrado = df_filtrado[df_filtrado['departamento'] == filtros['departamento']]
     if filtros['cargo'] != "Todos":
         df_filtrado = df_filtrado[df_filtrado['cargo'] == filtros['cargo']]
+    
+    # Aplicar filtro de tipo de avaliação
+    if filtros['tipo_avaliacao'] != "Todos":
+        df_filtrado = df_filtrado[df_filtrado['tipo'] == filtros['tipo_avaliacao']]
     
     if df_filtrado.empty:
         return None, None, None, None, None, df_filtrado
@@ -432,7 +441,6 @@ def calcular_medias_microambiente(df_respondentes, filtros):
         medias_equipe_ideal.append(media)
     
     return dimensoes, medias_real, medias_ideal, medias_equipe_real, medias_equipe_ideal, df_filtrado
-
 # ==================== FUNÇÕES DE GRÁFICOS ====================
 
 # GERAR GRÁFICO ARQUÉTIPOS
