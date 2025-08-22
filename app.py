@@ -246,7 +246,7 @@ def processar_dados_arquetipos(consolidado_arq, matriz):
     
     return pd.DataFrame(respondentes_processados)
 
-# PROCESSAR DADOS INDIVIDUAIS (MICROAMBIENTE)
+# PROCESSAR DADOS INDIVIDUAIS (MICROAMBIENTE) - CORRIGIDA
 def processar_dados_microambiente(consolidado_micro, matriz, pontos_max_dimensao, pontos_max_subdimensao):
     """Processa todos os respondentes e calcula microambiente"""
     
@@ -259,7 +259,7 @@ def processar_dados_microambiente(consolidado_micro, matriz, pontos_max_dimensao
             # Processar autoavaliação
             if 'autoavaliacao' in dados:
                 auto = dados['autoavaliacao']
-                dimensoes_auto, subdimensoes_auto = calcular_microambiente_respondente(auto, matriz, pontos_max_dimensao, pontos_max_subdimensao)
+                dimensoes_real, dimensoes_ideal, subdimensoes_real, subdimensoes_ideal = calcular_microambiente_respondente(auto, matriz, pontos_max_dimensao, pontos_max_subdimensao)
                 
                 respondentes_processados.append({
                     'empresa': auto.get('empresa', 'N/A'),
@@ -275,17 +275,17 @@ def processar_dados_microambiente(consolidado_micro, matriz, pontos_max_dimensao
                     'area': auto.get('area', 'N/A'),
                     'departamento': auto.get('departamento', 'N/A'),
                     'tipo': 'Autoavaliação',
-                    'dimensoes_real': dimensoes_auto,
-                    'dimensoes_ideal': dimensoes_auto,  # Vou corrigir isso
-                    'subdimensoes_real': subdimensoes_auto,
-                    'subdimensoes_ideal': subdimensoes_auto,  # Vou corrigir isso
+                    'dimensoes_real': dimensoes_real,
+                    'dimensoes_ideal': dimensoes_ideal,
+                    'subdimensoes_real': subdimensoes_real,
+                    'subdimensoes_ideal': subdimensoes_ideal,
                     'respostas': auto
                 })
             
             # Processar avaliações da equipe
             if 'avaliacoesEquipe' in dados:
                 for membro in dados['avaliacoesEquipe']:
-                    dimensoes_equipe, subdimensoes_equipe = calcular_microambiente_respondente(membro, matriz, pontos_max_dimensao, pontos_max_subdimensao)
+                    dimensoes_real, dimensoes_ideal, subdimensoes_real, subdimensoes_ideal = calcular_microambiente_respondente(membro, matriz, pontos_max_dimensao, pontos_max_subdimensao)
                     
                     respondentes_processados.append({
                         'empresa': membro.get('empresa', 'N/A'),
@@ -301,15 +301,14 @@ def processar_dados_microambiente(consolidado_micro, matriz, pontos_max_dimensao
                         'area': membro.get('area', 'N/A'),
                         'departamento': membro.get('departamento', 'N/A'),
                         'tipo': 'Avaliação Equipe',
-                        'dimensoes_real': dimensoes_equipe,
-                        'dimensoes_ideal': dimensoes_equipe,  # Vou corrigir isso
-                        'subdimensoes_real': subdimensoes_equipe,
-                        'subdimensoes_ideal': subdimensoes_equipe,  # Vou corrigir isso
+                        'dimensoes_real': dimensoes_real,
+                        'dimensoes_ideal': dimensoes_ideal,
+                        'subdimensoes_real': subdimensoes_real,
+                        'subdimensoes_ideal': subdimensoes_ideal,
                         'respostas': membro
                     })
     
     return pd.DataFrame(respondentes_processados)
-
 
 
 # CALCULAR MÉDIAS COM FILTROS (ARQUÉTIPOS)
