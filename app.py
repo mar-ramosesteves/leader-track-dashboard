@@ -460,77 +460,41 @@ def gerar_grafico_arquetipos(medias_auto, medias_equipe, arquétipos, titulo, ti
     return fig
 
 # GERAR GRÁFICO MICROAMBIENTE
-def gerar_grafico_microambiente(medias_real, medias_equipe_real, dimensoes, titulo, tipo_visualizacao):
-    """Gera gráfico comparativo de microambiente"""
+def gerar_grafico_microambiente_linha(medias_real, medias_ideal, dimensoes, titulo):
+    """Gera gráfico de linha para microambiente"""
+    fig = go.Figure()
     
-    if tipo_visualizacao == "📊 Gráfico com Rótulos e Clique":
-        fig = go.Figure()
-        
-        fig.add_trace(go.Bar(
-            name='Autoavaliação (Real)',
-            x=dimensoes,
-            y=medias_real,
-            marker_color='#2E86AB',
-            text=[f"{v:.1f}%" for v in medias_real],
-            textposition='auto',
-            hovertemplate='<b>%{x}</b><br>Autoavaliação: %{y:.1f}%<br><extra>Clique para ver questões!</extra>',
-            customdata=dimensoes
-        ))
-        
-        fig.add_trace(go.Bar(
-            name='Média da Equipe (Real)',
-            x=dimensoes,
-            y=medias_equipe_real,
-            marker_color='#A23B72',
-            text=[f"{v:.1f}%" for v in medias_equipe_real],
-            textposition='auto',
-            hovertemplate='<b>%{x}</b><br>Média da Equipe: %{y:.1f}%<br><extra>Clique para ver questões!</extra>',
-            customdata=dimensoes
-        ))
-        
-        fig.update_layout(
-            title=f"🏢 {titulo}",
-            xaxis_title="Dimensões do Microambiente",
-            yaxis_title="Pontuação (%)",
-            yaxis=dict(range=[0, 100]),
-            barmode='group',
-            height=600,
-            hovermode='closest',
-            showlegend=True,
-            clickmode='event+select'
-        )
-    else:
-        fig = go.Figure()
-        
-        fig.add_trace(go.Bar(
-            name='Autoavaliação (Real)',
-            x=dimensoes,
-            y=medias_real,
-            marker_color='#2E86AB',
-            hovertemplate='<b>%{x}</b><br>Autoavaliação: %{y:.1f}%<extra></extra>'
-        ))
-        
-        fig.add_trace(go.Bar(
-            name='Média da Equipe (Real)',
-            x=dimensoes,
-            y=medias_equipe_real,
-            marker_color='#A23B72',
-            hovertemplate='<b>%{x}</b><br>Média da Equipe: %{y:.1f}%<extra></extra>'
-        ))
-        
-        fig.update_layout(
-            title=f"🏢 {titulo}",
-            xaxis_title="Dimensões do Microambiente",
-            yaxis_title="Pontuação (%)",
-            yaxis=dict(range=[0, 100]),
-            barmode='group',
-            height=500,
-            hovermode='closest',
-            showlegend=True
-        )
+    fig.add_trace(go.Scatter(
+        x=dimensoes,
+        y=medias_real,
+        mode='lines+markers+text',
+        name='Como é (Real)',
+        line=dict(color='orange', width=3),
+        marker=dict(size=8),
+        text=[f"{v:.1f}%" for v in medias_real],
+        textposition='top center'
+    ))
+    
+    fig.add_trace(go.Scatter(
+        x=dimensoes,
+        y=medias_ideal,
+        mode='lines+markers+text',
+        name='Como deveria ser (Ideal)',
+        line=dict(color='darkblue', width=3),
+        marker=dict(size=8),
+        text=[f"{v:.1f}%" for v in medias_ideal],
+        textposition='bottom center'
+    ))
+    
+    fig.update_layout(
+        title=f"�� {titulo}",
+        xaxis_title="Dimensões",
+        yaxis_title="Pontuação (%)",
+        yaxis=dict(range=[0, 100]),
+        height=500
+    )
     
     return fig
-
 # ==================== FUNÇÕES DE DRILL-DOWN ====================
 
 # DRILL-DOWN ARQUÉTIPOS (CORRIGIDA)
@@ -679,6 +643,10 @@ if matriz_arq is not None and matriz_micro is not None:
     
     if consolidado_arq and consolidado_micro:
         st.success("✅ Conectado ao Supabase!")
+
+        st.write("DEBUG - Dados microambiente:", len(consolidado_micro))
+        if consolidado_micro:
+            st.write("DEBUG - Primeiro item:", consolidado_micro[0])
         
         # Processar dados individuais
         with st.spinner("Calculando arquétipos individuais..."):
