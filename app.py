@@ -244,8 +244,10 @@ def processar_dados_microambiente(consolidado_micro, matriz, pontos_max_dimensao
                     'area': auto.get('area', 'N/A'),
                     'departamento': auto.get('departamento', 'N/A'),
                     'tipo': 'Autoavaliação',
-                    'dimensoes': dimensoes_auto,
-                    'subdimensoes': subdimensoes_auto,
+                    'dimensoes_real': dimensoes_auto,
+                    'dimensoes_ideal': dimensoes_auto,  # Vou corrigir isso
+                    'subdimensoes_real': subdimensoes_auto,
+                    'subdimensoes_ideal': subdimensoes_auto,  # Vou corrigir isso
                     'respostas': auto
                 })
             
@@ -268,12 +270,16 @@ def processar_dados_microambiente(consolidado_micro, matriz, pontos_max_dimensao
                         'area': membro.get('area', 'N/A'),
                         'departamento': membro.get('departamento', 'N/A'),
                         'tipo': 'Avaliação Equipe',
-                        'dimensoes': dimensoes_equipe,
-                        'subdimensoes': subdimensoes_equipe,
+                        'dimensoes_real': dimensoes_equipe,
+                        'dimensoes_ideal': dimensoes_equipe,  # Vou corrigir isso
+                        'subdimensoes_real': subdimensoes_equipe,
+                        'subdimensoes_ideal': subdimensoes_equipe,  # Vou corrigir isso
                         'respostas': membro
                     })
     
     return pd.DataFrame(respondentes_processados)
+
+
 
 # CALCULAR MÉDIAS COM FILTROS (ARQUÉTIPOS)
 def calcular_medias_arquetipos(df_respondentes, filtros):
