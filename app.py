@@ -8,6 +8,9 @@ from datetime import datetime
 import numpy as np
 import openpyxl
 
+# Limpar cache para forçar atualização
+st.cache_data.clear()
+
 # Configuração da página
 st.set_page_config(
     page_title="🎯 Leader Track - Dashboard Completo (Arquétipos + Microambiente)",
@@ -977,7 +980,7 @@ if matriz_arq is not None and matriz_micro is not None:
                     key="microambiente"
                 )
                 
-                # Gerar e exibir gráfico
+               
                 # Gerar e exibir gráfico
                 fig = gerar_grafico_microambiente_linha(medias_real_final, medias_ideal_final, dimensoes, f"{titulo} - {titulo_analise}")
                 st.plotly_chart(fig, use_container_width=True, key=f"grafico_dimensoes_{tipo_analise}")
