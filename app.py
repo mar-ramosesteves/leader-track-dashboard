@@ -90,7 +90,8 @@ def carregar_matrizes_microambiente():
         st.error(f"❌ Erro ao carregar matrizes de microambiente: {str(e)}")
         return None, None, None
 
-# CALCULAR MICROAMBIENTE PARA UM RESPONDENTE
+
+# CALCULAR MICROAMBIENTE PARA UM RESPONDENTE (CORRIGIDA)
 def calcular_microambiente_respondente(respostas, matriz, pontos_max_dimensao, pontos_max_subdimensao):
     """Calcula percentuais de microambiente para um respondente individual"""
     
@@ -101,59 +102,89 @@ def calcular_microambiente_respondente(respostas, matriz, pontos_max_dimensao, p
         'Qualidade Superior', 'Celebração', 'Performance', 'Liberdade de Ação', 'Responsabilização'
     ]
     
-    pontos_por_dimensao = {dim: 0 for dim in dimensoes}
-    pontos_por_subdimensao = {sub: 0 for sub in subdimensoes}
+    # Separar respostas Real (C) e Ideal (k)
+    respostas_real = {}
+    respostas_ideal = {}
     
-    # Para cada questão respondida
     for questao, estrelas in respostas.items():
         if questao.startswith('Q'):
-            estrelas_int = int(estrelas)
-            
-            # Buscar na matriz para Real (C) e Ideal (k)
             if questao.endswith('C'):  # Como é (Real)
                 questao_num = questao[:-1]  # Remove o 'C'
-                chave_real = f"{questao_num}_{estrelas_int}_R{estrelas_int}"
-                linha_real = matriz[matriz['CHAVE'] == chave_real]
-                
-                if not linha_real.empty:
-                    dimensao = linha_real['DIMENSAO'].iloc[0]
-                    subdimensao = linha_real['SUBDIMENSAO'].iloc[0]
-                    pontos_real = linha_real['PONTUACAO_REAL'].iloc[0]
-                    
-                    pontos_por_dimensao[dimensao] += pontos_real
-                    pontos_por_subdimensao[subdimensao] += pontos_real
-            
+                respostas_real[questao_num] = int(estrelas)
             elif questao.endswith('k'):  # Como deveria ser (Ideal)
                 questao_num = questao[:-1]  # Remove o 'k'
-                chave_ideal = f"{questao_num}_{estrelas_int}_Q{estrelas_int}"
-                linha_ideal = matriz[matriz['CHAVE'] == chave_ideal]
-                
-                if not linha_ideal.empty:
-                    dimensao = linha_ideal['DIMENSAO'].iloc[0]
-                    subdimensao = linha_ideal['SUBDIMENSAO'].iloc[0]
-                    pontos_ideal = linha_ideal['PONTUACAO_IDEAL'].iloc[0]
-                    
-                    pontos_por_dimensao[dimensao] += pontos_ideal
-                    pontos_por_subdimensao[subdimensao] += pontos_ideal
+                respostas_ideal[questao_num] = int(estrelas)
     
-    # Calcular percentuais por dimensão
-    dimensoes_percentuais = {}
+    # Calcular pontos por dimensão (Real)
+    pontos_por_dimensao_real = {dim: 0 for dim in dimensoes}
+    pontos_por_subdimensao_real = {sub: 0 for sub in subdimensoes}
+    
+    # Calcular pontos por dimensão (Ideal)
+    pontos_por_dimensao_ideal = {dim: 0 for dim in dimensoes}
+    pontos_por_subdimensao_ideal = {sub: 0 for sub in subdimensoes}
+    
+    # Processar respostas Real
+    for questao, estrelas in respostas_real.items():
+        # Buscar na matriz para Real
+        chave_real = f"{questao}_{estrelas}_R{estrelas}"
+        linha_real = matriz[matriz['CHAVE'] == chave_real]
+        
+        if not linha_real.empty:
+            dimensao = linha_real['DIMENSAO'].iloc[0]
+            subdimensao = linha_real['SUBDIMENSAO'].iloc[0]
+            pontos_real = linha_real['PONTUACAO_REAL'].iloc[0]
+            
+            pontos_por_dimensao_real[dimensao] += pontos_real
+            pontos_por_subdimensao_real[subdimensao] += pontos_real
+    
+    # Processar respostas Ideal
+    for questao, estrelas in respostas_ideal.items():
+        # Buscar na matriz para Ideal
+        chave_ideal = f"{questao}_{estrelas}_Q{estrelas}"
+        linha_ideal = matriz[matriz['CHAVE'] == chave_ideal]
+        
+        if not linha_ideal.empty:
+            dimensao = linha_ideal['DIMENSAO'].iloc[0]
+            subdimensao = linha_ideal['SUBDIMENSAO'].iloc[0]
+            pontos_ideal = linha_ideal['PONTUACAO_IDEAL'].iloc[0]
+            
+            pontos_por_dimensao_ideal[dimensao] += pontos_ideal
+            pontos_por_subdimensao_ideal[subdimensao] += pontos_ideal
+    
+    # Calcular percentuais por dimensão (Real)
+    dimensoes_percentuais_real = {}
     for dimensao in dimensoes:
-        pontos_total = pontos_por_dimensao[dimensao]
+        pontos_total = pontos_por_dimensao_real[dimensao]
         pontos_maximos = pontos_max_dimensao[pontos_max_dimensao['DIMENSAO'] == dimensao]['PONTOS_MAXIMOS_DIMENSAO'].iloc[0]
         percentual = (pontos_total / pontos_maximos) * 100 if pontos_maximos > 0 else 0
-        dimensoes_percentuais[dimensao] = percentual
+        dimensoes_percentuais_real[dimensao] = percentual
     
-    # Calcular percentuais por subdimensão
-    subdimensoes_percentuais = {}
+    # Calcular percentuais por dimensão (Ideal)
+    dimensoes_percentuais_ideal = {}
+    for dimensao in dimensoes:
+        pontos_total = pontos_por_dimensao_ideal[dimensao]
+        pontos_maximos = pontos_max_dimensao[pontos_max_dimensao['DIMENSAO'] == dimensao]['PONTOS_MAXIMOS_DIMENSAO'].iloc[0]
+        percentual = (pontos_total / pontos_maximos) * 100 if pontos_maximos > 0 else 0
+        dimensoes_percentuais_ideal[dimensao] = percentual
+    
+    # Calcular percentuais por subdimensão (Real)
+    subdimensoes_percentuais_real = {}
     for subdimensao in subdimensoes:
-        pontos_total = pontos_por_subdimensao[subdimensao]
+        pontos_total = pontos_por_subdimensao_real[subdimensao]
         pontos_maximos = pontos_max_subdimensao[pontos_max_subdimensao['SUBDIMENSAO'] == subdimensao]['PONTOS_MAXIMOS_SUBDIMENSAO'].iloc[0]
         percentual = (pontos_total / pontos_maximos) * 100 if pontos_maximos > 0 else 0
-        subdimensoes_percentuais[subdimensao] = percentual
+        subdimensoes_percentuais_real[subdimensao] = percentual
     
-    return dimensoes_percentuais, subdimensoes_percentuais
-
+    # Calcular percentuais por subdimensão (Ideal)
+    subdimensoes_percentuais_ideal = {}
+    for subdimensao in subdimensoes:
+        pontos_total = pontos_por_subdimensao_ideal[subdimensao]
+        pontos_maximos = pontos_max_subdimensao[pontos_max_subdimensao['SUBDIMENSAO'] == subdimensao]['PONTOS_MAXIMOS_SUBDIMENSAO'].iloc[0]
+        percentual = (pontos_total / pontos_maximos) * 100 if pontos_maximos > 0 else 0
+        subdimensoes_percentuais_ideal[subdimensao] = percentual
+    
+    return (dimensoes_percentuais_real, dimensoes_percentuais_ideal, 
+            subdimensoes_percentuais_real, subdimensoes_percentuais_ideal)
 # ==================== FUNÇÕES COMPARTILHADAS ====================
 
 # PROCESSAR DADOS INDIVIDUAIS (ARQUÉTIPOS)
