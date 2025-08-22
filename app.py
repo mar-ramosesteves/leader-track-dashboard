@@ -895,7 +895,7 @@ if matriz_arq is not None and matriz_micro is not None:
                 )
                 
                 # Gerar e exibir gráfico
-                fig = gerar_grafico_microambiente(medias_real, medias_equipe_real, dimensoes, titulo, tipo_visualizacao)
+                fig = gerar_grafico_microambiente_linha(medias_real, medias_equipe_real, dimensoes, titulo)
                 st.plotly_chart(fig, use_container_width=True)
                 
                 if tipo_visualizacao == "📊 Gráfico com Rótulos e Clique":
