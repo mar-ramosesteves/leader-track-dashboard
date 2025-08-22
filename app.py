@@ -329,12 +329,7 @@ def calcular_medias_arquetipos(df_respondentes, filtros):
     if filtros['cargo'] != "Todos":
         df_filtrado = df_filtrado[df_filtrado['cargo'] == filtros['cargo']]
     
-    # Aplicar filtro de tipo de avaliação
-    if filtros['tipo_avaliacao'] != "Todos":
-        df_filtrado = df_filtrado[df_filtrado['tipo'] == filtros['tipo_avaliacao']]
-    
-    if df_filtrado.empty:
-        return None, None, None, df_filtrado
+   
     
     # Separar autoavaliação e equipe
     df_auto = df_filtrado[df_filtrado['tipo'] == 'Autoavaliação']
@@ -389,12 +384,7 @@ def calcular_medias_microambiente(df_respondentes, filtros):
     if filtros['cargo'] != "Todos":
         df_filtrado = df_filtrado[df_filtrado['cargo'] == filtros['cargo']]
     
-    # Aplicar filtro de tipo de avaliação
-    if filtros['tipo_avaliacao'] != "Todos":
-        df_filtrado = df_filtrado[df_filtrado['tipo'] == filtros['tipo_avaliacao']]
     
-    if df_filtrado.empty:
-        return None, None, None, None, None, df_filtrado
     
     # Separar autoavaliação e equipe
     df_auto = df_filtrado[df_filtrado['tipo'] == 'Autoavaliação']
