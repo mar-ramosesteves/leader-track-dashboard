@@ -802,13 +802,7 @@ if matriz_arq is not None and matriz_micro is not None:
 
         
         
-        # Filtro de tipo de avaliação
-        st.sidebar.subheader("📋 Tipo de Avaliação")
-        tipo_avaliacao = st.sidebar.selectbox(
-            "Escolha o tipo de avaliação:",
-            ["Todos", "Autoavaliação", "Avaliação da Equipe"],
-            key="tipo_avaliacao"
-        )
+        
         
         # Dicionário de filtros
         filtros = {
@@ -820,7 +814,6 @@ if matriz_arq is not None and matriz_micro is not None:
             'etnia': etnia_selecionada,
             'departamento': departamento_selecionado,
             'cargo': cargo_selecionado,
-            'tipo_avaliacao': tipo_avaliacao
         }
         
         # TABS PRINCIPAIS
@@ -962,7 +955,7 @@ if matriz_arq is not None and matriz_micro is not None:
                 
                 titulo = " | ".join(titulo_parts) if titulo_parts else "Média Geral de Todos os Respondentes"
                 
-                # ==================== FILTRO DE TIPO DE ANÁLISE ====================
+                                # ==================== FILTRO DE TIPO DE ANÁLISE ====================
                 st.markdown("**🎯 Escolha o tipo de análise:**")
                 tipo_analise = st.radio(
                     "Tipo de Análise:",
@@ -971,16 +964,12 @@ if matriz_arq is not None and matriz_micro is not None:
                     key="tipo_analise_micro"
                 )
                 
-                # Separar dados por tipo
-                df_auto = df_filtrado_micro[df_filtrado_micro['tipo'] == 'Autoavaliação']
-                df_equipe = df_filtrado_micro[df_filtrado_micro['tipo'] == 'Avaliação Equipe']
-                
                 # Calcular médias baseado no tipo selecionado
                 if tipo_analise == "👤 Autoavaliação":
                     medias_real_final = medias_real
                     medias_ideal_final = medias_ideal
                     titulo_analise = "Autoavaliação"
-                elif tipo_analise == "�� Média da Equipe":
+                elif tipo_analise == " Média da Equipe":
                     medias_real_final = medias_equipe_real
                     medias_ideal_final = medias_equipe_ideal
                     titulo_analise = "Média da Equipe"
