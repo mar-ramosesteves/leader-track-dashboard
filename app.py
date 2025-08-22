@@ -192,8 +192,44 @@ def calcular_microambiente_respondente(respostas, matriz, pontos_max_dimensao, p
         percentual = (pontos_total / pontos_maximos) * 100 if pontos_maximos > 0 else 0
         subdimensoes_percentuais_ideal[subdimensao] = percentual
     
+    # DEBUG - Verificar busca na matriz
+    st.write("DEBUG - Verificando busca na matriz...")
+    
+    # Testar primeira questão
+    questao_teste = "Q01"
+    estrelas_teste_real = respostas_real[questao_teste]
+    estrelas_teste_ideal = respostas_ideal[questao_teste]
+    
+    chave_real_teste = f"{questao_teste}_{estrelas_teste_real}_R{estrelas_teste_real}"
+    chave_ideal_teste = f"{questao_teste}_{estrelas_teste_ideal}_Q{estrelas_teste_ideal}"
+    
+    st.write("DEBUG - Chave Real teste:", chave_real_teste)
+    st.write("DEBUG - Chave Ideal teste:", chave_ideal_teste)
+    
+    # Verificar se existe na matriz
+    linha_real_teste = matriz[matriz['CHAVE'] == chave_real_teste]
+    linha_ideal_teste = matriz[matriz['CHAVE'] == chave_ideal_teste]
+    
+    st.write("DEBUG - Encontrou Real?", not linha_real_teste.empty)
+    st.write("DEBUG - Encontrou Ideal?", not linha_ideal_teste.empty)
+    
+    if not linha_real_teste.empty:
+        st.write("DEBUG - Dimensão Real:", linha_real_teste['DIMENSAO'].iloc[0])
+        st.write("DEBUG - Pontuação Real:", linha_real_teste['PONTUACAO_REAL'].iloc[0])
+    
+    if not linha_ideal_teste.empty:
+        st.write("DEBUG - Dimensão Ideal:", linha_ideal_teste['DIMENSAO'].iloc[0])
+        st.write("DEBUG - Pontuação Ideal:", linha_ideal_teste['PONTUACAO_IDEAL'].iloc[0])
+    
+    # Verificar colunas da matriz
+    st.write("DEBUG - Colunas da matriz:", matriz.columns.tolist())
+    st.write("DEBUG - Primeiras 5 chaves da matriz:", matriz['CHAVE'].head().tolist())
+    
     return (dimensoes_percentuais_real, dimensoes_percentuais_ideal, 
             subdimensoes_percentuais_real, subdimensoes_percentuais_ideal)
+
+
+
 # ==================== FUNÇÕES COMPARTILHADAS ====================
 
 # PROCESSAR DADOS INDIVIDUAIS (ARQUÉTIPOS)
