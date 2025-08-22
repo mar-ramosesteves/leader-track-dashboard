@@ -978,13 +978,11 @@ if matriz_arq is not None and matriz_micro is not None:
                 )
                 
                 # Gerar e exibir gráfico
+                # Gerar e exibir gráfico
                 fig = gerar_grafico_microambiente_linha(medias_real_final, medias_ideal_final, dimensoes, f"{titulo} - {titulo_analise}")
-                st.plotly_chart(fig, use_container_width=True)
+                st.plotly_chart(fig, use_container_width=True, key=f"grafico_dimensoes_{tipo_analise}")
 
-                # DEBUG TEMPORÁRIO - Verificar valores
-                st.write(f"🔍 DEBUG - Tipo selecionado: {tipo_analise}")
-                st.write(f"🔍 DEBUG - Médias Real finais: {medias_real_final}")
-                st.write(f"🔍 DEBUG - Médias Ideal finais: {medias_ideal_final}")
+                
                 
                                 # ==================== GRÁFICO DE SUBDIMENSÕES ====================
                 st.subheader("📊 Análise por Subdimensões")
