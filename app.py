@@ -708,14 +708,10 @@ if matriz_arq is not None and matriz_micro is not None:
         with st.spinner("Calculando microambiente individual..."):
             df_microambiente = processar_dados_microambiente(consolidado_micro, matriz_micro, pontos_max_dimensao, pontos_max_subdimensao)
         
+        # Normalizar dados para minúsculas
+        df_arquetipos['empresa'] = df_arquetipos['empresa'].str.lower()
+        df_microambiente['empresa'] = df_microambiente['empresa'].str.lower()
         
-        
-        # Processar dados individuais
-        with st.spinner("Calculando arquétipos individuais..."):
-            df_arquetipos = processar_dados_arquetipos(consolidado_arq, matriz_arq)
-        
-        with st.spinner("Calculando microambiente individual..."):
-            df_microambiente = processar_dados_microambiente(consolidado_micro, matriz_micro, pontos_max_dimensao, pontos_max_subdimensao)
         
         # Métricas
         col1, col2, col3, col4 = st.columns(4)
@@ -735,11 +731,11 @@ if matriz_arq is not None and matriz_micro is not None:
         # Filtros principais
         st.sidebar.subheader(" Filtros Principais")
         
-        # Combinar empresas de ambos os datasets
-        empresas_arq = set(df_arquetipos['empresa'].unique())
-        empresas_micro = set(df_microambiente['empresa'].unique())
+        # Combinar empresas de ambos os datasets (tudo minúsculas)
+        empresas_arq = set(df_arquetipos['empresa'].str.lower().unique())
+        empresas_micro = set(df_microambiente['empresa'].str.lower().unique())
         todas_empresas = sorted(list(empresas_arq.union(empresas_micro)))
-        empresas = ["Todas"] + todas_empresas
+        empresas = ["Todas"] + todas_empresas  # Tudo minúsculas
         empresa_selecionada = st.sidebar.selectbox(" Empresa", empresas)
         
         # Combinar codrodadas de ambos os datasets
@@ -794,7 +790,7 @@ if matriz_arq is not None and matriz_micro is not None:
         cargos = ["Todos"] + todos_cargos
         cargo_selecionado = st.sidebar.selectbox("💼 Cargo", cargos)
         
-        # Dicionário de filtros
+        # Dicionário de filtros (empresa já está minúscula)
         filtros = {
             'empresa': empresa_selecionada,
             'codrodada': codrodada_selecionada,
