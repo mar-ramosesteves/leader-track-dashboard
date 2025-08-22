@@ -699,49 +699,7 @@ if matriz_arq is not None and matriz_micro is not None:
         st.success("✅ Conectado ao Supabase!")
                 
         
-        # DEBUG TEMPORÁRIO - Verificar dados
-        st.write("🔍 DEBUG - Verificando dados:")
-        st.write(f"�� Total de registros arquétipos: {len(consolidado_arq)}")
-        st.write(f"�� Total de registros microambiente: {len(consolidado_micro)}")
         
-        # Verificar se há dados da incicle
-        if consolidado_micro:
-            empresas_micro = set()
-            for item in consolidado_micro:
-                if isinstance(item, dict) and 'dados_json' in item:
-                    dados = item['dados_json']
-                    if 'autoavaliacao' in dados:
-                        empresa = dados['autoavaliacao'].get('empresa', 'N/A')
-                        empresas_micro.add(empresa)
-                    if 'avaliacoesEquipe' in dados:
-                        for membro in dados['avaliacoesEquipe']:
-                            empresa = membro.get('empresa', 'N/A')
-                            empresas_micro.add(empresa)
-            
-            st.write(f"🏢 Empresas encontradas no microambiente: {sorted(list(empresas_micro))}")
-            
-            # Verificar especificamente a incicle
-            dados_incicle = []
-            for item in consolidado_micro:
-                if isinstance(item, dict) and 'dados_json' in item:
-                    dados = item['dados_json']
-                    if 'autoavaliacao' in dados and dados['autoavaliacao'].get('empresa') == 'incicle':
-                        dados_incicle.append(item)
-                    if 'avaliacoesEquipe' in dados:
-                        for membro in dados['avaliacoesEquipe']:
-                            if membro.get('empresa') == 'incicle':
-                                dados_incicle.append(item)
-            
-            st.write(f"🎯 Registros da incicle encontrados: {len(dados_incicle)}")
-            
-            if dados_incicle:
-                st.write("✅ Dados da incicle encontrados no Supabase!")
-                # Mostrar estrutura do primeiro registro
-                primeiro_registro = dados_incicle[0]
-                st.write("📋 Estrutura do primeiro registro:")
-                st.json(primeiro_registro['dados_json'])
-            else:
-                st.write("❌ Nenhum registro da incicle encontrado!")
         
         # Processar dados individuais
         with st.spinner("Calculando arquétipos individuais..."):
@@ -750,31 +708,6 @@ if matriz_arq is not None and matriz_micro is not None:
         with st.spinner("Calculando microambiente individual..."):
             df_microambiente = processar_dados_microambiente(consolidado_micro, matriz_micro, pontos_max_dimensao, pontos_max_subdimensao)
         
-        # DEBUG - Verificar dados processados
-        st.write("🔍 DEBUG - Dados processados:")
-        st.write(f"📊 Total arquétipos processados: {len(df_arquetipos)}")
-        st.write(f"🏢 Total microambiente processados: {len(df_microambiente)}")
-        
-        if len(df_microambiente) > 0:
-            empresas_processadas = df_microambiente['empresa'].unique()
-            st.write(f"🏢 Empresas após processamento: {sorted(empresas_processadas)}")
-            
-            # Verificar dados da incicle após processamento
-            df_incicle = df_microambiente[df_microambiente['empresa'] == 'incicle']
-            st.write(f"🎯 Registros da incicle após processamento: {len(df_incicle)}")
-            
-            if len(df_incicle) > 0:
-                st.write("✅ Dados da incicle processados com sucesso!")
-                st.write(f"👤 Autoavaliações: {len(df_incicle[df_incicle['tipo'] == 'Autoavaliação'])}")
-                st.write(f"👥 Avaliações da equipe: {len(df_incicle[df_incicle['tipo'] == 'Avaliação Equipe'])}")
-            else:
-                st.write("❌ Dados da incicle não foram processados!")
-
-
-
-
-
-
         
         
         # Processar dados individuais
@@ -796,35 +729,69 @@ if matriz_arq is not None and matriz_micro is not None:
         with col4:
             st.metric("�� Última Atualização", datetime.now().strftime("%H:%M"))
         
-        # FILTROS
+                # FILTROS
         st.sidebar.header("🎛️ Filtros Globais")
         
         # Filtros principais
-        st.sidebar.subheader("�� Filtros Principais")
-        empresas = ["Todas"] + sorted(df_arquetipos['empresa'].unique().tolist())
-        empresa_selecionada = st.sidebar.selectbox("�� Empresa", empresas)
+        st.sidebar.subheader(" Filtros Principais")
         
-        codrodadas = ["Todas"] + sorted(df_arquetipos['codrodada'].unique().tolist())
-        codrodada_selecionada = st.sidebar.selectbox("�� Código da Rodada", codrodadas)
+        # Combinar empresas de ambos os datasets
+        empresas_arq = set(df_arquetipos['empresa'].unique())
+        empresas_micro = set(df_microambiente['empresa'].unique())
+        todas_empresas = sorted(list(empresas_arq.union(empresas_micro)))
+        empresas = ["Todas"] + todas_empresas
+        empresa_selecionada = st.sidebar.selectbox(" Empresa", empresas)
         
-        emailliders = ["Todos"] + sorted(df_arquetipos['emailLider'].unique().tolist())
+        # Combinar codrodadas de ambos os datasets
+        codrodadas_arq = set(df_arquetipos['codrodada'].unique())
+        codrodadas_micro = set(df_microambiente['codrodada'].unique())
+        todas_codrodadas = sorted(list(codrodadas_arq.union(codrodadas_micro)))
+        codrodadas = ["Todas"] + todas_codrodadas
+        codrodada_selecionada = st.sidebar.selectbox(" Código da Rodada", codrodadas)
+        
+        # Combinar emails de líderes de ambos os datasets
+        emailliders_arq = set(df_arquetipos['emailLider'].unique())
+        emailliders_micro = set(df_microambiente['emailLider'].unique())
+        todos_emailliders = sorted(list(emailliders_arq.union(emailliders_micro)))
+        emailliders = ["Todos"] + todos_emailliders
         emaillider_selecionado = st.sidebar.selectbox("👤 Email do Líder", emailliders)
         
         # Filtros demográficos
         st.sidebar.subheader("📊 Filtros Demográficos")
-        estados = ["Todos"] + sorted(df_arquetipos['estado'].unique().tolist())
+        
+        # Combinar estados de ambos os datasets
+        estados_arq = set(df_arquetipos['estado'].unique())
+        estados_micro = set(df_microambiente['estado'].unique())
+        todos_estados = sorted(list(estados_arq.union(estados_micro)))
+        estados = ["Todos"] + todos_estados
         estado_selecionado = st.sidebar.selectbox("🗺️ Estado", estados)
         
-        generos = ["Todos"] + sorted(df_arquetipos['sexo'].unique().tolist())
+        # Combinar gêneros de ambos os datasets
+        generos_arq = set(df_arquetipos['sexo'].unique())
+        generos_micro = set(df_microambiente['sexo'].unique())
+        todos_generos = sorted(list(generos_arq.union(generos_micro)))
+        generos = ["Todos"] + todos_generos
         genero_selecionado = st.sidebar.selectbox("⚧ Gênero", generos)
         
-        etnias = ["Todas"] + sorted(df_arquetipos['etnia'].unique().tolist())
+        # Combinar etnias de ambos os datasets
+        etnias_arq = set(df_arquetipos['etnia'].unique())
+        etnias_micro = set(df_microambiente['etnia'].unique())
+        todas_etnias = sorted(list(etnias_arq.union(etnias_micro)))
+        etnias = ["Todas"] + todas_etnias
         etnia_selecionada = st.sidebar.selectbox("👥 Etnia", etnias)
         
-        departamentos = ["Todos"] + sorted(df_arquetipos['departamento'].unique().tolist())
+        # Combinar departamentos de ambos os datasets
+        departamentos_arq = set(df_arquetipos['departamento'].unique())
+        departamentos_micro = set(df_microambiente['departamento'].unique())
+        todos_departamentos = sorted(list(departamentos_arq.union(departamentos_micro)))
+        departamentos = ["Todos"] + todos_departamentos
         departamento_selecionado = st.sidebar.selectbox("🏢 Departamento", departamentos)
         
-        cargos = ["Todos"] + sorted(df_arquetipos['cargo'].unique().tolist())
+        # Combinar cargos de ambos os datasets
+        cargos_arq = set(df_arquetipos['cargo'].unique())
+        cargos_micro = set(df_microambiente['cargo'].unique())
+        todos_cargos = sorted(list(cargos_arq.union(cargos_micro)))
+        cargos = ["Todos"] + todos_cargos
         cargo_selecionado = st.sidebar.selectbox("💼 Cargo", cargos)
         
         # Dicionário de filtros
