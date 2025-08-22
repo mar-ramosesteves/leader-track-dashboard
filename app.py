@@ -101,10 +101,14 @@ def calcular_microambiente_respondente(respostas, matriz, pontos_max_dimensao, p
         'Satisfação em Fazer Parte', 'Obrigações e Deveres', 'Propósito e Objetivo', 'Aprimoramento', 
         'Qualidade Superior', 'Celebração', 'Performance', 'Liberdade de Ação', 'Responsabilização'
     ]
-    
+    st.write("DEBUG - Processando respondente...")
+    st.write("DEBUG - Respostas recebidas:", len(respostas))
+    st.write("DEBUG - Primeiras 5 respostas:", list(respostas.items())[:5])
     # Separar respostas Real (C) e Ideal (k)
     respostas_real = {}
     respostas_ideal = {}
+
+    
     
     for questao, estrelas in respostas.items():
         if questao.startswith('Q'):
@@ -114,6 +118,11 @@ def calcular_microambiente_respondente(respostas, matriz, pontos_max_dimensao, p
             elif questao.endswith('k'):  # Como deveria ser (Ideal)
                 questao_num = questao[:-1]  # Remove o 'k'
                 respostas_ideal[questao_num] = int(estrelas)
+
+    st.write("DEBUG - Respostas Real:", len(respostas_real))
+    st.write("DEBUG - Respostas Ideal:", len(respostas_ideal))
+    st.write("DEBUG - Primeiras Real:", list(respostas_real.items())[:3])
+    st.write("DEBUG - Primeiras Ideal:", list(respostas_ideal.items())[:3])
     
     # Calcular pontos por dimensão (Real)
     pontos_por_dimensao_real = {dim: 0 for dim in dimensoes}
