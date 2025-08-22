@@ -598,6 +598,7 @@ def gerar_drill_down_arquetipos(arquétipo_clicado, df_respondentes_filtrado, ma
     return questoes_detalhadas
 
 # DRILL-DOWN MICROAMBIENTE (CORRIGIDA)
+# DRILL-DOWN MICROAMBIENTE (CORRIGIDA COM ARREDONDAMENTO)
 def gerar_drill_down_microambiente(dimensao_clicada, df_respondentes_filtrado, matriz):
     """Gera detalhamento das questões de microambiente"""
     
@@ -634,7 +635,7 @@ def gerar_drill_down_microambiente(dimensao_clicada, df_respondentes_filtrado, m
             media_real = np.mean(estrelas_real)
             media_ideal = np.mean(estrelas_ideal)
             
-            # Arredondar para buscar na matriz
+            # ARREDONDAMENTO NATURAL para buscar na matriz
             media_real_arredondada = round(media_real)
             media_ideal_arredondada = round(media_ideal)
             
@@ -664,7 +665,6 @@ def gerar_drill_down_microambiente(dimensao_clicada, df_respondentes_filtrado, m
     questoes_detalhadas.sort(key=lambda x: x['gap'], reverse=True)
     
     return questoes_detalhadas
-
 # ==================== BUSCAR DADOS ====================
 
 # Buscar dados
@@ -789,8 +789,18 @@ if matriz_arq is not None and matriz_micro is not None:
         todos_cargos = sorted(list(cargos_arq.union(cargos_micro)))
         cargos = ["Todos"] + todos_cargos
         cargo_selecionado = st.sidebar.selectbox("💼 Cargo", cargos)
+
         
-        # Dicionário de filtros (empresa já está minúscula)
+        
+        # Filtro de tipo de avaliação
+        st.sidebar.subheader("📋 Tipo de Avaliação")
+        tipo_avaliacao = st.sidebar.selectbox(
+            "Escolha o tipo de avaliação:",
+            ["Todos", "Autoavaliação", "Avaliação da Equipe"],
+            key="tipo_avaliacao"
+        )
+        
+        # Dicionário de filtros
         filtros = {
             'empresa': empresa_selecionada,
             'codrodada': codrodada_selecionada,
@@ -799,7 +809,8 @@ if matriz_arq is not None and matriz_micro is not None:
             'sexo': genero_selecionado,
             'etnia': etnia_selecionada,
             'departamento': departamento_selecionado,
-            'cargo': cargo_selecionado
+            'cargo': cargo_selecionado,
+            'tipo_avaliacao': tipo_avaliacao
         }
         
         # TABS PRINCIPAIS
