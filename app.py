@@ -109,12 +109,11 @@ def calcular_microambiente_respondente(respostas, matriz, pontos_max_dimensao, p
     st.write("DEBUG - Processando respondente...")
     st.write("DEBUG - Respostas recebidas:", len(respostas))
     st.write("DEBUG - Primeiras 5 respostas:", list(respostas.items())[:5])
+    
     # Separar respostas Real (C) e Ideal (k)
     respostas_real = {}
     respostas_ideal = {}
 
-    
-    
     for questao, estrelas in respostas.items():
         if questao.startswith('Q'):
             if questao.endswith('C'):  # Como é (Real)
@@ -140,7 +139,7 @@ def calcular_microambiente_respondente(respostas, matriz, pontos_max_dimensao, p
     # Processar respostas Real
     for questao, estrelas in respostas_real.items():
         # Buscar na matriz para Real
-        chave_real = f"{questao}_{estrelas}_R{estrelas}"
+        chave_real = f"{questao}_I{estrelas}_R{estrelas}"
         linha_real = matriz[matriz['CHAVE'] == chave_real]
         
         if not linha_real.empty:
@@ -154,7 +153,7 @@ def calcular_microambiente_respondente(respostas, matriz, pontos_max_dimensao, p
     # Processar respostas Ideal
     for questao, estrelas in respostas_ideal.items():
         # Buscar na matriz para Ideal
-        chave_ideal = f"{questao}_{estrelas}_Q{estrelas}"
+        chave_ideal = f"{questao}_I{estrelas}_Q{estrelas}"
         linha_ideal = matriz[matriz['CHAVE'] == chave_ideal]
         
         if not linha_ideal.empty:
@@ -205,8 +204,8 @@ def calcular_microambiente_respondente(respostas, matriz, pontos_max_dimensao, p
     estrelas_teste_real = respostas_real[questao_teste]
     estrelas_teste_ideal = respostas_ideal[questao_teste]
     
-    chave_real_teste = f"{questao_teste}_{estrelas_teste_real}_R{estrelas_teste_real}"
-    chave_ideal_teste = f"{questao_teste}_{estrelas_teste_ideal}_Q{estrelas_teste_ideal}"
+    chave_real_teste = f"{questao_teste}_I{estrelas_teste_real}_R{estrelas_teste_real}"
+    chave_ideal_teste = f"{questao_teste}_I{estrelas_teste_ideal}_Q{estrelas_teste_ideal}"
     
     st.write("DEBUG - Chave Real teste:", chave_real_teste)
     st.write("DEBUG - Chave Ideal teste:", chave_ideal_teste)
@@ -232,7 +231,6 @@ def calcular_microambiente_respondente(respostas, matriz, pontos_max_dimensao, p
     
     return (dimensoes_percentuais_real, dimensoes_percentuais_ideal, 
             subdimensoes_percentuais_real, subdimensoes_percentuais_ideal)
-
 
 
 # ==================== FUNÇÕES COMPARTILHADAS ====================
