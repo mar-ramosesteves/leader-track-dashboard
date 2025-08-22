@@ -91,6 +91,7 @@ def carregar_matrizes_microambiente():
         return None, None, None
 
 # CALCULAR MICROAMBIENTE PARA UM RESPONDENTE (CORRIGIDA)
+# CALCULAR MICROAMBIENTE PARA UM RESPONDENTE (CORRIGIDA COM ARREDONDAMENTO)
 def calcular_microambiente_respondente(respostas, matriz, pontos_max_dimensao, pontos_max_subdimensao):
     """Calcula percentuais de microambiente para um respondente individual"""
     
@@ -177,7 +178,6 @@ def calcular_microambiente_respondente(respostas, matriz, pontos_max_dimensao, p
     
     return (dimensoes_percentuais_real, dimensoes_percentuais_ideal, 
             subdimensoes_percentuais_real, subdimensoes_percentuais_ideal)
-
 # ==================== FUNÇÕES COMPARTILHADAS ====================
 
 # PROCESSAR DADOS INDIVIDUAIS (ARQUÉTIPOS)
