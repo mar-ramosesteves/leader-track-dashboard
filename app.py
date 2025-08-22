@@ -945,7 +945,7 @@ if matriz_arq is not None and matriz_micro is not None:
                 
                 titulo = " | ".join(titulo_parts) if titulo_parts else "Média Geral de Todos os Respondentes"
                 
-                                # ==================== FILTRO DE TIPO DE ANÁLISE ====================
+                                                # ==================== FILTRO DE TIPO DE ANÁLISE ====================
                 st.markdown("**🎯 Escolha o tipo de análise:**")
                 tipo_analise = st.radio(
                     "Tipo de Análise:",
@@ -980,6 +980,11 @@ if matriz_arq is not None and matriz_micro is not None:
                 # Gerar e exibir gráfico
                 fig = gerar_grafico_microambiente_linha(medias_real_final, medias_ideal_final, dimensoes, f"{titulo} - {titulo_analise}")
                 st.plotly_chart(fig, use_container_width=True)
+
+                # DEBUG TEMPORÁRIO - Verificar valores
+                st.write(f"🔍 DEBUG - Tipo selecionado: {tipo_analise}")
+                st.write(f"🔍 DEBUG - Médias Real finais: {medias_real_final}")
+                st.write(f"🔍 DEBUG - Médias Ideal finais: {medias_ideal_final}")
                 
                                 # ==================== GRÁFICO DE SUBDIMENSÕES ====================
                 st.subheader("📊 Análise por Subdimensões")
