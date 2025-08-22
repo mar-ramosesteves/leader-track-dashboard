@@ -180,7 +180,7 @@ def calcular_microambiente_respondente(respostas, matriz, pontos_max_dimensao, p
             subdimensoes_percentuais_real, subdimensoes_percentuais_ideal)
 # ==================== FUNÇÕES COMPARTILHADAS ====================
 
-# PROCESSAR DADOS INDIVIDUAIS (ARQUÉTIPOS)
+# PROCESSAR DADOS INDIVIDUAIS (ARQUÉTIPOS) - CORRIGIDA COM NOMES CORRETOS
 def processar_dados_arquetipos(consolidado_arq, matriz):
     """Processa todos os respondentes e calcula arquétipos"""
     
@@ -208,7 +208,7 @@ def processar_dados_arquetipos(consolidado_arq, matriz):
                     'cargo': auto.get('cargo', 'N/A'),
                     'area': auto.get('area', 'N/A'),
                     'departamento': auto.get('departamento', 'N/A'),
-                    'tipo': 'Autoavaliação',
+                    'tipo': 'Autoavaliação',  # Nome padronizado
                     'arquétipos': arquétipos_auto,
                     'respostas': auto['respostas']
                 })
@@ -232,12 +232,13 @@ def processar_dados_arquetipos(consolidado_arq, matriz):
                             'cargo': membro.get('cargo', 'N/A'),
                             'area': membro.get('area', 'N/A'),
                             'departamento': membro.get('departamento', 'N/A'),
-                            'tipo': 'Avaliação Equipe',
+                            'tipo': 'Avaliação Equipe',  # Nome padronizado
                             'arquétipos': arquétipos_equipe,
                             'respostas': membro['respostas']
                         })
     
     return pd.DataFrame(respondentes_processados)
+
 
 # PROCESSAR DADOS INDIVIDUAIS (MICROAMBIENTE) - CORRIGIDA COM NOMES CORRETOS
 def processar_dados_microambiente(consolidado_micro, matriz, pontos_max_dimensao, pontos_max_subdimensao):
