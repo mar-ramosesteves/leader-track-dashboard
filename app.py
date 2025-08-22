@@ -813,7 +813,7 @@ if matriz_arq is not None and matriz_micro is not None:
                         # Gerar drill-down
                         questoes_detalhadas = gerar_drill_down_arquetipos(arquétipo_selecionado, df_filtrado_arq, matriz_arq)
                         
-                                                if questoes_detalhadas:
+                        if questoes_detalhadas:
                             # Criar gráfico das questões
                             questoes = [q['questao'] for q in questoes_detalhadas]
                             tendencias = [q['tendencia'] for q in questoes_detalhadas]
