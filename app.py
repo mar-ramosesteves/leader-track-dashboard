@@ -95,12 +95,17 @@ def carregar_matrizes_microambiente():
 def calcular_microambiente_respondente(respostas, matriz, pontos_max_dimensao, pontos_max_subdimensao):
     """Calcula percentuais de microambiente para um respondente individual"""
     
+    st.write("DEBUG - Iniciando função")
+    st.write("DEBUG - Colunas da matriz:", matriz.columns.tolist())
+    st.write("DEBUG - Primeiras 3 chaves da matriz:", matriz['CHAVE'].head(3).tolist())
+    
     dimensoes = ['Adaptabilidade', 'Colaboração Mútua', 'Nitidez', 'Performance', 'Reconhecimento', 'Responsabilidade']
     subdimensoes = [
         'Criação', 'Simplificação de Processos', 'Credibilidade Recíproca', 'Dedicação', 'Parceria', 
         'Satisfação em Fazer Parte', 'Obrigações e Deveres', 'Propósito e Objetivo', 'Aprimoramento', 
         'Qualidade Superior', 'Celebração', 'Performance', 'Liberdade de Ação', 'Responsabilização'
     ]
+    
     st.write("DEBUG - Processando respondente...")
     st.write("DEBUG - Respostas recebidas:", len(respostas))
     st.write("DEBUG - Primeiras 5 respostas:", list(respostas.items())[:5])
