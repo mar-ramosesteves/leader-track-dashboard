@@ -366,7 +366,7 @@ def calcular_medias_arquetipos(df_respondentes, filtros):
     
     return arquétipos, medias_auto, medias_equipe, df_filtrado
 
-# CALCULAR MÉDIAS COM FILTROS (MICROAMBIENTE)
+# CALCULAR MÉDIAS COM FILTROS (MICROAMBIENTE) - CORRIGIDA
 def calcular_medias_microambiente(df_respondentes, filtros):
     """Aplica filtros demográficos e calcula médias do microambiente"""
     
@@ -391,7 +391,7 @@ def calcular_medias_microambiente(df_respondentes, filtros):
         df_filtrado = df_filtrado[df_filtrado['cargo'] == filtros['cargo']]
     
     if df_filtrado.empty:
-        return None, None, None, df_filtrado
+        return None, None, None, None, df_filtrado
     
     # Separar autoavaliação e equipe
     df_auto = df_filtrado[df_filtrado['tipo'] == 'Autoavaliação']
@@ -404,23 +404,42 @@ def calcular_medias_microambiente(df_respondentes, filtros):
     for dim in dimensoes:
         valores = []
         for _, row in df_auto.iterrows():
-            if 'dimensoes' in row and isinstance(row['dimensoes'], dict) and dim in row['dimensoes']:
-                valores.append(row['dimensoes'][dim])
+            if 'dimensoes_real' in row and isinstance(row['dimensoes_real'], dict) and dim in row['dimensoes_real']:
+                valores.append(row['dimensoes_real'][dim])
         media = np.mean(valores) if valores else 0
         medias_real.append(media)
+    
+    # Calcular médias de autoavaliação (Ideal)
+    medias_ideal = []
+    for dim in dimensoes:
+        valores = []
+        for _, row in df_auto.iterrows():
+            if 'dimensoes_ideal' in row and isinstance(row['dimensoes_ideal'], dict) and dim in row['dimensoes_ideal']:
+                valores.append(row['dimensoes_ideal'][dim])
+        media = np.mean(valores) if valores else 0
+        medias_ideal.append(media)
     
     # Calcular médias da equipe (Real)
     medias_equipe_real = []
     for dim in dimensoes:
         valores = []
         for _, row in df_equipe.iterrows():
-            if 'dimensoes' in row and isinstance(row['dimensoes'], dict) and dim in row['dimensoes']:
-                valores.append(row['dimensoes'][dim])
+            if 'dimensoes_real' in row and isinstance(row['dimensoes_real'], dict) and dim in row['dimensoes_real']:
+                valores.append(row['dimensoes_real'][dim])
         media = np.mean(valores) if valores else 0
         medias_equipe_real.append(media)
     
-    return dimensoes, medias_real, medias_equipe_real, df_filtrado
-
+    # Calcular médias da equipe (Ideal)
+    medias_equipe_ideal = []
+    for dim in dimensoes:
+        valores = []
+        for _, row in df_equipe.iterrows():
+            if 'dimensoes_ideal' in row and isinstance(row['dimensoes_ideal'], dict) and dim in row['dimensoes_ideal']:
+                valores.append(row['dimensoes_ideal'][dim])
+        media = np.mean(valores) if valores else 0
+        medias_equipe_ideal.append(media)
+    
+    return dimensoes, medias_real, medias_ideal, medias_equipe_real, medias_equipe_ideal, df_filtrado
 # ==================== FUNÇÕES DE GRÁFICOS ====================
 
 # GERAR GRÁFICO ARQUÉTIPOS
@@ -874,7 +893,7 @@ if matriz_arq is not None and matriz_micro is not None:
             st.header("🏢 Análise de Microambiente de Equipes")
             
             # Calcular médias com filtros
-            dimensoes, medias_real, medias_equipe_real, df_filtrado_micro = calcular_medias_microambiente(df_microambiente, filtros)
+            dimensoes, medias_real, medias_ideal, medias_equipe_real, medias_equipe_ideal, df_filtrado_micro = calcular_medias_microambiente(df_microambiente, filtros)
             
             if dimensoes:
                 # Criar título dinâmico
@@ -895,7 +914,7 @@ if matriz_arq is not None and matriz_micro is not None:
                 )
                 
                 # Gerar e exibir gráfico
-                fig = gerar_grafico_microambiente_linha(medias_real, medias_equipe_real, dimensoes, titulo)
+                fig = gerar_grafico_microambiente_linha(medias_real, medias_ideal, dimensoes, titulo)
                 st.plotly_chart(fig, use_container_width=True)
                 
                 if tipo_visualizacao == "📊 Gráfico com Rótulos e Clique":
