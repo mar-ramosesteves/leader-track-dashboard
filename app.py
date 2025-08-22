@@ -355,7 +355,7 @@ def calcular_medias_microambiente(df_respondentes, filtros):
         df_filtrado = df_filtrado[df_filtrado['cargo'] == filtros['cargo']]
     
     if df_filtrado.empty:
-        return None, None, None, None, df_filtrado
+        return None, None, None, df_filtrado
     
     # Separar autoavaliação e equipe
     df_auto = df_filtrado[df_filtrado['tipo'] == 'Autoavaliação']
@@ -690,7 +690,7 @@ if matriz_arq is not None and matriz_micro is not None:
         # Métricas
         col1, col2, col3, col4 = st.columns(4)
         with col1:
-            st.metric("   Total Arquétipos", len(df_arquetipos))
+            st.metric("�� Total Arquétipos", len(df_arquetipos))
         with col2:
             st.metric("🏢 Total Microambiente", len(df_microambiente))
         with col3:
@@ -821,13 +821,11 @@ if matriz_arq is not None and matriz_micro is not None:
                             
                             st.plotly_chart(fig_questoes, use_container_width=True)
                             
-                            # Tabela detalhada
+                                                        # Tabela detalhada
                             st.subheader("📋 Detalhamento das Questões")
                             
                             df_questoes = pd.DataFrame(questoes_detalhadas)
                             df_questoes['% Tendência'] = df_questoes['tendencia'].apply(lambda x: f"{x:.1f}%")
-
-
                             df_questoes['Questão'] = df_questoes['questao']
                             df_questoes['Afirmação'] = df_questoes['afirmacao']
                             df_questoes['Média Estrelas'] = df_questoes['media_estrelas'].apply(lambda x: f"{x:.1f}")
@@ -934,7 +932,7 @@ if matriz_arq is not None and matriz_micro is not None:
                             ))
                             
                             fig_questoes.update_layout(
-                                title=f"   Gap das Questões - {dimensao_selecionada}",
+                                title=f"�� Gap das Questões - {dimensao_selecionada}",
                                 xaxis_title="Questões",
                                 yaxis_title="Gap (Ideal - Real)",
                                 height=400
