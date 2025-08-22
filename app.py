@@ -981,8 +981,12 @@ if matriz_arq is not None and matriz_micro is not None:
                 fig = gerar_grafico_microambiente_linha(medias_real_final, medias_ideal_final, dimensoes, f"{titulo} - {titulo_analise}")
                 st.plotly_chart(fig, use_container_width=True)
                 
-                # ==================== GRÁFICO DE SUBDIMENSÕES ====================
+                                # ==================== GRÁFICO DE SUBDIMENSÕES ====================
                 st.subheader("📊 Análise por Subdimensões")
+                
+                # Separar dados por tipo
+                df_auto = df_filtrado_micro[df_filtrado_micro['tipo'] == 'Autoavaliação']
+                df_equipe = df_filtrado_micro[df_filtrado_micro['tipo'] == 'Avaliação Equipe']
                 
                 # Calcular médias por subdimensão baseado no tipo selecionado
                 subdimensoes = [
