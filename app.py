@@ -239,7 +239,7 @@ def processar_dados_arquetipos(consolidado_arq, matriz):
     
     return pd.DataFrame(respondentes_processados)
 
-# PROCESSAR DADOS INDIVIDUAIS (MICROAMBIENTE) - CORRIGIDA
+# PROCESSAR DADOS INDIVIDUAIS (MICROAMBIENTE) - CORRIGIDA COM NOMES CORRETOS
 def processar_dados_microambiente(consolidado_micro, matriz, pontos_max_dimensao, pontos_max_subdimensao):
     """Processa todos os respondentes e calcula microambiente"""
     
@@ -267,7 +267,7 @@ def processar_dados_microambiente(consolidado_micro, matriz, pontos_max_dimensao
                     'cargo': auto.get('cargo', 'N/A'),
                     'area': auto.get('area', 'N/A'),
                     'departamento': auto.get('departamento', 'N/A'),
-                    'tipo': 'Autoavaliação',
+                    'tipo': 'Autoavaliação',  # Nome padronizado
                     'dimensoes_real': dimensoes_real,
                     'dimensoes_ideal': dimensoes_ideal,
                     'subdimensoes_real': subdimensoes_real,
@@ -293,7 +293,7 @@ def processar_dados_microambiente(consolidado_micro, matriz, pontos_max_dimensao
                         'cargo': membro.get('cargo', 'N/A'),
                         'area': membro.get('area', 'N/A'),
                         'departamento': membro.get('departamento', 'N/A'),
-                        'tipo': 'Avaliação Equipe',
+                        'tipo': 'Avaliação Equipe',  # Nome padronizado
                         'dimensoes_real': dimensoes_real,
                         'dimensoes_ideal': dimensoes_ideal,
                         'subdimensoes_real': subdimensoes_real,
@@ -302,6 +302,7 @@ def processar_dados_microambiente(consolidado_micro, matriz, pontos_max_dimensao
                     })
     
     return pd.DataFrame(respondentes_processados)
+
 
 # CALCULAR MÉDIAS COM FILTROS (ARQUÉTIPOS) - ATUALIZADA
 def calcular_medias_arquetipos(df_respondentes, filtros):
