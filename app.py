@@ -90,14 +90,9 @@ def carregar_matrizes_microambiente():
         st.error(f"❌ Erro ao carregar matrizes de microambiente: {str(e)}")
         return None, None, None
 
-
 # CALCULAR MICROAMBIENTE PARA UM RESPONDENTE (CORRIGIDA)
 def calcular_microambiente_respondente(respostas, matriz, pontos_max_dimensao, pontos_max_subdimensao):
     """Calcula percentuais de microambiente para um respondente individual"""
-    
-    st.write("DEBUG - Iniciando função")
-    st.write("DEBUG - Colunas da matriz:", matriz.columns.tolist())
-    st.write("DEBUG - Primeiras 3 chaves da matriz:", matriz['CHAVE'].head(3).tolist())
     
     dimensoes = ['Adaptabilidade', 'Colaboração Mútua', 'Nitidez', 'Performance', 'Reconhecimento', 'Responsabilidade']
     subdimensoes = [
@@ -105,10 +100,6 @@ def calcular_microambiente_respondente(respostas, matriz, pontos_max_dimensao, p
         'Satisfação em Fazer Parte', 'Obrigações e Deveres', 'Propósito e Objetivo', 'Aprimoramento', 
         'Qualidade Superior', 'Celebração', 'Performance', 'Liberdade de Ação', 'Responsabilização'
     ]
-    
-    st.write("DEBUG - Processando respondente...")
-    st.write("DEBUG - Respostas recebidas:", len(respostas))
-    st.write("DEBUG - Primeiras 5 respostas:", list(respostas.items())[:5])
     
     # Separar respostas Real (C) e Ideal (k)
     respostas_real = {}
@@ -122,11 +113,6 @@ def calcular_microambiente_respondente(respostas, matriz, pontos_max_dimensao, p
             elif questao.endswith('k'):  # Como deveria ser (Ideal)
                 questao_num = questao[:-1]  # Remove o 'k'
                 respostas_ideal[questao_num] = int(estrelas)
-
-    st.write("DEBUG - Respostas Real:", len(respostas_real))
-    st.write("DEBUG - Respostas Ideal:", len(respostas_ideal))
-    st.write("DEBUG - Primeiras Real:", list(respostas_real.items())[:3])
-    st.write("DEBUG - Primeiras Ideal:", list(respostas_ideal.items())[:3])
     
     # Calcular pontos por dimensão (Real)
     pontos_por_dimensao_real = {dim: 0 for dim in dimensoes}
@@ -189,35 +175,9 @@ def calcular_microambiente_respondente(respostas, matriz, pontos_max_dimensao, p
         percentual = (pontos_total / pontos_maximos) * 100 if pontos_maximos > 0 else 0
         subdimensoes_percentuais_ideal[subdimensao] = percentual
     
-    # DEBUG - Verificar busca na matriz
-    st.write("DEBUG - Verificando busca na matriz...")
-    
-    # Testar primeira questão
-    questao_teste = "Q01"
-    if questao_teste in respostas_real and questao_teste in respostas_ideal:
-        estrelas_teste_real = respostas_real[questao_teste]
-        estrelas_teste_ideal = respostas_ideal[questao_teste]
-        
-        chave_teste = f"{questao_teste}_I{estrelas_teste_ideal}_R{estrelas_teste_real}"
-        
-        st.write("DEBUG - Chave teste:", chave_teste)
-        
-        # Verificar se existe na matriz
-        linha_teste = matriz[matriz['CHAVE'] == chave_teste]
-        
-        st.write("DEBUG - Encontrou na matriz?", not linha_teste.empty)
-        
-        if not linha_teste.empty:
-            st.write("DEBUG - Dimensão:", linha_teste['DIMENSAO'].iloc[0])
-            st.write("DEBUG - Pontuação Real:", linha_teste['PONTUACAO_REAL'].iloc[0])
-            st.write("DEBUG - Pontuação Ideal:", linha_teste['PONTUACAO_IDEAL'].iloc[0])
-    
-    # Verificar colunas da matriz
-    st.write("DEBUG - Colunas da matriz:", matriz.columns.tolist())
-    st.write("DEBUG - Primeiras 5 chaves da matriz:", matriz['CHAVE'].head().tolist())
-    
     return (dimensoes_percentuais_real, dimensoes_percentuais_ideal, 
             subdimensoes_percentuais_real, subdimensoes_percentuais_ideal)
+
 # ==================== FUNÇÕES COMPARTILHADAS ====================
 
 # PROCESSAR DADOS INDIVIDUAIS (ARQUÉTIPOS)
@@ -343,7 +303,6 @@ def processar_dados_microambiente(consolidado_micro, matriz, pontos_max_dimensao
     
     return pd.DataFrame(respondentes_processados)
 
-
 # CALCULAR MÉDIAS COM FILTROS (ARQUÉTIPOS)
 def calcular_medias_arquetipos(df_respondentes, filtros):
     """Aplica filtros demográficos e calcula médias dos arquétipos"""
@@ -424,7 +383,7 @@ def calcular_medias_microambiente(df_respondentes, filtros):
         df_filtrado = df_filtrado[df_filtrado['cargo'] == filtros['cargo']]
     
     if df_filtrado.empty:
-        return None, None, None, None, df_filtrado
+        return None, None, None, None, None, df_filtrado
     
     # Separar autoavaliação e equipe
     df_auto = df_filtrado[df_filtrado['tipo'] == 'Autoavaliação']
@@ -473,6 +432,7 @@ def calcular_medias_microambiente(df_respondentes, filtros):
         medias_equipe_ideal.append(media)
     
     return dimensoes, medias_real, medias_ideal, medias_equipe_real, medias_equipe_ideal, df_filtrado
+
 # ==================== FUNÇÕES DE GRÁFICOS ====================
 
 # GERAR GRÁFICO ARQUÉTIPOS
@@ -583,6 +543,7 @@ def gerar_grafico_microambiente_linha(medias_real, medias_ideal, dimensoes, titu
     )
     
     return fig
+
 # ==================== FUNÇÕES DE DRILL-DOWN ====================
 
 # DRILL-DOWN ARQUÉTIPOS (CORRIGIDA)
@@ -636,7 +597,7 @@ def gerar_drill_down_arquetipos(arquétipo_clicado, df_respondentes_filtrado, ma
     
     return questoes_detalhadas
 
-# DRILL-DOWN MICROAMBIENTE
+# DRILL-DOWN MICROAMBIENTE (CORRIGIDA)
 def gerar_drill_down_microambiente(dimensao_clicada, df_respondentes_filtrado, matriz):
     """Gera detalhamento das questões de microambiente"""
     
@@ -669,25 +630,30 @@ def gerar_drill_down_microambiente(dimensao_clicada, df_respondentes_filtrado, m
                     estrelas_ideal.append(int(respostas[questao_ideal]))
         
         if estrelas_real and estrelas_ideal:
-            # Calcular médias e arredondar
-            media_real = round(np.mean(estrelas_real))
-            media_ideal = round(np.mean(estrelas_ideal))
+            # Calcular médias
+            media_real = np.mean(estrelas_real)
+            media_ideal = np.mean(estrelas_ideal)
             
-            # Buscar pontuações na matriz
-            chave_real = f"{questao}_{media_real}_R{media_real}"
-            chave_ideal = f"{questao}_{media_ideal}_Q{media_ideal}"
+            # Arredondar para buscar na matriz
+            media_real_arredondada = round(media_real)
+            media_ideal_arredondada = round(media_ideal)
             
-            linha_real = matriz[matriz['CHAVE'] == chave_real]
-            linha_ideal = matriz[matriz['CHAVE'] == chave_ideal]
+            # Buscar pontuações na matriz usando a chave combinada
+            chave = f"{questao}_I{media_ideal_arredondada}_R{media_real_arredondada}"
+            linha = matriz[matriz['CHAVE'] == chave]
             
-            pontuacao_real = linha_real['PONTUACAO_REAL'].iloc[0] if not linha_real.empty else 0
-            pontuacao_ideal = linha_ideal['PONTUACAO_IDEAL'].iloc[0] if not linha_ideal.empty else 0
+            if not linha.empty:
+                pontuacao_real = linha['PONTUACAO_REAL'].iloc[0]
+                pontuacao_ideal = linha['PONTUACAO_IDEAL'].iloc[0]
+            else:
+                pontuacao_real = 0
+                pontuacao_ideal = 0
             
             questoes_detalhadas.append({
                 'questao': questao,
                 'afirmacao': afirmacao,
-                'media_real': np.mean(estrelas_real),
-                'media_ideal': np.mean(estrelas_ideal),
+                'media_real': media_real,
+                'media_ideal': media_ideal,
                 'pontuacao_real': pontuacao_real,
                 'pontuacao_ideal': pontuacao_ideal,
                 'gap': pontuacao_ideal - pontuacao_real,
@@ -731,10 +697,6 @@ if matriz_arq is not None and matriz_micro is not None:
     
     if consolidado_arq and consolidado_micro:
         st.success("✅ Conectado ao Supabase!")
-
-        st.write("DEBUG - Dados microambiente:", len(consolidado_micro))
-        if consolidado_micro:
-            st.write("DEBUG - Primeiro item:", consolidado_micro[0])
         
         # Processar dados individuais
         with st.spinner("Calculando arquétipos individuais..."):
@@ -753,18 +715,18 @@ if matriz_arq is not None and matriz_micro is not None:
             auto_count = len(df_arquetipos[df_arquetipos['tipo'] == 'Autoavaliação'])
             st.metric("👤 Autoavaliações", auto_count)
         with col4:
-            st.metric(" Última Atualização", datetime.now().strftime("%H:%M"))
+            st.metric("�� Última Atualização", datetime.now().strftime("%H:%M"))
         
         # FILTROS
         st.sidebar.header("🎛️ Filtros Globais")
         
         # Filtros principais
-        st.sidebar.subheader(" Filtros Principais")
+        st.sidebar.subheader("�� Filtros Principais")
         empresas = ["Todas"] + sorted(df_arquetipos['empresa'].unique().tolist())
-        empresa_selecionada = st.sidebar.selectbox(" Empresa", empresas)
+        empresa_selecionada = st.sidebar.selectbox("�� Empresa", empresas)
         
         codrodadas = ["Todas"] + sorted(df_arquetipos['codrodada'].unique().tolist())
-        codrodada_selecionada = st.sidebar.selectbox(" Código da Rodada", codrodadas)
+        codrodada_selecionada = st.sidebar.selectbox("�� Código da Rodada", codrodadas)
         
         emailliders = ["Todos"] + sorted(df_arquetipos['emailLider'].unique().tolist())
         emaillider_selecionado = st.sidebar.selectbox("👤 Email do Líder", emailliders)
@@ -851,7 +813,7 @@ if matriz_arq is not None and matriz_micro is not None:
                         # Gerar drill-down
                         questoes_detalhadas = gerar_drill_down_arquetipos(arquétipo_selecionado, df_filtrado_arq, matriz_arq)
                         
-                        if questoes_detalhadas:
+                                                if questoes_detalhadas:
                             # Criar gráfico das questões
                             questoes = [q['questao'] for q in questoes_detalhadas]
                             tendencias = [q['tendencia'] for q in questoes_detalhadas]
@@ -877,7 +839,7 @@ if matriz_arq is not None and matriz_micro is not None:
                             
                             st.plotly_chart(fig_questoes, use_container_width=True)
                             
-                                                        # Tabela detalhada
+                            # Tabela detalhada
                             st.subheader("📋 Detalhamento das Questões")
                             
                             df_questoes = pd.DataFrame(questoes_detalhadas)
@@ -937,6 +899,33 @@ if matriz_arq is not None and matriz_micro is not None:
                 
                 titulo = " | ".join(titulo_parts) if titulo_parts else "Média Geral de Todos os Respondentes"
                 
+                # ==================== FILTRO DE TIPO DE ANÁLISE ====================
+                st.markdown("**🎯 Escolha o tipo de análise:**")
+                tipo_analise = st.radio(
+                    "Tipo de Análise:",
+                    ["👤 Autoavaliação", "👥 Média da Equipe", "📊 Comparativo (Auto vs Equipe)"],
+                    horizontal=True,
+                    key="tipo_analise_micro"
+                )
+                
+                # Separar dados por tipo
+                df_auto = df_filtrado_micro[df_filtrado_micro['tipo'] == 'Autoavaliação']
+                df_equipe = df_filtrado_micro[df_filtrado_micro['tipo'] == 'Avaliação Equipe']
+                
+                # Calcular médias baseado no tipo selecionado
+                if tipo_analise == "👤 Autoavaliação":
+                    medias_real_final = medias_real
+                    medias_ideal_final = medias_ideal
+                    titulo_analise = "Autoavaliação"
+                elif tipo_analise == "�� Média da Equipe":
+                    medias_real_final = medias_equipe_real
+                    medias_ideal_final = medias_equipe_ideal
+                    titulo_analise = "Média da Equipe"
+                else:  # Comparativo
+                    medias_real_final = medias_real
+                    medias_ideal_final = medias_ideal
+                    titulo_analise = "Comparativo"
+                
                 # Opções de visualização
                 st.markdown("**🎨 Escolha o tipo de visualização:**")
                 tipo_visualizacao = st.radio(
@@ -947,8 +936,51 @@ if matriz_arq is not None and matriz_micro is not None:
                 )
                 
                 # Gerar e exibir gráfico
-                fig = gerar_grafico_microambiente_linha(medias_real, medias_ideal, dimensoes, titulo)
+                fig = gerar_grafico_microambiente_linha(medias_real_final, medias_ideal_final, dimensoes, f"{titulo} - {titulo_analise}")
                 st.plotly_chart(fig, use_container_width=True)
+                
+                # ==================== GRÁFICO DE SUBDIMENSÕES ====================
+                st.subheader("📊 Análise por Subdimensões")
+                
+                # Calcular médias por subdimensão baseado no tipo selecionado
+                subdimensoes = [
+                    'Criação', 'Simplificação de Processos', 'Credibilidade Recíproca', 'Dedicação', 'Parceria', 
+                    'Satisfação em Fazer Parte', 'Obrigações e Deveres', 'Propósito e Objetivo', 'Aprimoramento', 
+                    'Qualidade Superior', 'Celebração', 'Performance', 'Liberdade de Ação', 'Responsabilização'
+                ]
+                
+                if tipo_analise == "👤 Autoavaliação":
+                    # Calcular médias de autoavaliação por subdimensão
+                    medias_sub_real = []
+                    medias_sub_ideal = []
+                    for sub in subdimensoes:
+                        valores_real = []
+                        valores_ideal = []
+                        for _, row in df_auto.iterrows():
+                            if 'subdimensoes_real' in row and isinstance(row['subdimensoes_real'], dict) and sub in row['subdimensoes_real']:
+                                valores_real.append(row['subdimensoes_real'][sub])
+                            if 'subdimensoes_ideal' in row and isinstance(row['subdimensoes_ideal'], dict) and sub in row['subdimensoes_ideal']:
+                                valores_ideal.append(row['subdimensoes_ideal'][sub])
+                        medias_sub_real.append(np.mean(valores_real) if valores_real else 0)
+                        medias_sub_ideal.append(np.mean(valores_ideal) if valores_ideal else 0)
+                else:
+                    # Calcular médias da equipe por subdimensão
+                    medias_sub_real = []
+                    medias_sub_ideal = []
+                    for sub in subdimensoes:
+                        valores_real = []
+                        valores_ideal = []
+                        for _, row in df_equipe.iterrows():
+                            if 'subdimensoes_real' in row and isinstance(row['subdimensoes_real'], dict) and sub in row['subdimensoes_real']:
+                                valores_real.append(row['subdimensoes_real'][sub])
+                            if 'subdimensoes_ideal' in row and isinstance(row['subdimensoes_ideal'], dict) and sub in row['subdimensoes_ideal']:
+                                valores_ideal.append(row['subdimensoes_ideal'][sub])
+                        medias_sub_real.append(np.mean(valores_real) if valores_real else 0)
+                        medias_sub_ideal.append(np.mean(valores_ideal) if valores_ideal else 0)
+                
+                # Gerar gráfico de subdimensões
+                fig_sub = gerar_grafico_microambiente_linha(medias_sub_real, medias_sub_ideal, subdimensoes, f"Microambiente por Subdimensões - {titulo_analise}")
+                st.plotly_chart(fig_sub, use_container_width=True)
                 
                 if tipo_visualizacao == "📊 Gráfico com Rótulos e Clique":
                     st.info("💡 **Dica:** Clique nas barras para ver as questões detalhadas!")
@@ -962,7 +994,7 @@ if matriz_arq is not None and matriz_micro is not None:
                         dimensoes,
                         index=None,
                         placeholder="Escolha uma dimensão...",
-                        key="dimensao_select"
+                        key="dimensao_select_micro"
                     )
                     
                     if dimensao_selecionada:
@@ -1034,8 +1066,8 @@ if matriz_arq is not None and matriz_micro is not None:
                 st.subheader("📋 Tabela de Médias")
                 df_medias = pd.DataFrame({
                     'Dimensão': dimensoes,
-                    'Autoavaliação (Real) (%)': [f"{v:.1f}%" for v in medias_real],
-                    'Média Equipe (Real) (%)': [f"{v:.1f}%" for v in medias_equipe_real]
+                    f'{titulo_analise} (Real) (%)': [f"{v:.1f}%" for v in medias_real_final],
+                    f'{titulo_analise} (Ideal) (%)': [f"{v:.1f}%" for v in medias_ideal_final]
                 })
                 st.dataframe(df_medias, use_container_width=True)
                 
