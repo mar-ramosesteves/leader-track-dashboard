@@ -1023,7 +1023,7 @@ if matriz_arq is not None and matriz_micro is not None:
                     'Qualidade Superior', 'Celebração', 'Performance', 'Liberdade de Ação', 'Responsabilização'
                 ]
                 
-                if tipo_analise == "👤 Autoavaliação":
+                if tipo_analise == "Autoavaliação":
                     # Calcular médias de autoavaliação por subdimensão
                     medias_sub_real = []
                     medias_sub_ideal = []
