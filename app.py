@@ -958,17 +958,17 @@ if matriz_arq is not None and matriz_micro is not None:
                 st.markdown("**🎯 Escolha o tipo de análise:**")
                 tipo_analise = st.radio(
                     "Tipo de Análise:",
-                    ["👤 Autoavaliação", "👥 Média da Equipe", "📊 Comparativo (Auto vs Equipe)"],
+                    ["Autoavaliação", "Média da Equipe", "Comparativo (Auto vs Equipe)"],
                     horizontal=True,
                     key="tipo_analise_micro"
                 )
                 
                 # Calcular médias baseado no tipo selecionado
-                if tipo_analise == "👤 Autoavaliação":
+                if tipo_analise == "Autoavaliação":
                     medias_real_final = medias_real
                     medias_ideal_final = medias_ideal
                     titulo_analise = "Autoavaliação"
-                elif tipo_analise == " Média da Equipe":
+                elif tipo_analise == "Média da Equipe":
                     medias_real_final = medias_equipe_real
                     medias_ideal_final = medias_equipe_ideal
                     titulo_analise = "Média da Equipe"
