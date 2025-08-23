@@ -716,7 +716,24 @@ if matriz_arq is not None and matriz_micro is not None:
         # Normalizar dados para minúsculas
         df_arquetipos['empresa'] = df_arquetipos['empresa'].str.lower()
         df_microambiente['empresa'] = df_microambiente['empresa'].str.lower()
+        # Normalizar TODOS os campos para minúsculas
+        df_arquetipos['empresa'] = df_arquetipos['empresa'].str.lower()
+        df_arquetipos['codrodada'] = df_arquetipos['codrodada'].str.lower()
+        df_arquetipos['emailLider'] = df_arquetipos['emailLider'].str.lower()
+        df_arquetipos['estado'] = df_arquetipos['estado'].str.lower()
+        df_arquetipos['sexo'] = df_arquetipos['sexo'].str.lower()
+        df_arquetipos['etnia'] = df_arquetipos['etnia'].str.lower()
+        df_arquetipos['departamento'] = df_arquetipos['departamento'].str.lower()
+        df_arquetipos['cargo'] = df_arquetipos['cargo'].str.lower()
         
+        df_microambiente['empresa'] = df_microambiente['empresa'].str.lower()
+        df_microambiente['codrodada'] = df_microambiente['codrodada'].str.lower()
+        df_microambiente['emailLider'] = df_microambiente['emailLider'].str.lower()
+        df_microambiente['estado'] = df_microambiente['estado'].str.lower()
+        df_microambiente['sexo'] = df_microambiente['sexo'].str.lower()
+        df_microambiente['etnia'] = df_microambiente['etnia'].str.lower()
+        df_microambiente['departamento'] = df_microambiente['departamento'].str.lower()
+        df_microambiente['cargo'] = df_microambiente['cargo'].str.lower()
         
         # Métricas
         col1, col2, col3, col4 = st.columns(4)
@@ -737,18 +754,18 @@ if matriz_arq is not None and matriz_micro is not None:
         st.sidebar.subheader(" Filtros Principais")
         
         # Combinar empresas de ambos os datasets (tudo minúsculas)
-        empresas_arq = set(df_arquetipos['empresa'].str.lower().unique())
-        empresas_micro = set(df_microambiente['empresa'].str.lower().unique())
+        empresas_arq = set(df_arquetipos['empresa'].unique())
+        empresas_micro = set(df_microambiente['empresa'].unique())
         todas_empresas = sorted(list(empresas_arq.union(empresas_micro)))
-        empresas = ["Todas"] + todas_empresas  # Tudo minúsculas
-        empresa_selecionada = st.sidebar.selectbox(" Empresa", empresas)
+        empresas = ["Todas"] + todas_empresas
+        empresa_selecionada = st.sidebar.selectbox("�� Empresa", empresas)
         
         # Combinar codrodadas de ambos os datasets
         codrodadas_arq = set(df_arquetipos['codrodada'].unique())
         codrodadas_micro = set(df_microambiente['codrodada'].unique())
         todas_codrodadas = sorted(list(codrodadas_arq.union(codrodadas_micro)))
         codrodadas = ["Todas"] + todas_codrodadas
-        codrodada_selecionada = st.sidebar.selectbox(" Código da Rodada", codrodadas)
+        codrodada_selecionada = st.sidebar.selectbox("�� Código da Rodada", codrodadas)
         
         # Combinar emails de líderes de ambos os datasets
         emailliders_arq = set(df_arquetipos['emailLider'].unique())
@@ -756,9 +773,6 @@ if matriz_arq is not None and matriz_micro is not None:
         todos_emailliders = sorted(list(emailliders_arq.union(emailliders_micro)))
         emailliders = ["Todos"] + todos_emailliders
         emaillider_selecionado = st.sidebar.selectbox("👤 Email do Líder", emailliders)
-        
-        # Filtros demográficos
-        st.sidebar.subheader("📊 Filtros Demográficos")
         
         # Combinar estados de ambos os datasets
         estados_arq = set(df_arquetipos['estado'].unique())
@@ -779,7 +793,7 @@ if matriz_arq is not None and matriz_micro is not None:
         etnias_micro = set(df_microambiente['etnia'].unique())
         todas_etnias = sorted(list(etnias_arq.union(etnias_micro)))
         etnias = ["Todas"] + todas_etnias
-        etnia_selecionada = st.sidebar.selectbox("👥 Etnia", etnias)
+        etnia_selecionada = st.sidebar.selectbox("�� Etnia", etnias)
         
         # Combinar departamentos de ambos os datasets
         departamentos_arq = set(df_arquetipos['departamento'].unique())
@@ -794,7 +808,6 @@ if matriz_arq is not None and matriz_micro is not None:
         todos_cargos = sorted(list(cargos_arq.union(cargos_micro)))
         cargos = ["Todos"] + todos_cargos
         cargo_selecionado = st.sidebar.selectbox("💼 Cargo", cargos)
-
         
         
         
