@@ -985,6 +985,22 @@ if matriz_arq is not None and matriz_micro is not None:
                 fig = gerar_grafico_microambiente_linha(medias_real_final, medias_ideal_final, dimensoes, f"{titulo} - {titulo_analise}")
                 st.plotly_chart(fig, use_container_width=True, key=f"grafico_dimensoes_{tipo_analise}")
 
+                                # DEBUG - Comparar dimensões vs subdimensões
+                st.write("�� DEBUG - COMPARAÇÃO:")
+                st.write(f"Tipo selecionado: {tipo_analise}")
+                st.write(f"Dimensões - Médias Real: {medias_real_final}")
+                st.write(f"Dimensões - Médias Ideal: {medias_ideal_final}")
+                
+                # Verificar se as variáveis são as mesmas
+                st.write(f"medias_real original: {medias_real}")
+                st.write(f"medias_equipe_real original: {medias_equipe_real}")
+                st.write(f"medias_ideal original: {medias_ideal}")
+                st.write(f"medias_equipe_ideal original: {medias_equipe_ideal}")
+                
+                # Verificar se as variáveis finais são diferentes
+                st.write(f"medias_real_final == medias_real: {medias_real_final == medias_real}")
+                st.write(f"medias_ideal_final == medias_ideal: {medias_ideal_final == medias_ideal}")
+
                 
                 
                                 # ==================== GRÁFICO DE SUBDIMENSÕES ====================
