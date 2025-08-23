@@ -513,6 +513,13 @@ def gerar_grafico_arquetipos(medias_auto, medias_equipe, arquétipos, titulo, ti
 # GERAR GRÁFICO MICROAMBIENTE
 def gerar_grafico_microambiente_linha(medias_real, medias_ideal, dimensoes, titulo):
     """Gera gráfico de linha para microambiente"""
+    
+    # DEBUG TEMPORÁRIO
+    st.write(f"�� DEBUG - Função gráfico recebeu:")
+    st.write(f"medias_real: {medias_real}")
+    st.write(f"medias_ideal: {medias_ideal}")
+    st.write(f"titulo: {titulo}")
+    
     fig = go.Figure()
     
     fig.add_trace(go.Scatter(
@@ -546,7 +553,6 @@ def gerar_grafico_microambiente_linha(medias_real, medias_ideal, dimensoes, titu
     )
     
     return fig
-
 # ==================== FUNÇÕES DE DRILL-DOWN ====================
 
 # DRILL-DOWN ARQUÉTIPOS (CORRIGIDA)
