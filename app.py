@@ -330,8 +330,7 @@ def calcular_medias_arquetipos(df_respondentes, filtros):
     if filtros['departamento'] != "Todos":
         df_filtrado = df_filtrado[df_filtrado['departamento'] == filtros['departamento']]
     if filtros['cargo'] != "Todos":
-        df_filtrado = df_filtrado[df_filtrado['cargo'] == filtros['cargo']]
-    
+        df_filtrado = df_filtrado[df_filtrado['cargo'] == filtros['cargo']]    
    
     
     # Separar autoavaliação e equipe
