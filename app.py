@@ -686,7 +686,7 @@ def fetch_data():
 # ==================== INTERFACE PRINCIPAL ====================
 
 # INTERFACE PRINCIPAL
-st.title("🎯 Leader Track - Dashboard Completo (Arquétipos + Microambiente)")
+st.title("🎯 LeaderTrack Dashboard")
 st.markdown("---")
 
 # Carregar matrizes
@@ -1148,4 +1148,4 @@ else:
     st.error("❌ Erro ao carregar matrizes.")
 
 st.markdown("---")
-st.markdown("🎯 **Leader Track Dashboard Completo** - Desenvolvido com Streamlit + Supabase + Cálculo Individual")
+st.markdown("🎯 **LeaderTrack Dashboard** - Desenvolvido com Streamlit + Supabase + Cálculo Individual")
