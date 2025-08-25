@@ -13,7 +13,7 @@ st.cache_data.clear()
 
 # Configuração da página
 st.set_page_config(
-    page_title="🎯 Leader Track - Dashboard Completo (Arquétipos + Microambiente)",
+    page_title="🎯 LeaderTrack Dashboard",
     page_icon="",
     layout="wide"
 )
