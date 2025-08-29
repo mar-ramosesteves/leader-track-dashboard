@@ -99,6 +99,14 @@ def calcular_microambiente_respondente(respostas, matriz, pontos_max_dimensao, p
     """Calcula percentuais de microambiente para um respondente individual"""
     
     dimensoes = ['Adaptabilidade', 'Colaboração Mútua', 'Nitidez', 'Performance', 'Reconhecimento', 'Responsabilidade']
+
+    # Definir subdimensões (lista original para cálculos)
+    subdimensoes = [
+        'Criação', 'Simplificação de Processos', 'Credibilidade Recíproca', 'Dedicação', 'Parceria', 
+        'Satisfação em Fazer Parte', 'Obrigações e Deveres', 'Propósito e Objetivo', 'Aprimoramento', 
+        'Qualidade Superior', 'Celebração', 'Performance', 'Liberdade de Ação', 'Responsabilização'
+    ]
+    
     # Definir ordem das dimensões (igual ao gráfico principal)
     ordem_dimensoes = ['Adaptabilidade', 'Colaboração Mútua', 'Nitidez', 'Performance', 'Reconhecimento', 'Responsabilidade']
     
