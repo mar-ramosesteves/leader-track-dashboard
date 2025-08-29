@@ -1163,7 +1163,65 @@ if matriz_arq is not None and matriz_micro is not None:
                         medias_sub_ideal.append(np.mean(valores_ideal) if valores_ideal else 0)
                 
                 # Gerar gráfico de subdimensões
-                fig_sub = gerar_grafico_microambiente_linha(medias_sub_real, medias_sub_ideal, subdimensoes, f"Microambiente por Subdimensões - {titulo_analise}")
+                # Criar cores baseadas nos valores %
+                cores_real = []
+                cores_ideal = []
+                
+                for real, ideal in zip(medias_sub_real, medias_sub_ideal):
+                    # Cor para Real
+                    if real < 30:
+                        cores_real.append('rgba(255, 0, 0, 0.8)')  # Vermelho
+                    elif real < 50:
+                        cores_real.append('rgba(255, 165, 0, 0.7)')  # Laranja
+                    elif real < 70:
+                        cores_real.append('rgba(255, 255, 0, 0.6)')  # Amarelo
+                    else:
+                        cores_real.append('rgba(0, 255, 0, 0.5)')  # Verde
+                    
+                    # Cor para Ideal
+                    if ideal < 30:
+                        cores_ideal.append('rgba(255, 0, 0, 0.8)')  # Vermelho
+                    elif ideal < 50:
+                        cores_ideal.append('rgba(255, 165, 0, 0.7)')  # Laranja
+                    elif ideal < 70:
+                        cores_ideal.append('rgba(255, 255, 0, 0.6)')  # Amarelo
+                    else:
+                        cores_ideal.append('rgba(0, 255, 0, 0.5)')  # Verde
+                
+                # Criar gráfico com cores personalizadas
+                fig_sub = go.Figure()
+                
+                fig_sub.add_trace(go.Scatter(
+                    x=subdimensoes,
+                    y=medias_sub_real,
+                    mode='lines+markers+text',
+                    name='Como é (Real)',
+                    line=dict(color='orange', width=3),
+                    marker=dict(size=8, color=cores_real),
+                    text=[f"{v:.1f}%" for v in medias_sub_real],
+                    textposition='top center'
+                ))
+                
+                fig_sub.add_trace(go.Scatter(
+                    x=subdimensoes,
+                    y=medias_sub_ideal,
+                    mode='lines+markers+text',
+                    name='Como deveria ser (Ideal)',
+                    line=dict(color='darkblue', width=3),
+                    marker=dict(size=8, color=cores_ideal),
+                    text=[f"{v:.1f}%" for v in medias_sub_ideal],
+                    textposition='bottom center'
+                ))
+                
+                fig_sub.update_layout(
+                    title=f"📊 Microambiente por Subdimensões - {titulo_analise}",
+                    xaxis_title="Subdimensões",
+                    yaxis_title="Pontuação (%)",
+                    yaxis=dict(range=[0, 100]),
+                    height=500
+                )
+
+                
                 st.plotly_chart(fig_sub, use_container_width=True)
                 
                 if tipo_visualizacao == "📊 Gráfico com Rótulos e Clique":
@@ -1193,10 +1251,22 @@ if matriz_arq is not None and matriz_micro is not None:
                             gaps = [q['gap'] for q in questoes_detalhadas]
                             
                             fig_questoes = go.Figure()
+                            # Criar cores baseadas no gap
+                            cores_gaps = []
+                            for gap in gaps:
+                                if gap > 20:
+                                    cores_gaps.append('rgba(255, 0, 0, 0.8)')  # Vermelho (gap alto)
+                                elif gap > 10:
+                                    cores_gaps.append('rgba(255, 165, 0, 0.7)')  # Laranja
+                                elif gap > 0:
+                                    cores_gaps.append('rgba(255, 255, 0, 0.6)')  # Amarelo
+                                else:
+                                    cores_gaps.append('rgba(0, 255, 0, 0.5)')  # Verde (gap baixo/negativo)
+                            
                             fig_questoes.add_trace(go.Bar(
                                 x=questoes,
                                 y=gaps,
-                                marker_color='#A23B72',
+                                marker_color=cores_gaps,
                                 text=[f"{v:.1f}" for v in gaps],
                                 textposition='auto',
                                 hovertemplate='<b>%{x}</b><br>Gap: %{y:.1f}<br>Real: %{customdata[0]:.1f} | Ideal: %{customdata[1]:.1f}<extra></extra>',
