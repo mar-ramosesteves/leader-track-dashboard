@@ -916,8 +916,23 @@ if matriz_arq is not None and matriz_micro is not None:
                             df_questoes['Média Arredondada'] = df_questoes['media_arredondada']
                             df_questoes['Nº Respostas'] = df_questoes['n_respostas']
                             
+                            # Função para aplicar cores baseadas na tendência
+                            def color_tendencia(val):
+                                if 'POUCO DESFAVORÁVEL' in str(val):
+                                    return 'background-color: rgba(255, 255, 0, 0.3)'  # Amarelo semitransparente
+                                elif 'DESFAVORÁVEL' in str(val):
+                                    return 'background-color: rgba(255, 165, 0, 0.3)'  # Laranja semitransparente
+                                elif 'MUITO DESFAVORÁVEL' in str(val):
+                                    return 'background-color: rgba(255, 0, 0, 0.3)'    # Vermelho semitransparente
+                                else:
+                                    return 'background-color: rgba(0, 255, 0, 0.1)'    # Verde claro para favorável
+                            
+                            # Aplicar cores
+                            df_questoes_styled = df_questoes[['Questão', 'Afirmação', '% Tendência', 'Tendência', 'Média Estrelas', 'Média Arredondada', 'Nº Respostas']].style.applymap(color_tendencia, subset=['Tendência'])
+                            
+                            # Exibir tabela colorida
                             st.dataframe(
-                                df_questoes[['Questão', 'Afirmação', '% Tendência', 'Tendência', 'Média Estrelas', 'Média Arredondada', 'Nº Respostas']],
+                                df_questoes_styled,
                                 use_container_width=True,
                                 hide_index=True
                             )
