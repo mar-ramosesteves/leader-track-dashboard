@@ -586,6 +586,7 @@ def gerar_drill_down_arquetipos(arquétipo_clicado, df_respondentes_filtrado, ma
             chave = f"{arquétipo_clicado}{media_arredondada}{questao}"
             linha = matriz[matriz['CHAVE'] == chave]
             tendencia = linha['% Tendência'].iloc[0] * 100 if not linha.empty else 0
+            tendencia_info = linha['Tendência'].iloc[0] if not linha.empty else 'N/A'
             
             questoes_detalhadas.append({
                 'questao': questao,
@@ -593,6 +594,7 @@ def gerar_drill_down_arquetipos(arquétipo_clicado, df_respondentes_filtrado, ma
                 'media_estrelas': media_estrelas,
                 'media_arredondada': media_arredondada,
                 'tendencia': tendencia,
+                'tendencia_info': tendencia_info,
                 'n_respostas': len(estrelas_questao)
             })
     
@@ -906,6 +908,7 @@ if matriz_arq is not None and matriz_micro is not None:
                             st.subheader("📋 Detalhamento das Questões")
                             
                             df_questoes = pd.DataFrame(questoes_detalhadas)
+                            df_questoes['Tendência'] = df_questoes['tendencia_info']
                             df_questoes['% Tendência'] = df_questoes['tendencia'].apply(lambda x: f"{x:.1f}%")
                             df_questoes['Questão'] = df_questoes['questao']
                             df_questoes['Afirmação'] = df_questoes['afirmacao']
@@ -914,7 +917,7 @@ if matriz_arq is not None and matriz_micro is not None:
                             df_questoes['Nº Respostas'] = df_questoes['n_respostas']
                             
                             st.dataframe(
-                                df_questoes[['Questão', 'Afirmação', '% Tendência', 'Média Estrelas', 'Média Arredondada', 'Nº Respostas']],
+                                df_questoes[['Questão', 'Afirmação', '% Tendência', 'Tendência', 'Média Estrelas', 'Média Arredondada', 'Nº Respostas']],
                                 use_container_width=True,
                                 hide_index=True
                             )
