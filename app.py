@@ -891,10 +891,27 @@ if matriz_arq is not None and matriz_micro is not None:
                             valores_grafico = [q['valor_grafico'] for q in questoes_detalhadas]
                             
                             fig_questoes = go.Figure()
+                            # Criar cores baseadas na tendência
+                            cores_barras = []
+                            for q in questoes_detalhadas:
+                                tendencia_info = q['tendencia_info']
+                                if 'POUCO DESFAVORÁVEL' in tendencia_info:
+                                    cores_barras.append('rgba(255, 255, 0, 0.7)')  # Amarelo
+                                elif 'DESFAVORÁVEL' in tendencia_info:
+                                    cores_barras.append('rgba(255, 165, 0, 0.7)')  # Laranja
+                                elif 'MUITO DESFAVORÁVEL' in tendencia_info:
+                                    cores_barras.append('rgba(255, 0, 0, 0.8)')    # Vermelho
+                                elif 'FAVORÁVEL' in tendencia_info:
+                                    cores_barras.append('rgba(0, 255, 0, 0.3)')    # Verde claro
+                                elif 'MUITO FAVORÁVEL' in tendencia_info:
+                                    cores_barras.append('rgba(0, 128, 0, 0.5)')    # Verde escuro
+                                else:
+                                    cores_barras.append('rgba(128, 128, 128, 0.5)') # Cinza
+                            
                             fig_questoes.add_trace(go.Bar(
                                 x=questoes,
-                                y=valores_grafico,  # USAR valores_grafico em vez de tendencias
-                                marker_color='#2E86AB',
+                                y=valores_grafico,
+                                marker_color=cores_barras,  # USAR AS CORES PERSONALIZADAS
                                 text=[f"{v:.1f}%" for v in valores_grafico],
                                 textposition='auto',
                                 hovertemplate='<b>%{x}</b><br>% Tendência: %{y:.1f}%<br>Média: %{customdata:.1f} estrelas<extra></extra>',
