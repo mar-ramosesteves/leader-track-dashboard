@@ -899,7 +899,7 @@ if matriz_arq is not None and matriz_micro is not None:
                                     cores_barras.append('rgba(255, 255, 0, 0.7)')  # Amarelo
                                 elif 'DESFAVORÁVEL' in tendencia_info:
                                     cores_barras.append('rgba(255, 165, 0, 0.7)')  # Laranja
-                                elif 'MUITO DESFAVORÁVEL' in tendencia_info:
+                                elif tendencia_info == 'MUITO DESFAVORÁVEL':
                                     cores_barras.append('rgba(255, 0, 0, 0.8)')    # Vermelho
                                 elif 'FAVORÁVEL' in tendencia_info:
                                     cores_barras.append('rgba(0, 255, 0, 0.3)')    # Verde claro
