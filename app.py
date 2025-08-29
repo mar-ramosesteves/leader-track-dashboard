@@ -411,6 +411,12 @@ def calcular_medias_microambiente(df_respondentes, filtros):
     df_equipe = df_filtrado[df_filtrado['tipo'] == 'Avaliação Equipe']
     
     dimensoes = ['Adaptabilidade', 'Colaboração Mútua', 'Nitidez', 'Performance', 'Reconhecimento', 'Responsabilidade']
+
+    subdimensoes = [
+        'Criação', 'Simplificação de Processos', 'Credibilidade Recíproca', 'Dedicação', 'Parceria', 
+        'Satisfação em Fazer Parte', 'Obrigações e Deveres', 'Propósito e Objetivo', 'Aprimoramento', 
+        'Qualidade Superior', 'Celebração', 'Performance', 'Liberdade de Ação', 'Responsabilização'
+    ]
     
     # Calcular médias de autoavaliação (Real)
     medias_real = []
