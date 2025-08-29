@@ -915,6 +915,13 @@ if matriz_arq is not None and matriz_micro is not None:
                             df_questoes['Média Estrelas'] = df_questoes['media_estrelas'].apply(lambda x: f"{x:.1f}")
                             df_questoes['Média Arredondada'] = df_questoes['media_arredondada']
                             df_questoes['Nº Respostas'] = df_questoes['n_respostas']
+
+                            # DEBUG - Vamos ver o que está na coluna Tendência
+                            st.write("🔍 **DEBUG - Valores únicos na coluna Tendência:**")
+                            st.write(df_questoes['Tendência'].unique())
+                            st.write("🔍 **DEBUG - Primeiras 5 linhas da coluna Tendência:**")
+                            st.write(df_questoes['Tendência'].head())
+                            
                             
                             # Função para aplicar cores baseadas na tendência
                             def color_tendencia(val):
