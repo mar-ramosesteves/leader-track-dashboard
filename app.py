@@ -924,7 +924,7 @@ if matriz_arq is not None and matriz_micro is not None:
                                     return 'background-color: rgba(255, 165, 0, 0.5)'  # Laranja semitransparente
                                 elif 'MUITO DESFAVORÁVEL' in str(val):
                                     return 'background-color: rgba(255, 0, 0, 0.7)'    # Vermelho semitransparente
-                         [       else:
+                                else:
                                     return 'background-color: rgba(0, 255, 0, 0.2)'    # Verde claro para favorável
                             
                             # Aplicar cores
