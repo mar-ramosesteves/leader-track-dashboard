@@ -1267,6 +1267,7 @@ if matriz_arq is not None and matriz_micro is not None:
                                     cores_gaps.append('rgba(144, 238, 144, 0.6)')  # Verde claro (0-20)
                                 else:
                                     cores_gaps.append('rgba(0, 255, 0, 0.5)')  # Verde (0 ou negativo)
+                            fig_questoes = go.Figure()
                             
                             fig_questoes.add_trace(go.Bar(
                                 x=questoes,
