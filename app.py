@@ -99,11 +99,29 @@ def calcular_microambiente_respondente(respostas, matriz, pontos_max_dimensao, p
     """Calcula percentuais de microambiente para um respondente individual"""
     
     dimensoes = ['Adaptabilidade', 'Colaboração Mútua', 'Nitidez', 'Performance', 'Reconhecimento', 'Responsabilidade']
-    subdimensoes = [
-        'Criação', 'Simplificação de Processos', 'Credibilidade Recíproca', 'Dedicação', 'Parceria', 
-        'Satisfação em Fazer Parte', 'Obrigações e Deveres', 'Propósito e Objetivo', 'Aprimoramento', 
-        'Qualidade Superior', 'Celebração', 'Performance', 'Liberdade de Ação', 'Responsabilização'
-    ]
+    # Definir ordem das dimensões (igual ao gráfico principal)
+    ordem_dimensoes = ['Adaptabilidade', 'Colaboração Mútua', 'Nitidez', 'Performance', 'Reconhecimento', 'Responsabilidade']
+    
+    # Relacionamento dimensão → subdimensões
+    relacionamento = {
+        'Adaptabilidade': ['Criação', 'Simplificação de Processos'],
+        'Colaboração Mútua': ['Credibilidade Recíproca', 'Dedicação', 'Parceria'],
+        'Nitidez': ['Satisfação em Fazer Parte', 'Obrigações e Deveres', 'Propósito e Objetivo'],
+        'Performance': ['Aprimoramento', 'Qualidade Superior'],
+        'Reconhecimento': ['Celebração', 'Performance'],
+        'Responsabilidade': ['Liberdade de Ação', 'Responsabilização']
+    }
+    
+    # Criar lista ordenada de subdimensões
+    subdimensoes_ordenadas = []
+    for dimensao in ordem_dimensoes:
+        subdimensoes_ordenadas.extend(relacionamento[dimensao])
+    
+    # Criar labels com dimensão + subdimensão
+    labels_subdimensoes = []
+    for dimensao in ordem_dimensoes:
+        for sub in relacionamento[dimensao]:
+            labels_subdimensoes.append(f"{dimensao}: {sub}")
     
     # Separar respostas Real (C) e Ideal (k)
     respostas_real = {}
@@ -685,9 +703,14 @@ def gerar_drill_down_microambiente(dimensao_clicada, df_respondentes_filtrado, m
                 pontuacao_real = 0
                 pontuacao_ideal = 0
             
+            # Buscar subdimensão na matriz
+            subdimensao = linha['SUBDIMENSAO'].iloc[0] if not linha.empty else 'N/A'
+            
             questoes_detalhadas.append({
                 'questao': questao,
                 'afirmacao': afirmacao,
+                'dimensao': dimensao_clicada,
+                'subdimensao': subdimensao,
                 'media_real': media_real,
                 'media_ideal': media_ideal,
                 'pontuacao_real': pontuacao_real,
@@ -1178,18 +1201,22 @@ if matriz_arq is not None and matriz_micro is not None:
                             # Tabela detalhada
                             st.subheader("📋 Detalhamento das Questões")
                             
-                            df_questoes = pd.DataFrame(questoes_detalhadas)
                             df_questoes['Questão'] = df_questoes['questao']
                             df_questoes['Afirmação'] = df_questoes['afirmacao']
+                            df_questoes['Dimensão'] = df_questoes['dimensao']
+                            df_questoes['Subdimensão'] = df_questoes['subdimensao']
                             df_questoes['Média Real'] = df_questoes['media_real'].apply(lambda x: f"{x:.1f}")
                             df_questoes['Média Ideal'] = df_questoes['media_ideal'].apply(lambda x: f"{x:.1f}")
                             df_questoes['Pontuação Real'] = df_questoes['pontuacao_real'].apply(lambda x: f"{x:.1f}")
                             df_questoes['Pontuação Ideal'] = df_questoes['pontuacao_ideal'].apply(lambda x: f"{x:.1f}")
                             df_questoes['Gap'] = df_questoes['gap'].apply(lambda x: f"{x:.1f}")
                             df_questoes['Nº Respostas'] = df_questoes['n_respostas']
+
+                            # Ordenar por dimensão e depois por subdimensão
+                            df_questoes = df_questoes.sort_values(['Dimensão', 'Subdimensão'])
                             
                             st.dataframe(
-                                df_questoes[['Questão', 'Afirmação', 'Média Real', 'Média Ideal', 'Pontuação Real', 'Pontuação Ideal', 'Gap', 'Nº Respostas']],
+                                df_questoes[['Questão', 'Afirmação', 'Dimensão', 'Subdimensão', 'Média Real', 'Média Ideal', 'Pontuação Real', 'Pontuação Ideal', 'Gap', 'Nº Respostas']],
                                 use_container_width=True,
                                 hide_index=True
                             )
