@@ -1290,10 +1290,9 @@ if matriz_arq is not None and matriz_micro is not None:
                             
                             # Tabela detalhada
                             st.subheader("📋 Detalhamento das Questões")
-                            
+
                             df_questoes = pd.DataFrame(questoes_detalhadas)
                             df_questoes['Questão'] = df_questoes['questao']
-
                             
                             df_questoes['Afirmação'] = df_questoes['afirmacao']
                             df_questoes['Dimensão'] = df_questoes['dimensao']
@@ -1304,12 +1303,34 @@ if matriz_arq is not None and matriz_micro is not None:
                             df_questoes['Pontuação Ideal'] = df_questoes['pontuacao_ideal'].apply(lambda x: f"{x:.1f}")
                             df_questoes['Gap'] = df_questoes['gap'].apply(lambda x: f"{x:.1f}")
                             df_questoes['Nº Respostas'] = df_questoes['n_respostas']
-
+                            
                             # Ordenar por dimensão e depois por subdimensão
                             df_questoes = df_questoes.sort_values(['Dimensão', 'Subdimensão'])
                             
+                            # Função para aplicar cores baseadas no gap
+                            def color_gap(val):
+                                try:
+                                    gap_val = float(val)
+                                    if gap_val > 80:
+                                        return 'background-color: rgba(255, 0, 0, 0.8)'  # Vermelho
+                                    elif gap_val > 60:
+                                        return 'background-color: rgba(255, 100, 0, 0.8)'  # Vermelho-laranja
+                                    elif gap_val > 40:
+                                        return 'background-color: rgba(255, 165, 0, 0.7)'  # Laranja
+                                    elif gap_val > 20:
+                                        return 'background-color: rgba(255, 255, 0, 0.6)'  # Amarelo
+                                    elif gap_val > 0:
+                                        return 'background-color: rgba(144, 238, 144, 0.6)'  # Verde claro
+                                    else:
+                                        return 'background-color: rgba(0, 255, 0, 0.5)'  # Verde
+                                except:
+                                    return 'background-color: transparent'
+                            
+                            # Aplicar cores
+                            df_questoes_styled = df_questoes[['Questão', 'Afirmação', 'Dimensão', 'Subdimensão', 'Média Real', 'Média Ideal', 'Pontuação Real', 'Pontuação Ideal', 'Gap', 'Nº Respostas']].style.applymap(color_gap, subset=['Gap'])
+                            
                             st.dataframe(
-                                df_questoes[['Questão', 'Afirmação', 'Dimensão', 'Subdimensão', 'Média Real', 'Média Ideal', 'Pontuação Real', 'Pontuação Ideal', 'Gap', 'Nº Respostas']],
+                                df_questoes_styled,
                                 use_container_width=True,
                                 hide_index=True
                             )
