@@ -1249,7 +1249,11 @@ if matriz_arq is not None and matriz_micro is not None:
                             # Criar gráfico das questões
                             questoes = [q['questao'] for q in questoes_detalhadas]
                             gaps = [q['gap'] for q in questoes_detalhadas]
-                            
+
+
+                            # DEBUG - Vamos ver os valores dos gaps
+                            st.write("🔍 **DEBUG - Valores dos gaps:**")
+                            st.write(gaps)
                             fig_questoes = go.Figure()
                             # Criar cores baseadas no gap
                             cores_gaps = []
