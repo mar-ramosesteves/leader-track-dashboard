@@ -1137,7 +1137,7 @@ if matriz_arq is not None and matriz_micro is not None:
                     # Calcular médias de autoavaliação por subdimensão
                     medias_sub_real = []
                     medias_sub_ideal = []
-                    for sub in subdimensoes_ordenadas:
+                    for sub in subdimensoes:
                         valores_real = []
                         valores_ideal = []
                         for _, row in df_auto.iterrows():
@@ -1151,7 +1151,7 @@ if matriz_arq is not None and matriz_micro is not None:
                     # Calcular médias da equipe por subdimensão
                     medias_sub_real = []
                     medias_sub_ideal = []
-                    for sub in subdimensoes_ordenadas:
+                    for sub in subdimensoes:
                         valores_real = []
                         valores_ideal = []
                         for _, row in df_equipe.iterrows():
@@ -1163,7 +1163,7 @@ if matriz_arq is not None and matriz_micro is not None:
                         medias_sub_ideal.append(np.mean(valores_ideal) if valores_ideal else 0)
                 
                 # Gerar gráfico de subdimensões
-                fig_sub = gerar_grafico_microambiente_linha(medias_sub_real, medias_sub_ideal, labels_subdimensoes, f"Microambiente por Subdimensões - {titulo_analise}")
+                fig_sub = gerar_grafico_microambiente_linha(medias_sub_real, medias_sub_ideal, subdimensoes, f"Microambiente por Subdimensões - {titulo_analise}")
                 
                 if tipo_visualizacao == "📊 Gráfico com Rótulos e Clique":
                     st.info("💡 **Dica:** Clique nas barras para ver as questões detalhadas!")
