@@ -585,16 +585,23 @@ def gerar_drill_down_arquetipos(arquétipo_clicado, df_respondentes_filtrado, ma
             # Buscar % tendência baseado na média arredondada
             chave = f"{arquétipo_clicado}{media_arredondada}{questao}"
             linha = matriz[matriz['CHAVE'] == chave]
-            tendencia = linha['% Tendência'].iloc[0] * 100 if not linha.empty else 0
+            tendencia_percentual = linha['% Tendência'].iloc[0] * 100 if not linha.empty else 0
             tendencia_info = linha['Tendência'].iloc[0] if not linha.empty else 'N/A'
+            
+            # CALCULAR VALOR PARA O GRÁFICO (negativo para desfavorável, positivo para favorável)
+            if 'DESFAVORÁVEL' in tendencia_info:
+                valor_grafico = -tendencia_percentual  # Negativo para desfavorável
+            else:
+                valor_grafico = tendencia_percentual   # Positivo para favorável
             
             questoes_detalhadas.append({
                 'questao': questao,
                 'afirmacao': afirmacao,
                 'media_estrelas': media_estrelas,
                 'media_arredondada': media_arredondada,
-                'tendencia': tendencia,
+                'tendencia': tendencia_percentual,
                 'tendencia_info': tendencia_info,
+                'valor_grafico': valor_grafico,  # ADICIONAR ESTA LINHA
                 'n_respostas': len(estrelas_questao)
             })
     
@@ -881,14 +888,14 @@ if matriz_arq is not None and matriz_micro is not None:
                         if questoes_detalhadas:
                             # Criar gráfico das questões
                             questoes = [q['questao'] for q in questoes_detalhadas]
-                            tendencias = [q['tendencia'] for q in questoes_detalhadas]
+                            valores_grafico = [q['valor_grafico'] for q in questoes_detalhadas]
                             
                             fig_questoes = go.Figure()
                             fig_questoes.add_trace(go.Bar(
                                 x=questoes,
-                                y=tendencias,
+                                y=valores_grafico,  # USAR valores_grafico em vez de tendencias
                                 marker_color='#2E86AB',
-                                text=[f"{v:.1f}%" for v in tendencias],
+                                text=[f"{v:.1f}%" for v in valores_grafico],
                                 textposition='auto',
                                 hovertemplate='<b>%{x}</b><br>% Tendência: %{y:.1f}%<br>Média: %{customdata:.1f} estrelas<extra></extra>',
                                 customdata=[q['media_estrelas'] for q in questoes_detalhadas]
@@ -898,7 +905,7 @@ if matriz_arq is not None and matriz_micro is not None:
                                 title=f"📊 % Tendência das Questões - {arquétipo_selecionado}",
                                 xaxis_title="Questões",
                                 yaxis_title="% Tendência",
-                                yaxis=dict(range=[0, 100]),
+                                yaxis=dict(range=[-100, 100]),  # Permitir valores negativos e positivos
                                 height=400
                             )
                             
