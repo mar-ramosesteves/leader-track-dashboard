@@ -925,22 +925,22 @@ if matriz_arq is not None and matriz_micro is not None:
                             
                             # Função para aplicar cores baseadas na tendência
                             def color_tendencia(val):
-                            val_str = str(val).strip()  # Remove espaços extras
-                            
-                            if val_str == 'POUCO DESFAVORÁVEL':
-                                return 'background-color: rgba(255, 255, 0, 0.4)'  # Amarelo
-                            elif val_str == 'DESFAVORÁVEL':
-                                return 'background-color: rgba(255, 165, 0, 0.5)'  # Laranja
-                            elif val_str == 'MUITO DESFAVORÁVEL':
-                                return 'background-color: rgba(255, 0, 0, 0.8)'    # Vermelho bem intenso!
-                            elif val_str == 'MUITO FAVORÁVEL':
-                                return 'background-color: rgba(0, 255, 0, 0.1)'    # Verde claro
-                            elif val_str == 'FAVORÁVEL':
-                                return 'background-color: rgba(0, 255, 0, 0.2)'    # Verde claro
-                            elif val_str == 'POUCO FAVORÁVEL':
-                                return 'background-color: rgba(0, 128, 0, 0.3)'    # Verde mais escuro
-                            else:
-                                return 'background-color: rgba(200, 200, 200, 0.1)' # Cinza para outros casos
+                                val_str = str(val).strip()  # Remove espaços extras
+                                
+                                if val_str == 'POUCO DESFAVORÁVEL':
+                                    return 'background-color: rgba(255, 255, 0, 0.4)'  # Amarelo
+                                elif val_str == 'DESFAVORÁVEL':
+                                    return 'background-color: rgba(255, 165, 0, 0.5)'  # Laranja
+                                elif val_str == 'MUITO DESFAVORÁVEL':
+                                    return 'background-color: rgba(255, 0, 0, 0.8)'    # Vermelho bem intenso!
+                                elif val_str == 'MUITO FAVORÁVEL':
+                                    return 'background-color: rgba(0, 255, 0, 0.1)'    # Verde claro
+                                elif val_str == 'FAVORÁVEL':
+                                    return 'background-color: rgba(0, 255, 0, 0.2)'    # Verde claro
+                                elif val_str == 'POUCO FAVORÁVEL':
+                                    return 'background-color: rgba(0, 128, 0, 0.3)'    # Verde mais escuro
+                                else:
+                                    return 'background-color: rgba(200, 200, 200, 0.1)' # Cinza para outros casos
                             
                             # Aplicar cores
                             df_questoes_styled = df_questoes[['Questão', 'Afirmação', '% Tendência', 'Tendência', 'Média Estrelas', 'Média Arredondada', 'Nº Respostas']].style.applymap(color_tendencia, subset=['Tendência'])
