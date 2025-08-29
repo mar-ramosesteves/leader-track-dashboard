@@ -466,6 +466,17 @@ def gerar_grafico_arquetipos(medias_auto, medias_equipe, arquétipos, titulo, ti
             customdata=arquétipos
         ))
         
+        # Adicionar linhas horizontais fixas
+        fig.add_hline(y=50, line_dash="dash", line_color="orange", 
+                      annotation_text="Suporte (50%)", 
+                      annotation_position="right",
+                      line_width=2)
+        
+        fig.add_hline(y=60, line_dash="dash", line_color="red", 
+                      annotation_text="Dominante (60%)", 
+                      annotation_position="right",
+                      line_width=2)
+        
         fig.update_layout(
             title=f"📊 {titulo}",
             xaxis_title="Arquétipos",
@@ -495,6 +506,17 @@ def gerar_grafico_arquetipos(medias_auto, medias_equipe, arquétipos, titulo, ti
             marker_color='#ff7f0e',
             hovertemplate='<b>%{x}</b><br>Média da Equipe: %{y:.1f}%<extra></extra>'
         ))
+        
+        # Adicionar linhas horizontais fixas
+        fig.add_hline(y=50, line_dash="dash", line_color="orange", 
+                      annotation_text="Suporte (50%)", 
+                      annotation_position="right",
+                      line_width=2)
+        
+        fig.add_hline(y=60, line_dash="dash", line_color="red", 
+                      annotation_text="Dominante (60%)", 
+                      annotation_position="right",
+                      line_width=2)
         
         fig.update_layout(
             title=f"📈 {titulo}",
