@@ -1251,21 +1251,22 @@ if matriz_arq is not None and matriz_micro is not None:
                             gaps = [q['gap'] for q in questoes_detalhadas]
 
 
-                            # DEBUG - Vamos ver os valores dos gaps
-                            st.write("🔍 **DEBUG - Valores dos gaps:**")
-                            st.write(gaps)
-                            fig_questoes = go.Figure()
-                            # Criar cores baseadas no gap
+                            
+                            # Criar cores baseadas no gap (escala 0-100)
                             cores_gaps = []
                             for gap in gaps:
-                                if gap > 20:
-                                    cores_gaps.append('rgba(255, 0, 0, 0.8)')  # Vermelho (gap alto)
-                                elif gap > 10:
-                                    cores_gaps.append('rgba(255, 165, 0, 0.7)')  # Laranja
+                                if gap > 80:
+                                    cores_gaps.append('rgba(255, 0, 0, 0.8)')  # Vermelho (80-100)
+                                elif gap > 60:
+                                    cores_gaps.append('rgba(255, 100, 0, 0.8)')  # Vermelho-laranja (60-80)
+                                elif gap > 40:
+                                    cores_gaps.append('rgba(255, 165, 0, 0.7)')  # Laranja (40-60)
+                                elif gap > 20:
+                                    cores_gaps.append('rgba(255, 255, 0, 0.6)')  # Amarelo (20-40)
                                 elif gap > 0:
-                                    cores_gaps.append('rgba(255, 255, 0, 0.6)')  # Amarelo
+                                    cores_gaps.append('rgba(144, 238, 144, 0.6)')  # Verde claro (0-20)
                                 else:
-                                    cores_gaps.append('rgba(0, 255, 0, 0.5)')  # Verde (gap baixo/negativo)
+                                    cores_gaps.append('rgba(0, 255, 0, 0.5)')  # Verde (0 ou negativo)
                             
                             fig_questoes.add_trace(go.Bar(
                                 x=questoes,
