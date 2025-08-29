@@ -1164,6 +1164,7 @@ if matriz_arq is not None and matriz_micro is not None:
                 
                 # Gerar gráfico de subdimensões
                 fig_sub = gerar_grafico_microambiente_linha(medias_sub_real, medias_sub_ideal, subdimensoes, f"Microambiente por Subdimensões - {titulo_analise}")
+                st.plotly_chart(fig_sub, use_container_width=True)
                 
                 if tipo_visualizacao == "📊 Gráfico com Rótulos e Clique":
                     st.info("💡 **Dica:** Clique nas barras para ver as questões detalhadas!")
@@ -1214,7 +1215,10 @@ if matriz_arq is not None and matriz_micro is not None:
                             # Tabela detalhada
                             st.subheader("📋 Detalhamento das Questões")
                             
+                            df_questoes = pd.DataFrame(questoes_detalhadas)
                             df_questoes['Questão'] = df_questoes['questao']
+
+                            
                             df_questoes['Afirmação'] = df_questoes['afirmacao']
                             df_questoes['Dimensão'] = df_questoes['dimensao']
                             df_questoes['Subdimensão'] = df_questoes['subdimensao']
