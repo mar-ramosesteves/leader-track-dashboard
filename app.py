@@ -171,10 +171,8 @@ def mapear_compliance_nr1(afirmacoes_saude_emocional):
         'Equilíbrio Vida-Trabalho': []
     }
     
-    # Combinar afirmações de arquétipos e microambiente
-    todas_afirmacoes = afirmacoes_saude_emocional['arquetipos'] + afirmacoes_saude_emocional['microambiente']
-    
-    for afirmacao in todas_afirmacoes:
+    # afirmacoes_saude_emocional já é uma lista
+    for afirmacao in afirmacoes_saude_emocional:
         af = afirmacao['afirmacao'].lower()
         
         # Prevenção de Estresse (EXPANDIDO)
