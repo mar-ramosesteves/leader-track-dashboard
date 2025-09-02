@@ -1804,7 +1804,7 @@ if matriz_arq is not None and matriz_micro is not None:
             else:
                 st.warning("⚠️ Nenhuma afirmação relacionada à saúde emocional foi identificada.")
                 st.info("�� Dica: Verifique se as palavras-chave estão presentes nas afirmações existentes.")
-            else:
+    else:
         st.error("❌ Erro ao carregar dados do Supabase.")
 else:
     st.error("❌ Erro ao carregar matrizes.")
