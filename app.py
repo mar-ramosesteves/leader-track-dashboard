@@ -15,6 +15,7 @@ import openpyxl
 # ANALISAR AFIRMAÇÕES EXISTENTES PARA SAÚDE EMOCIONAL (COM FILTROS)
 def analisar_afirmacoes_saude_emocional(matriz_arq, matriz_micro, df_arquetipos, df_microambiente, filtros):
     """Analisa afirmações existentes e identifica as relacionadas à saúde emocional com filtros aplicados"""
+    
     print("DEBUG: Iniciando análise de afirmações...")
     print(f"DEBUG: matriz_arq tem {len(matriz_arq) if matriz_arq is not None else 'None'} linhas")
     print(f"DEBUG: matriz_micro tem {len(matriz_micro) if matriz_micro is not None else 'None'} linhas")
@@ -118,7 +119,7 @@ def analisar_afirmacoes_saude_emocional(matriz_arq, matriz_micro, df_arquetipos,
     if filtros['codrodada'] != "Todas":
         df_micro_filtrado = df_micro_filtrado[df_micro_filtrado['codrodada'] == filtros['codrodada']]
     if filtros['emaillider'] != "Todos":
-        df_micro_filtrado = df_micro_filtrado[df_micro_filtrado['emailLider'] == filtros['emaillider']]
+        df_micro_filtrado = df_micro_filtrado[df_micro_filtrado['emaillider'] == filtros['emaillider']]
     if filtros['estado'] != "Todos":
         df_micro_filtrado = df_micro_filtrado[df_micro_filtrado['estado'] == filtros['estado']]
     if filtros['sexo'] != "Todos":
@@ -160,11 +161,10 @@ def analisar_afirmacoes_saude_emocional(matriz_arq, matriz_micro, df_arquetipos,
                 })
                 codigos_ja_processados.add(codigo)  # Marca como processado
                 
-    print(f"DEBUG: Encontradas {len(afirmacoes_saude_emocional['arquetipos'])} afirmações de arquétipos")
-    print(f"DEBUG: Encontradas {len(afirmacoes_saude_emocional['microambiente'])} afirmações de microambiente")
+    print(f"DEBUG: Encontradas {len(afirmacoes_se)} afirmações no total")
     
     return afirmacoes_se, df_arq_filtrado, df_micro_filtrado
-
+    
 # MAPEAR COMPLIANCE COM NR-1 (MANTIDO IGUAL)
 def mapear_compliance_nr1(afirmacoes_saude_emocional):
     """Mapeia afirmações de saúde emocional com requisitos da NR-1"""
