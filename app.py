@@ -162,6 +162,10 @@ def analisar_afirmacoes_saude_emocional(matriz_arq, matriz_micro, df_arquetipos,
 # MAPEAR COMPLIANCE COM NR-1 (MANTIDO IGUAL)
 def mapear_compliance_nr1(afirmacoes_saude_emocional):
     """Mapeia afirmações de saúde emocional com requisitos da NR-1"""
+    # DEBUG: Ver o que está chegando
+    print(f"DEBUG: Recebidas {len(afirmacoes_saude_emocional)} afirmações")
+    for i, af in enumerate(afirmacoes_saude_emocional[:3]):  # Primeiras 3
+        print(f"DEBUG {i}: {af['afirmacao'][:100]}...")
     
     compliance = {
         'Prevenção de Estresse': [],
