@@ -160,7 +160,7 @@ def analisar_afirmacoes_saude_emocional(matriz_arq, matriz_micro, df_arquetipos,
     return afirmacoes_se, df_arq_filtrado, df_micro_filtrado
 
 # MAPEAR COMPLIANCE COM NR-1 (MANTIDO IGUAL)
-def mapear_compliance_nr1(afirmacoes_se):
+def mapear_compliance_nr1(afirmacoes_saude_emocional):
     """Mapeia afirmações de saúde emocional com requisitos da NR-1"""
     
     compliance = {
@@ -171,11 +171,14 @@ def mapear_compliance_nr1(afirmacoes_se):
         'Equilíbrio Vida-Trabalho': []
     }
     
-    for afirmacao in afirmacoes_se:
+    # Combinar afirmações de arquétipos e microambiente
+    todas_afirmacoes = afirmacoes_saude_emocional['arquetipos'] + afirmacoes_saude_emocional['microambiente']
+    
+    for afirmacao in todas_afirmacoes:
         af = afirmacao['afirmacao'].lower()
         
         # Prevenção de Estresse (EXPANDIDO)
-        if any(palavra in af for palavra in ['estresse', 'ansiedade', 'pressão', 'pressao', 'cobrança', 'cobranca', 'deadline', 'prazos', 'tensão', 'tensao', 'sobrecarga']):
+        if any(palavra in af for palavra in ['estresse', 'ansiedade', 'pressão', 'pressao', 'cobrança', 'cobranca', 'deadline', 'prazos', 'tensão', 'tensao', 'sobrecarga', 'preocupa com o tempo', 'preocupa com detalhes', 'preocupa se', 'necessidade de se aprofundar', 'aprofundar nos detalhes', 'detalhes na execução', 'detalhes de realização', 'detalhes do trabalho', 'sem necessidade de ficar de olho', 'fazer todo o possivel', 'resolver problemas particulares', 'problemas particulares urgentes', 'atuar na solução de conflitos', 'solução de conflitos em sua equipe', 'risco calculado', 'resultasse em algo negativo', 'seriam apoiados', 'leais uns com os outros', 'mais elogiados e incentivados', 'do que criticados']):
             compliance['Prevenção de Estresse'].append(afirmacao)
         
         # Ambiente Psicológico Seguro
