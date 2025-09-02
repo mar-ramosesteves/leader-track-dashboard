@@ -1447,7 +1447,7 @@ if matriz_arq is not None and matriz_micro is not None:
             else:
                 st.warning("⚠️ Nenhum dado encontrado com os filtros aplicados.")
                 
-                # ==================== TAB SAÚDE EMOCIONAL ====================
+                        # ==================== TAB SAÚDE EMOCIONAL ====================
         with tab3:
             st.header("💚 Análise de Saúde Emocional + Compliance NR-1")
             st.markdown("**🔍 Analisando afirmações existentes relacionadas à saúde emocional...**")
@@ -1465,7 +1465,7 @@ if matriz_arq is not None and matriz_micro is not None:
                     st.metric("🧠 Arquétipos SE", len([a for a in afirmacoes_saude_emocional if a['tipo'] == 'Arquétipo']))
                 
                 with col2:
-                    st.metric("�� Microambiente SE", len([a for a in afirmacoes_saude_emocional if a['tipo'] == 'Microambiente']))
+                    st.metric(" Microambiente SE", len([a for a in afirmacoes_saude_emocional if a['tipo'] == 'Microambiente']))
                 
                 with col3:
                     st.metric("💚 Total SE", len(afirmacoes_saude_emocional))
@@ -1476,101 +1476,75 @@ if matriz_arq is not None and matriz_micro is not None:
                 
                 st.divider()
                 
-                # ==================== GRÁFICOS DE SAÚDE EMOCIONAL ====================
-                st.subheader("📊 Análise de Saúde Emocional por Tipo")
+                # ==================== GRÁFICO 1: COMPLIANCE NR-1 ====================
+                st.subheader("�� Compliance com NR-1 + Adendo Saúde Mental")
                 
-                # Separar afirmações por tipo
-                afirmacoes_arq = [a for a in afirmacoes_saude_emocional if a['tipo'] == 'Arquétipo']
+                # Calcular percentuais de cada categoria
+                compliance_percentuais = {}
+                total_afirmacoes = len(afirmacoes_saude_emocional)
+                
+                for categoria, afirmacoes in compliance_nr1.items():
+                    if total_afirmacoes > 0:
+                        percentual = (len(afirmacoes) / total_afirmacoes) * 100
+                        compliance_percentuais[categoria] = percentual
+                    else:
+                        compliance_percentuais[categoria] = 0
+                
+                # Gráfico de barras horizontais
+                fig_compliance = go.Figure()
+                
+                # Cores baseadas no percentual
+                cores_compliance = []
+                for percentual in compliance_percentuais.values():
+                    if percentual >= 30:
+                        cores_compliance.append('rgba(0, 128, 0, 0.8)')  # Verde (bom)
+                    elif percentual >= 20:
+                        cores_compliance.append('rgba(255, 255, 0, 0.7)')  # Amarelo (regular)
+                    elif percentual >= 10:
+                        cores_compliance.append('rgba(255, 165, 0, 0.7)')  # Laranja (ruim)
+                    else:
+                        cores_compliance.append('rgba(255, 0, 0, 0.8)')    # Vermelho (muito ruim)
+                
+                fig_compliance.add_trace(go.Bar(
+                    y=list(compliance_percentuais.keys()),
+                    x=list(compliance_percentuais.values()),
+                    orientation='h',
+                    marker_color=cores_compliance,
+                    text=[f"{v:.1f}%" for v in compliance_percentuais.values()],
+                    textposition='auto',
+                    hovertemplate='<b>%{y}</b><br>Percentual: %{x:.1f}%<br>Questões: %{customdata}<extra></extra>',
+                    customdata=[len(compliance_nr1[k]) for k in compliance_percentuais.keys()]
+                ))
+                
+                fig_compliance.update_layout(
+                    title="📊 Distribuição de Questões por Categoria NR-1",
+                    xaxis_title="Percentual das Questões de Saúde Emocional",
+                    yaxis_title="Categorias de Compliance",
+                    xaxis=dict(range=[0, 100]),
+                    height=400,
+                    showlegend=False
+                )
+                
+                st.plotly_chart(fig_compliance, use_container_width=True)
+                
+                # ==================== GRÁFICO 2: MICROAMBIENTE REAL VS IDEAL ====================
+                st.subheader("🏢 Microambiente: Como é vs Como deveria ser")
+                
+                # Filtrar apenas questões de microambiente
                 afirmacoes_micro = [a for a in afirmacoes_saude_emocional if a['tipo'] == 'Microambiente']
                 
-                # ==================== GRÁFICO ARQUÉTIPOS ====================
-                if afirmacoes_arq:
-                    st.markdown("**🧠 Saúde Emocional - Arquétipos**")
-                    
-                    # Calcular médias de % tendência para arquétipos
-                    medias_tendencia_arq = []
-                    arquétipos_arq = []
-                    
-                    for af in afirmacoes_arq:
-                        codigo = af['chave']
-                        arquétipo = af['dimensao']
-                        
-                        # Buscar na matriz de arquétipos
-                        linha = matriz_arq[matriz_arq['COD_AFIRMACAO'] == codigo]
-                        if not linha.empty:
-                            # Calcular média de estrelas para esta questão
-                            estrelas_questao = []
-                            for _, respondente in df_arquetipos.iterrows():
-                                if 'respostas' in respondente and codigo in respondente['respostas']:
-                                    estrelas = int(respondente['respostas'][codigo])
-                                    estrelas_questao.append(estrelas)
-                            
-                            if estrelas_questao:
-                                media_estrelas = np.mean(estrelas_questao)
-                                media_arredondada = round(media_estrelas)
-                                
-                                # Buscar % tendência baseado na média arredondada
-                                chave = f"{arquétipo}{media_arredondada}{codigo}"
-                                linha_tendencia = matriz_arq[matriz_arq['CHAVE'] == chave]
-                                
-                                if not linha_tendencia.empty:
-                                    tendencia_percentual = linha_tendencia['% Tendência'].iloc[0] * 100
-                                    tendencia_info = linha_tendencia['Tendência'].iloc[0]
-                                    
-                                    # Calcular valor para o gráfico (negativo para desfavorável)
-                                    if 'DESFAVORÁVEL' in tendencia_info:
-                                        valor_grafico = -tendencia_percentual
-                                    else:
-                                        valor_grafico = tendencia_percentual
-                                    
-                                    medias_tendencia_arq.append(valor_grafico)
-                                    arquétipos_arq.append(arquétipo)
-                    
-                    if medias_tendencia_arq:
-                        # Gráfico de arquétipos
-                        fig_arq = go.Figure()
-                        
-                        # Cores baseadas na tendência
-                        cores_arq = []
-                        for valor in medias_tendencia_arq:
-                            if valor < 0:
-                                cores_arq.append('rgba(255, 0, 0, 0.7)')  # Vermelho para desfavorável
-                            else:
-                                cores_arq.append('rgba(0, 128, 0, 0.7)')   # Verde para favorável
-                        
-                        fig_arq.add_trace(go.Bar(
-                            x=arquétipos_arq,
-                            y=medias_tendencia_arq,
-                            marker_color=cores_arq,
-                            text=[f"{v:.1f}%" for v in medias_tendencia_arq],
-                            textposition='auto',
-                            hovertemplate='<b>%{x}</b><br>% Tendência: %{y:.1f}%<extra></extra>'
-                        ))
-                        
-                        fig_arq.update_layout(
-                            title="🧠 Saúde Emocional - Arquétipos (-100% a +100%)",
-                            xaxis_title="Arquétipos",
-                            yaxis_title="% Tendência",
-                            yaxis=dict(range=[-100, 100]),
-                            height=400
-                        )
-                        
-                        st.plotly_chart(fig_arq, use_container_width=True)
-                
-                # ==================== GRÁFICO MICROAMBIENTE ====================
                 if afirmacoes_micro:
-                    st.markdown("**🏢 Saúde Emocional - Microambiente**")
-                    
-                    # Calcular médias de Real vs Ideal para microambiente
-                    medias_real_micro = []
-                    medias_ideal_micro = []
-                    dimensoes_micro = []
+                    # Calcular médias Real vs Ideal para cada questão
+                    questoes_micro = []
+                    medias_real = []
+                    medias_ideal = []
+                    gaps = []
                     
                     for af in afirmacoes_micro:
                         codigo = af['chave']
-                        dimensao = af['dimensao']
+                        questao = af['afirmacao'][:50] + "..." if len(af['afirmacao']) > 50 else af['afirmacao']
                         
-                        # Calcular médias de estrelas para Real e Ideal
+                        # Calcular médias
                         estrelas_real = []
                         estrelas_ideal = []
                         
@@ -1589,215 +1563,343 @@ if matriz_arq is not None and matriz_micro is not None:
                             media_real = np.mean(estrelas_real)
                             media_ideal = np.mean(estrelas_ideal)
                             
-                            # Arredondamento para buscar na matriz
-                            media_real_arredondada = round(media_real)
-                            media_ideal_arredondada = round(media_ideal)
+                            # Converter para percentual (estrelas 1-5 para 0-100%)
+                            percentual_real = (media_real / 5) * 100
+                            percentual_ideal = (media_ideal / 5) * 100
+                            gap = percentual_ideal - percentual_real
                             
-                            # Buscar pontuações na matriz
-                            chave = f"{codigo}_I{media_ideal_arredondada}_R{media_real_arredondada}"
-                            linha = matriz_micro[matriz_micro['CHAVE'] == chave]
-                            
-                            if not linha.empty:
-                                pontuacao_real = linha['PONTUACAO_REAL'].iloc[0]
-                                pontuacao_ideal = linha['PONTUACAO_IDEAL'].iloc[0]
-                                
-                                # Converter para percentual (assumindo máximo de 100)
-                                percentual_real = (pontuacao_real / 100) * 100
-                                percentual_ideal = (pontuacao_ideal / 100) * 100
-                                
-                                medias_real_micro.append(percentual_real)
-                                medias_ideal_micro.append(percentual_ideal)
-                                dimensoes_micro.append(dimensao)
+                            questoes_micro.append(questao)
+                            medias_real.append(percentual_real)
+                            medias_ideal.append(percentual_ideal)
+                            gaps.append(gap)
                     
-                    if medias_real_micro:
-                        # Gráfico de microambiente
+                    if questoes_micro:
+                        # Gráfico de barras agrupadas
                         fig_micro = go.Figure()
                         
-                        fig_micro.add_trace(go.Scatter(
-                            x=dimensoes_micro,
-                            y=medias_real_micro,
-                            mode='lines+markers+text',
+                        # Cores baseadas no gap
+                        cores_gap = []
+                        for gap in gaps:
+                            if gap > 40:
+                                cores_gap.append('rgba(255, 0, 0, 0.8)')      # Vermelho (gap alto)
+                            elif gap > 20:
+                                cores_gap.append('rgba(255, 165, 0, 0.7)')    # Laranja
+                            elif gap > 10:
+                                cores_gap.append('rgba(255, 255, 0, 0.7)')    # Amarelo
+                            else:
+                                cores_gap.append('rgba(0, 128, 0, 0.7)')      # Verde (gap baixo)
+                        
+                        # Barras para Real
+                        fig_micro.add_trace(go.Bar(
                             name='Como é (Real)',
-                            line=dict(color='orange', width=3),
-                            marker=dict(size=8),
-                            text=[f"{v:.1f}%" for v in medias_real_micro],
-                            textposition='top center'
+                            x=questoes_micro,
+                            y=medias_real,
+                            marker_color='rgba(255, 165, 0, 0.7)',
+                            text=[f"{v:.1f}%" for v in medias_real],
+                            textposition='auto'
                         ))
                         
-                        fig_micro.add_trace(go.Scatter(
-                            x=dimensoes_micro,
-                            y=medias_ideal_micro,
-                            mode='lines+markers+text',
+                        # Barras para Ideal
+                        fig_micro.add_trace(go.Bar(
                             name='Como deveria ser (Ideal)',
-                            line=dict(color='darkblue', width=3),
-                            marker=dict(size=8),
-                            text=[f"{v:.1f}%" for v in medias_ideal_micro],
-                            textposition='bottom center'
+                            x=questoes_micro,
+                            y=medias_ideal,
+                            marker_color='rgba(0, 128, 0, 0.7)',
+                            text=[f"{v:.1f}%" for v in medias_ideal],
+                            textposition='auto'
                         ))
                         
                         fig_micro.update_layout(
-                            title="🏢 Saúde Emocional - Microambiente (0% a 100%)",
-                            xaxis_title="Dimensões",
-                            yaxis_title="Pontuação (%)",
+                            title="🏢 Questões de Microambiente - Real vs Ideal",
+                            xaxis_title="Questões",
+                            yaxis_title="Percentual (%)",
                             yaxis=dict(range=[0, 100]),
-                            height=400
+                            barmode='group',
+                            height=500,
+                            xaxis_tickangle=-45
                         )
                         
                         st.plotly_chart(fig_micro, use_container_width=True)
                 
                 st.divider()
                 
-                # ==================== COMPLIANCE NR-1 ====================
-                st.subheader("�� Compliance com NR-1 + Adendo Saúde Mental")
+                # ==================== SCORE FINAL + TERMÔMETRO ====================
+                st.subheader("🌡️ Score Final de Saúde Emocional")
                 
-                # Gráfico de compliance
-                compliance_data = {k: len(v) for k, v in compliance_nr1.items()}
-                fig_compliance = px.bar(
-                    x=list(compliance_data.keys()),
-                    y=list(compliance_data.values()),
-                    title="Mapeamento de Compliance NR-1",
-                    color=list(compliance_data.values()),
-                    color_continuous_scale="RdYlGn"
-                )
-                fig_compliance.update_layout(height=400)
-                st.plotly_chart(fig_compliance, use_container_width=True)
+                # Calcular score baseado nos dois gráficos
+                score_arquetipos = 0
+                score_microambiente = 0
                 
-                # Detalhamento por categoria
-                for categoria, afirmacoes in compliance_nr1.items():
-                    if afirmacoes:
-                        with st.expander(f"�� {categoria} ({len(afirmacoes)} afirmações)"):
-                            for af in afirmacoes:
-                                st.markdown(f"**{af['tipo']} - {af['dimensao']}:** {af['afirmacao']}")
+                # Score Arquétipos (baseado na distribuição das categorias)
+                if afirmacoes_arq:
+                    # Calcular tendência geral dos arquétipos
+                    tendencias_gerais = []
+                    for af in afirmacoes_arq:
+                        codigo = af['chave']
+                        arquétipo = af['dimensao']
+                        
+                        # Buscar na matriz
+                        linha = matriz_arq[matriz_arq['COD_AFIRMACAO'] == codigo]
+                        if not linha.empty:
+                            # Calcular média de estrelas
+                            estrelas_questao = []
+                            for _, respondente in df_arquetipos.iterrows():
+                                if 'respostas' in respondente and codigo in respondente['respostas']:
+                                    estrelas = int(respondente['respostas'][codigo])
+                                    estrelas_questao.append(estrelas)
+                            
+                            if estrelas_questao:
+                                media_estrelas = np.mean(estrelas_questao)
+                                media_arredondada = round(media_estrelas)
+                                
+                                # Buscar % tendência
+                                chave = f"{arquétipo}{media_arredondada}{codigo}"
+                                linha_tendencia = matriz_arq[matriz_arq['CHAVE'] == chave]
+                                
+                                if not linha_tendencia.empty:
+                                    tendencia_percentual = linha_tendencia['% Tendência'].iloc[0] * 100
+                                    tendencia_info = linha_tendencia['Tendência'].iloc[0]
+                                    
+                                    # Converter para score positivo
+                                    if 'DESFAVORÁVEL' in tendencia_info:
+                                        score = max(0, 100 - tendencia_percentual)
+                                    else:
+                                        score = tendencia_percentual
+                                    
+                                    tendencias_gerais.append(score)
+                    
+                    if tendencias_gerais:
+                        score_arquetipos = np.mean(tendencias_gerais)
+                
+                # Score Microambiente (baseado no gap médio)
+                if afirmacoes_micro and 'gaps' in locals() and gaps:
+                    gap_medio = np.mean(gaps)
+                    # Converter gap para score (gap baixo = score alto)
+                    score_microambiente = max(0, 100 - gap_medio)
+                
+                # Score final combinado
+                if score_arquetipos > 0 and score_microambiente > 0:
+                    score_final = (score_arquetipos + score_microambiente) / 2
+                elif score_arquetipos > 0:
+                    score_final = score_arquetipos
+                elif score_microambiente > 0:
+                    score_final = score_microambiente
+                else:
+                    score_final = 0
+                
+                # Interpretação do score
+                if score_final >= 80:
+                    interpretacao = "🟢 EXCELENTE - Ambiente muito saudável"
+                    cor_score = "green"
+                elif score_final >= 60:
+                    interpretacao = "🟡 BOM - Ambiente saudável com melhorias"
+                    cor_score = "orange"
+                elif score_final >= 40:
+                    interpretacao = "�� REGULAR - Ambiente com problemas moderados"
+                    cor_score = "darkorange"
+                else:
+                    interpretacao = "🔴 RUIM - Ambiente com problemas sérios"
+                    cor_score = "red"
+                
+                # Exibir score final
+                col1, col2 = st.columns([1, 2])
+                
+                with col1:
+                    st.markdown(f"""
+                    <div style="text-align: center; padding: 20px; border: 3px solid {cor_score}; border-radius: 10px;">
+                        <h2 style="color: {cor_score}; margin: 0;">{score_final:.1f}%</h2>
+                        <p style="margin: 5px 0; font-size: 18px;">Score Final</p>
+                        <p style="margin: 5px 0; font-size: 14px;">Saúde Emocional</p>
+                    </div>
+                    """, unsafe_allow_html=True)
+                
+                with col2:
+                    st.markdown(f"""
+                    <div style="padding: 20px; background-color: rgba(0,0,0,0.05); border-radius: 10px;">
+                        <h3>📊 Interpretação</h3>
+                        <p><strong>{interpretacao}</strong></p>
+                        <p><strong>Arquétipos:</strong> {score_arquetipos:.1f}%</p>
+                        <p><strong>Microambiente:</strong> {score_microambiente:.1f}%</p>
+                    </div>
+                    """, unsafe_allow_html=True)
                 
                 st.divider()
                 
-                                # ==================== TABELA COM DRILL-DOWN ====================
-                st.subheader("📝 Análise Detalhada - Drill-Down")
+                # ==================== TABELAS SEPARADAS ====================
+                st.subheader("📋 Análise Detalhada por Tipo")
                 
-                # Seleção do tipo de análise
-                tipo_analise_se = st.selectbox(
-                    "Selecione o tipo de análise:",
-                    ["Arquétipos", "Microambiente", "Todos"],
-                    key="tipo_analise_se"
-                )
-                
-                # Filtrar afirmações baseado na seleção
-                if tipo_analise_se == "Arquétipos":
-                    afirmacoes_filtradas = [a for a in afirmacoes_saude_emocional if a['tipo'] == 'Arquétipo']
-                elif tipo_analise_se == "Microambiente":
-                    afirmacoes_filtradas = [a for a in afirmacoes_saude_emocional if a['tipo'] == 'Microambiente']
-                else:
-                    afirmacoes_filtradas = afirmacoes_saude_emocional
-                
-                if afirmacoes_filtradas:
-                    # Criar DataFrame para exibição
-                    df_se_detalhado = pd.DataFrame(afirmacoes_filtradas)
+                # ==================== TABELA 1: ARQUÉTIPOS ====================
+                if afirmacoes_arq:
+                    st.markdown("**�� Questões de Arquétipos - Saúde Emocional**")
+                    
+                    # Criar DataFrame para arquétipos
+                    df_arq_detalhado = pd.DataFrame(afirmacoes_arq)
                     
                     # Adicionar colunas de análise
-                    if tipo_analise_se == "Arquétipos":
-                        # Para arquétipos, adicionar % tendência
-                        tendencias = []
-                        for _, row in df_se_detalhado.iterrows():
-                            codigo = row['chave']
-                            arquétipo = row['dimensao']
+                    tendencias_arq = []
+                    percentuais_arq = []
+                    
+                    for _, row in df_arq_detalhado.iterrows():
+                        codigo = row['chave']
+                        arquétipo = row['dimensao']
+                        
+                        # Buscar na matriz
+                        linha = matriz_arq[matriz_arq['COD_AFIRMACAO'] == codigo]
+                        if not linha.empty:
+                            # Calcular média de estrelas
+                            estrelas_questao = []
+                            for _, respondente in df_arquetipos.iterrows():
+                                if 'respostas' in respondente and codigo in respondente['respostas']:
+                                    estrelas = int(respondente['respostas'][codigo])
+                                    estrelas_questao.append(estrelas)
                             
-                            # Buscar na matriz
-                            linha = matriz_arq[matriz_arq['COD_AFIRMACAO'] == codigo]
-                            if not linha.empty:
-                                # Calcular média de estrelas
-                                estrelas_questao = []
-                                for _, respondente in df_arquetipos.iterrows():
-                                    if 'respostas' in respondente and codigo in respondente['respostas']:
-                                        estrelas = int(respondente['respostas'][codigo])
-                                        estrelas_questao.append(estrelas)
+                            if estrelas_questao:
+                                media_estrelas = np.mean(estrelas_questao)
+                                media_arredondada = round(media_estrelas)
                                 
-                                if estrelas_questao:
-                                    media_estrelas = np.mean(estrelas_questao)
-                                    media_arredondada = round(media_estrelas)
+                                # Buscar % tendência
+                                chave = f"{arquétipo}{media_arredondada}{codigo}"
+                                linha_tendencia = matriz_arq[matriz_arq['CHAVE'] == chave]
+                                
+                                if not linha_tendencia.empty:
+                                    tendencia_percentual = linha_tendencia['% Tendência'].iloc[0] * 100
+                                    tendencia_info = linha_tendencia['Tendência'].iloc[0]
                                     
-                                    # Buscar % tendência
-                                    chave = f"{arquétipo}{media_arredondada}{codigo}"
-                                    linha_tendencia = matriz_arq[matriz_arq['CHAVE'] == chave]
-                                    
-                                    if not linha_tendencia.empty:
-                                        tendencia_percentual = linha_tendencia['% Tendência'].iloc[0] * 100
-                                        tendencia_info = linha_tendencia['Tendência'].iloc[0]
-                                        tendencias.append(f"{tendencia_percentual:.1f}% ({tendencia_info})")
-                                    else:
-                                        tendencias.append("N/A")
+                                    tendencias_arq.append(tendencia_info)
+                                    percentuais_arq.append(f"{tendencia_percentual:.1f}%")
                                 else:
-                                    tendencias.append("N/A")
+                                    tendencias_arq.append("N/A")
+                                    percentuais_arq.append("N/A")
                             else:
-                                tendencias.append("N/A")
-                        
-                        df_se_detalhado['% Tendência'] = tendencias
+                                tendencias_arq.append("N/A")
+                                percentuais_arq.append("N/A")
+                        else:
+                            tendencias_arq.append("N/A")
+                            percentuais_arq.append("N/A")
                     
-                    elif tipo_analise_se == "Microambiente":
-                        # Para microambiente, adicionar Real vs Ideal
-                        reais = []
-                        ideais = []
-                        gaps = []
-                        
-                        for _, row in df_se_detalhado.iterrows():
-                            codigo = row['chave']
-                            
-                            # Calcular médias
-                            estrelas_real = []
-                            estrelas_ideal = []
-                            
-                            for _, respondente in df_microambiente.iterrows():
-                                if 'respostas' in respondente:
-                                    respostas = respondente['respostas']
-                                    questao_real = f"{codigo}C"
-                                    questao_ideal = f"{codigo}k"
-                                    
-                                    if questao_real in respostas:
-                                        estrelas_real.append(int(respostas[questao_real]))
-                                    if questao_ideal in respostas:
-                                        estrelas_ideal.append(int(respostas[questao_ideal]))
-                            
-                            if estrelas_real and estrelas_ideal:
-                                media_real = np.mean(estrelas_real)
-                                media_ideal = np.mean(estrelas_ideal)
-                                
-                                # Arredondamento
-                                media_real_arredondada = round(media_real)
-                                media_ideal_arredondada = round(media_ideal)
-                                
-                                # Buscar pontuações
-                                chave = f"{codigo}_I{media_ideal_arredondada}_R{media_real_arredondada}"
-                                linha = matriz_micro[matriz_micro['CHAVE'] == chave]
-                                
-                                if not linha.empty:
-                                    pontuacao_real = linha['PONTUACAO_REAL'].iloc[0]
-                                    pontuacao_ideal = linha['PONTUACAO_IDEAL'].iloc[0]
-                                    gap = pontuacao_ideal - pontuacao_real
-                                    
-                                    reais.append(f"{pontuacao_real:.1f}")
-                                    ideais.append(f"{pontuacao_ideal:.1f}")
-                                    gaps.append(f"{gap:.1f}")
-                                else:
-                                    reais.append("N/A")
-                                    ideais.append("N/A")
-                                    gaps.append("N/A")
-                            else:
-                                reais.append("N/A")
-                                ideais.append("N/A")
-                                gaps.append("N/A")
-                        
-                        df_se_detalhado['Real'] = reais
-                        df_se_detalhado['Ideal'] = ideais
-                        df_se_detalhado['Gap'] = gaps
+                    df_arq_detalhado['% Tendência'] = percentuais_arq
+                    df_arq_detalhado['Tendência'] = tendencias_arq
                     
-                    # Exibir tabela
-                    st.dataframe(df_se_detalhado, use_container_width=True)
+                    # Função para aplicar cores baseadas na tendência
+                    def color_tendencia_arq(val):
+                        val_str = str(val).strip()
+                        
+                        if val_str == 'MUITO FAVORÁVEL':
+                            return 'background-color: rgba(173, 216, 230, 0.8)'  # Azul claro
+                        elif val_str == 'FAVORÁVEL':
+                            return 'background-color: rgba(0, 128, 0, 0.8)'      # Verde escuro
+                        elif val_str == 'POUCO FAVORÁVEL':
+                            return 'background-color: rgba(144, 238, 144, 0.8)'  # Verde claro
+                        elif val_str == 'POUCO DESFAVORÁVEL':
+                            return 'background-color: rgba(255, 255, 0, 0.7)'    # Amarelo
+                        elif val_str == 'DESFAVORÁVEL':
+                            return 'background-color: rgba(255, 165, 0, 0.7)'    # Laranja
+                        elif val_str == 'MUITO DESFAVORÁVEL':
+                            return 'background-color: rgba(255, 0, 0, 0.8)'      # Vermelho
+                        else:
+                            return 'background-color: rgba(200, 200, 200, 0.3)'   # Cinza
                     
-                    # Download dos dados
-                    csv_se = df_se_detalhado.to_csv(index=False)
+                    # Preparar colunas para exibição
+                    df_arq_exibir = df_arq_detalhado[['chave', 'afirmacao', 'dimensao', '% Tendência', 'Tendência']].copy()
+                    df_arq_exibir.columns = ['Questão', 'Afirmação', 'Arquétipo', '% Tendência', 'Tendência']
+                    
+                    # Aplicar cores
+                    df_arq_styled = df_arq_exibir.style.applymap(color_tendencia_arq, subset=['Tendência'])
+                    
+                    st.dataframe(df_arq_styled, use_container_width=True)
+                    
+                    # Download arquétipos
+                    csv_arq = df_arq_exibir.to_csv(index=False)
                     st.download_button(
-                        label=f"📥 Download CSV - {tipo_analise_se}",
-                        data=csv_se,
-                        file_name=f"saude_emocional_{tipo_analise_se.lower()}.csv",
+                        label="📥 Download CSV - Arquétipos SE",
+                        data=csv_arq,
+                        file_name="saude_emocional_arquetipos.csv",
+                        mime="text/csv"
+                    )
+                
+                st.divider()
+                
+                # ==================== TABELA 2: MICROAMBIENTE ====================
+                if afirmacoes_micro:
+                    st.markdown("**🏢 Questões de Microambiente - Saúde Emocional**")
+                    
+                    # Criar DataFrame para microambiente
+                    df_micro_detalhado = pd.DataFrame(afirmacoes_micro)
+                    
+                    # Adicionar colunas de análise
+                    reais_micro = []
+                    ideais_micro = []
+                    gaps_micro = []
+                    
+                    for _, row in df_micro_detalhado.iterrows():
+                        codigo = row['chave']
+                        
+                        # Calcular médias
+                        estrelas_real = []
+                        estrelas_ideal = []
+                        
+                        for _, respondente in df_microambiente.iterrows():
+                            if 'respostas' in respondente:
+                                respostas = respondente['respostas']
+                                questao_real = f"{codigo}C"
+                                questao_ideal = f"{codigo}k"
+                                
+                                if questao_real in respostas:
+                                    estrelas_real.append(int(respostas[questao_real]))
+                                if questao_ideal in respostas:
+                                    estrelas_ideal.append(int(respostas[questao_ideal]))
+                        
+                        if estrelas_real and estrelas_ideal:
+                            media_real = np.mean(estrelas_real)
+                            media_ideal = np.mean(estrelas_ideal)
+                            
+                            # Converter para percentual
+                            percentual_real = (media_real / 5) * 100
+                            percentual_ideal = (media_ideal / 5) * 100
+                            gap = percentual_ideal - percentual_real
+                            
+                            reais_micro.append(f"{percentual_real:.1f}%")
+                            ideais_micro.append(f"{percentual_ideal:.1f}%")
+                            gaps_micro.append(f"{gap:.1f}")
+                        else:
+                            reais_micro.append("N/A")
+                            ideais_micro.append("N/A")
+                            gaps_micro.append("N/A")
+                    
+                    df_micro_detalhado['Real'] = reais_micro
+                    df_micro_detalhado['Ideal'] = ideais_micro
+                    df_micro_detalhado['Gap'] = gaps_micro
+                    
+                    # Função para aplicar cores baseadas no gap
+                    def color_gap_micro(val):
+                        try:
+                            gap_val = float(val)
+                            if gap_val > 40:
+                                return 'background-color: rgba(255, 0, 0, 0.8)'      # Vermelho
+                            elif gap_val > 20:
+                                return 'background-color: rgba(255, 165, 0, 0.7)'    # Laranja
+                            elif gap_val > 10:
+                                return 'background-color: rgba(255, 255, 0, 0.7)'    # Amarelo
+                            else:
+                                return 'background-color: rgba(0, 128, 0, 0.7)'      # Verde
+                        except:
+                            return 'background-color: transparent'
+                    
+                    # Preparar colunas para exibição
+                    df_micro_exibir = df_micro_detalhado[['chave', 'afirmacao', 'dimensao', 'subdimensao', 'Real', 'Ideal', 'Gap']].copy()
+                    df_micro_exibir.columns = ['Questão', 'Afirmação', 'Dimensão', 'Subdimensão', 'Real (%)', 'Ideal (%)', 'Gap']
+                    
+                    # Aplicar cores
+                    df_micro_styled = df_micro_exibir.style.applymap(color_gap_micro, subset=['Gap'])
+                    
+                    st.dataframe(df_micro_styled, use_container_width=True)
+                    
+                    # Download microambiente
+                    csv_micro = df_micro_exibir.to_csv(index=False)
+                    st.download_button(
+                        label="📥 Download CSV - Microambiente SE",
+                        data=csv_micro,
+                        file_name="saude_emocional_microambiente.csv",
                         mime="text/csv"
                     )
                 
