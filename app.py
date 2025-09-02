@@ -1447,7 +1447,7 @@ if matriz_arq is not None and matriz_micro is not None:
             else:
                 st.warning("⚠️ Nenhum dado encontrado com os filtros aplicados.")
                 
-                        # ==================== TAB SAÚDE EMOCIONAL ====================
+                                # ==================== TAB SAÚDE EMOCIONAL ====================
         with tab3:
             st.header("💚 Análise de Saúde Emocional + Compliance NR-1")
             st.markdown("**🔍 Analisando afirmações existentes relacionadas à saúde emocional...**")
@@ -1456,6 +1456,8 @@ if matriz_arq is not None and matriz_micro is not None:
             with st.spinner("Identificando afirmações de saúde emocional..."):
                 afirmacoes_saude_emocional = analisar_afirmacoes_saude_emocional(matriz_arq, matriz_micro)
                 compliance_nr1 = mapear_compliance_nr1(afirmacoes_saude_emocional)
+                
+                # Separar afirmações por tipo
                 afirmacoes_arq = [a for a in afirmacoes_saude_emocional if a['tipo'] == 'Arquétipo']
             
             if afirmacoes_saude_emocional:
@@ -1478,7 +1480,7 @@ if matriz_arq is not None and matriz_micro is not None:
                 st.divider()
                 
                 # ==================== GRÁFICO 1: COMPLIANCE NR-1 ====================
-                st.subheader("�� Compliance com NR-1 + Adendo Saúde Mental")
+                st.subheader(" Compliance com NR-1 + Adendo Saúde Mental")
                 
                 # Calcular percentuais de cada categoria
                 compliance_percentuais = {}
@@ -1528,8 +1530,16 @@ if matriz_arq is not None and matriz_micro is not None:
                 
                 st.plotly_chart(fig_compliance, use_container_width=True)
                 
-                # ==================== GRÁFICO 2: MICROAMBIENTE REAL VS IDEAL ====================
-                st.subheader("🏢 Microambiente: Como é vs Como deveria ser")
+                # Verificar categorias zeradas
+                categorias_zeradas = [k for k, v in compliance_percentuais.items() if v == 0]
+                if categorias_zeradas:
+                    st.warning(f"⚠️ **Categorias sem questões:** {', '.join(categorias_zeradas)}")
+                    st.info("💡 **Dica:** As palavras-chave podem estar muito específicas. Considere expandir os termos de busca.")
+                
+                st.divider()
+                
+                # ==================== GRÁFICO 2: MICROAMBIENTE REAL VS IDEAL + GAP ====================
+                st.subheader("🏢 Microambiente: Como é vs Como deveria ser vs Gap")
                 
                 # Filtrar apenas questões de microambiente
                 afirmacoes_micro = [a for a in afirmacoes_saude_emocional if a['tipo'] == 'Microambiente']
@@ -1543,7 +1553,25 @@ if matriz_arq is not None and matriz_micro is not None:
                     
                     for af in afirmacoes_micro:
                         codigo = af['chave']
-                        questao = af['afirmacao'][:50] + "..." if len(af['afirmacao']) > 50 else af['afirmacao']
+                        # Quebrar afirmação longa em múltiplas linhas
+                        afirmacao = af['afirmacao']
+                        if len(afirmacao) > 60:
+                            # Quebrar em 2-3 linhas
+                            palavras = afirmacao.split()
+                            linhas = []
+                            linha_atual = ""
+                            for palavra in palavras:
+                                if len(linha_atual + " " + palavra) <= 60:
+                                    linha_atual += " " + palavra if linha_atual else palavra
+                                else:
+                                    if linha_atual:
+                                        linhas.append(linha_atual)
+                                    linha_atual = palavra
+                            if linha_atual:
+                                linhas.append(linha_atual)
+                            questao = "<br>".join(linhas)
+                        else:
+                            questao = afirmacao
                         
                         # Calcular médias
                         estrelas_real = []
@@ -1575,7 +1603,7 @@ if matriz_arq is not None and matriz_micro is not None:
                             gaps.append(gap)
                     
                     if questoes_micro:
-                        # Gráfico de barras agrupadas
+                        # Gráfico de barras agrupadas com 3 barras
                         fig_micro = go.Figure()
                         
                         # Cores baseadas no gap
@@ -1610,17 +1638,38 @@ if matriz_arq is not None and matriz_micro is not None:
                             textposition='auto'
                         ))
                         
+                        # Barras para Gap (3ª barra)
+                        fig_micro.add_trace(go.Bar(
+                            name='Gap (Ideal - Real)',
+                            x=questoes_micro,
+                            y=gaps,
+                            marker_color=cores_gap,
+                            text=[f"{v:.1f}" for v in gaps],
+                            textposition='auto'
+                        ))
+                        
                         fig_micro.update_layout(
-                            title="🏢 Questões de Microambiente - Real vs Ideal",
+                            title="🏢 Questões de Microambiente - Real vs Ideal vs Gap",
                             xaxis_title="Questões",
-                            yaxis_title="Percentual (%)",
-                            yaxis=dict(range=[0, 100]),
+                            yaxis_title="Percentual (%) / Gap",
                             barmode='group',
-                            height=500,
+                            height=600,
                             xaxis_tickangle=-45
                         )
                         
                         st.plotly_chart(fig_micro, use_container_width=True)
+                        
+                        # Legenda das cores do gap
+                        st.markdown("**🎨 Legenda das Cores do Gap:**")
+                        col1, col2, col3, col4 = st.columns(4)
+                        with col1:
+                            st.markdown("🟢 **Verde:** Gap ≤ 10% (Bom)")
+                        with col2:
+                            st.markdown("🟡 **Amarelo:** Gap 10-20% (Regular)")
+                        with col3:
+                            st.markdown("🟠 **Laranja:** Gap 20-40% (Ruim)")
+                        with col4:
+                            st.markdown("🔴 **Vermelho:** Gap > 40% (Muito Ruim)")
                 
                 st.divider()
                 
@@ -1696,7 +1745,7 @@ if matriz_arq is not None and matriz_micro is not None:
                     interpretacao = "🟡 BOM - Ambiente saudável com melhorias"
                     cor_score = "orange"
                 elif score_final >= 40:
-                    interpretacao = "�� REGULAR - Ambiente com problemas moderados"
+                    interpretacao = " REGULAR - Ambiente com problemas moderados"
                     cor_score = "darkorange"
                 else:
                     interpretacao = "🔴 RUIM - Ambiente com problemas sérios"
@@ -1717,10 +1766,12 @@ if matriz_arq is not None and matriz_micro is not None:
                 with col2:
                     st.markdown(f"""
                     <div style="padding: 20px; background-color: rgba(0,0,0,0.05); border-radius: 10px;">
-                        <h3>📊 Interpretação</h3>
+                        <h3>📊 Como o Score é Calculado</h3>
                         <p><strong>{interpretacao}</strong></p>
-                        <p><strong>Arquétipos:</strong> {score_arquetipos:.1f}%</p>
-                        <p><strong>Microambiente:</strong> {score_microambiente:.1f}%</p>
+                        <p><strong>🧠 Score Arquétipos:</strong> {score_arquetipos:.1f}% (baseado na tendência favorável/desfavorável)</p>
+                        <p><strong>🏢 Score Microambiente:</strong> {score_microambiente:.1f}% (baseado no gap Real vs Ideal)</p>
+                        <p><strong>💚 Score Final:</strong> Média dos dois scores</p>
+                        <p><strong>🎯 Interpretação:</strong> Quanto maior o score, melhor a saúde emocional proporcionada pelo líder</p>
                     </div>
                     """, unsafe_allow_html=True)
                 
@@ -1731,7 +1782,7 @@ if matriz_arq is not None and matriz_micro is not None:
                 
                 # ==================== TABELA 1: ARQUÉTIPOS ====================
                 if afirmacoes_arq:
-                    st.markdown("**�� Questões de Arquétipos - Saúde Emocional**")
+                    st.markdown("** Questões de Arquétipos - Saúde Emocional**")
                     
                     # Criar DataFrame para arquétipos
                     df_arq_detalhado = pd.DataFrame(afirmacoes_arq)
