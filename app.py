@@ -56,7 +56,33 @@ def analisar_afirmacoes_saude_emocional(matriz_arq, matriz_micro):
     return afirmacoes_se
 
 
-
+# MAPEAR COMPLIANCE COM NR-1
+def mapear_compliance_nr1(afirmacoes_se):
+    """Mapeia afirmações de saúde emocional com requisitos da NR-1"""
+    
+    compliance = {
+        'Prevenção de Estresse': [],
+        'Ambiente Psicológico Seguro': [],
+        'Suporte Emocional': [],
+        'Comunicação Positiva': [],
+        'Equilíbrio Vida-Trabalho': []
+    }
+    
+    for afirmacao in afirmacoes_se:
+        af = afirmacao['afirmacao'].lower()
+        
+        if any(palavra in af for palavra in ['estresse', 'ansiedade', 'pressão', 'pressao']):
+            compliance['Prevenção de Estresse'].append(afirmacao)
+        elif any(palavra in af for palavra in ['ambiente', 'seguro', 'proteção', 'protecao']):
+            compliance['Ambiente Psicológico Seguro'].append(afirmacao)
+        elif any(palavra in af for palavra in ['suporte', 'apoio', 'ajuda', 'assistência', 'assistencia']):
+            compliance['Suporte Emocional'].append(afirmacao)
+        elif any(palavra in af for palavra in ['feedback', 'positivo', 'construtivo', 'encorajamento']):
+            compliance['Comunicação Positiva'].append(afirmacao)
+        elif any(palavra in af for palavra in ['equilíbrio', 'equilibrio', 'flexibilidade', 'horários', 'horarios']):
+            compliance['Equilíbrio Vida-Trabalho'].append(afirmacao)
+    
+    return compliance
 
 
 # Limpar cache para forçar atualização
