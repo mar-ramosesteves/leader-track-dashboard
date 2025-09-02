@@ -21,7 +21,7 @@ def analisar_afirmacoes_saude_emocional(matriz_arq, matriz_micro):
         'estresse', 'estresse', 'ansiedade', 'pressão', 'pressao',
         'bem-estar', 'bem estar', 'saúde', 'saude', 'mental',
         'reconhecimento', 'celebração', 'celebracao', 'valorização', 'valorizacao',
-        'feedback', 'construtivo', 'positivo', 'encorajamento',
+        'feedback', 'positivo', 'construtivo', 'encorajamento',
         'ambiente', 'seguro', 'proteção', 'protecao', 'respeito',
         'equilíbrio', 'equilibrio', 'flexibilidade', 'horários', 'horarios',
         'desenvolvimento', 'crescimento', 'pessoal', 'participação', 'participacao'
@@ -29,60 +29,31 @@ def analisar_afirmacoes_saude_emocional(matriz_arq, matriz_micro):
     
     afirmacoes_se = []
     
-    # Analisar matriz de arquétipos
+    # Analisar matriz de arquétipos (usa ARQUETIPO em vez de DIMENSAO)
     for _, row in matriz_arq.iterrows():
         afirmacao = str(row['AFIRMACAO']).lower()
         if any(palavra in afirmacao for palavra in palavras_chave_saude_emocional):
             afirmacoes_se.append({
                 'tipo': 'Arquétipo',
                 'afirmacao': row['AFIRMACAO'],
-                'dimensao': row['DIMENSAO'],
-                'subdimensao': row['SUBDIMENSAO'],
-                'chave': row['CHAVE']
+                'dimensao': row['ARQUETIPO'],  # CORRIGIDO: usa ARQUETIPO
+                'subdimensao': 'N/A',  # Arquétipos não têm subdimensão
+                'chave': row['COD_AFIRMACAO']  # CORRIGIDO: usa COD_AFIRMACAO
             })
     
-    # Analisar matriz de microambiente
+    # Analisar matriz de microambiente (usa DIMENSAO e SUBDIMENSAO)
     for _, row in matriz_micro.iterrows():
         afirmacao = str(row['AFIRMACAO']).lower()
         if any(palavra in afirmacao for palavra in palavras_chave_saude_emocional):
             afirmacoes_se.append({
                 'tipo': 'Microambiente',
                 'afirmacao': row['AFIRMACAO'],
-                'dimensao': row['DIMENSAO'],
-                'subdimensao': row['SUBDIMENSAO'],
-                'chave': row['CHAVE']
+                'dimensao': row['DIMENSAO'],  # CORRETO: usa DIMENSAO
+                'subdimensao': row['SUBDIMENSAO'],  # CORRETO: usa SUBDIMENSAO
+                'chave': row['CHAVE']  # CORRETO: usa CHAVE
             })
     
     return afirmacoes_se
-
-# MAPEAR COMPLIANCE COM NR-1
-def mapear_compliance_nr1(afirmacoes_se):
-    """Mapeia afirmações de saúde emocional com requisitos da NR-1"""
-    
-    compliance = {
-        'Prevenção de Estresse': [],
-        'Ambiente Psicológico Seguro': [],
-        'Suporte Emocional': [],
-        'Comunicação Positiva': [],
-        'Equilíbrio Vida-Trabalho': []
-    }
-    
-    for afirmacao in afirmacoes_se:
-        af = afirmacao['afirmacao'].lower()
-        
-        if any(palavra in af for palavra in ['estresse', 'ansiedade', 'pressão', 'pressao']):
-            compliance['Prevenção de Estresse'].append(afirmacao)
-        elif any(palavra in af for palavra in ['ambiente', 'seguro', 'proteção', 'protecao']):
-            compliance['Ambiente Psicológico Seguro'].append(afirmacao)
-        elif any(palavra in af for palavra in ['suporte', 'apoio', 'ajuda', 'assistência', 'assistencia']):
-            compliance['Suporte Emocional'].append(afirmacao)
-        elif any(palavra in af for palavra in ['feedback', 'positivo', 'construtivo', 'encorajamento']):
-            compliance['Comunicação Positiva'].append(afirmacao)
-        elif any(palavra in af for palavra in ['equilíbrio', 'equilibrio', 'flexibilidade', 'horários', 'horarios']):
-            compliance['Equilíbrio Vida-Trabalho'].append(afirmacao)
-    
-    return compliance
-
 
 
 
