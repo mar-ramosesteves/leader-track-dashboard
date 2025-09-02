@@ -15,6 +15,9 @@ import openpyxl
 # ANALISAR AFIRMAÇÕES EXISTENTES PARA SAÚDE EMOCIONAL (COM FILTROS)
 def analisar_afirmacoes_saude_emocional(matriz_arq, matriz_micro, df_arquetipos, df_microambiente, filtros):
     """Analisa afirmações existentes e identifica as relacionadas à saúde emocional com filtros aplicados"""
+    print("DEBUG: Iniciando análise de afirmações...")
+    print(f"DEBUG: matriz_arq tem {len(matriz_arq) if matriz_arq is not None else 'None'} linhas")
+    print(f"DEBUG: matriz_micro tem {len(matriz_micro) if matriz_micro is not None else 'None'} linhas")
     
     # Palavras-chave relacionadas à saúde emocional (EXPANDIDAS para capturar mais questões)
     palavras_chave_saude_emocional = [
@@ -156,6 +159,9 @@ def analisar_afirmacoes_saude_emocional(matriz_arq, matriz_micro, df_arquetipos,
                     'chave': codigo
                 })
                 codigos_ja_processados.add(codigo)  # Marca como processado
+                
+    print(f"DEBUG: Encontradas {len(afirmacoes_saude_emocional['arquetipos'])} afirmações de arquétipos")
+    print(f"DEBUG: Encontradas {len(afirmacoes_saude_emocional['microambiente'])} afirmações de microambiente")
     
     return afirmacoes_se, df_arq_filtrado, df_micro_filtrado
 
