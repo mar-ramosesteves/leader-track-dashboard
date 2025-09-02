@@ -1671,7 +1671,7 @@ if matriz_arq is not None and matriz_micro is not None:
                 
                 st.divider()
                 
-                # ==================== TABELA COM DRILL-DOWN ====================
+                                # ==================== TABELA COM DRILL-DOWN ====================
                 st.subheader("📝 Análise Detalhada - Drill-Down")
                 
                 # Seleção do tipo de análise
@@ -1803,7 +1803,8 @@ if matriz_arq is not None and matriz_micro is not None:
                 
             else:
                 st.warning("⚠️ Nenhuma afirmação relacionada à saúde emocional foi identificada.")
-                st.info("�� Dica: Verifique se as palavras-chave estão presentes nas afirmações existentes.")
+                st.info(" Dica: Verifique se as palavras-chave estão presentes nas afirmações existentes.")
+        
     else:
         st.error("❌ Erro ao carregar dados do Supabase.")
 else:
