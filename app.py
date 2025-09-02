@@ -16,37 +16,73 @@ import openpyxl
 def analisar_afirmacoes_saude_emocional(matriz_arq, matriz_micro, df_arquetipos, df_microambiente, filtros):
     """Analisa afirmações existentes e identifica as relacionadas à saúde emocional com filtros aplicados"""
     
-    # Palavras-chave EXPANDIDAS para capturar mais questões
-    palavras_chave_saude_emocional = [
-        # Empatia e Compreensão
-        'empatia', 'compreensão', 'compreensao', 'entendimento', 'percebe', 'oferece',
-        
-        # Suporte e Apoio
-        'suporte', 'apoio', 'ajuda', 'assistência', 'assistencia', 'ajudar', 'resolver',
-        
-        # Estresse e Pressão (EXPANDIDO)
-        'estresse', 'ansiedade', 'pressão', 'pressao', 'cobrança', 'cobranca', 'deadline', 
-        'prazos', 'tensão', 'tensao', 'sobrecarga', 'sobrecarga',
-        
-        # Bem-estar e Saúde
-        'bem-estar', 'bem estar', 'saúde', 'saude', 'mental', 'felicidade', 'satisfação', 'satisfacao',
-        
-        # Reconhecimento
-        'reconhecimento', 'celebração', 'celebracao', 'valorização', 'valorizacao', 'elogio',
-        
-        # Feedback e Comunicação
-        'feedback', 'positivo', 'construtivo', 'encorajamento', 'comentários', 'comentarios',
-        
-        # Ambiente e Segurança
-        'ambiente', 'seguro', 'proteção', 'protecao', 'respeito', 'cuidadoso', 'palavras',
-        
-        # Equilíbrio Vida-Trabalho (EXPANDIDO)
-        'equilíbrio', 'equilibrio', 'flexibilidade', 'horários', 'horarios', 'tempo', 'família', 'familia',
-        'pessoal', 'relação', 'relacao', 'vida pessoal', 'vida pessoal',
-        
-        # Desenvolvimento
-        'desenvolvimento', 'crescimento', 'pessoal', 'participação', 'participacao', 'motivação', 'motivacao'
-    ]
+        # Palavras-chave relacionadas à saúde emocional (EXPANDIDAS para capturar mais questões)
+        palavras_chave_saude_emocional = [
+            # Empatia e Compreensão
+            'empatia', 'compreensão', 'compreensao', 'entendimento', 'percebe', 'oferece',
+            'compreensivo', 'atento', 'sensível', 'sensivel', 'cuidadoso',
+            
+            # Suporte e Apoio
+            'suporte', 'apoio', 'ajuda', 'assistência', 'assistencia', 'ajudar', 'resolver',
+            'orientar', 'guiar', 'acompanhar', 'estar presente', 'disponível', 'disponivel',
+            
+            # Estresse e Pressão (EXPANDIDO)
+            'estresse', 'ansiedade', 'pressão', 'pressao', 'cobrança', 'cobranca', 'deadline', 
+            'prazos', 'tensão', 'tensao', 'sobrecarga', 'excesso', 'cansaço', 'cansaco', 'fadiga', 
+            'desgaste', 'preocupação', 'preocupacao', 'nervoso', 'irritado', 'frustrado', 'angustiado', 
+            'estressado', 'sobrecarregado',
+            
+            # Bem-estar e Saúde
+            'bem-estar', 'bem estar', 'saúde', 'saude', 'mental', 'felicidade', 'satisfação', 'satisfacao',
+            'alegria', 'motivação', 'motivacao', 'energia', 'vitalidade', 'disposição', 'disposicao',
+            
+            # Reconhecimento e Valorização
+            'reconhecimento', 'celebração', 'celebracao', 'valorização', 'valorizacao', 'elogio',
+            'agradecimento', 'gratidão', 'gratidao', 'merece', 'merecido', 'esforço', 'esforco',
+            
+            # Feedback e Comunicação Positiva
+            'feedback', 'positivo', 'construtivo', 'encorajamento', 'comentários', 'comentarios',
+            'palavras', 'amáveis', 'amaveis', 'gentil', 'carinhoso', 'atencioso',
+            'desenvolvimento', 'futuro', 'potencial', 'capacidade', 'habilidade',
+            
+            # Ambiente e Segurança
+            'ambiente', 'seguro', 'proteção', 'protecao', 'respeito', 'cuidadoso', 'palavras',
+            'acolhedor', 'inclusivo', 'tolerante', 'paciente', 'calmo', 'tranquilo',
+            
+            # Equilíbrio Vida-Trabalho (EXPANDIDO)
+            'equilíbrio', 'equilibrio', 'flexibilidade', 'horários', 'horarios', 'tempo', 'família', 'familia',
+            'pessoal', 'relação', 'relacao', 'vida pessoal', 'descanso', 'pausa', 'intervalo', 'folga', 
+            'feriado', 'férias', 'ferias', 'licença', 'licenca',
+            
+            # Desenvolvimento e Crescimento
+            'desenvolvimento', 'crescimento', 'pessoal', 'participação', 'participacao', 'motivação', 'motivacao',
+            'aprendizado', 'evolução', 'evolucao', 'progresso', 'melhoria', 'oportunidades', 'expressar', 
+            'ideias', 'opiniões', 'opinioes', 'criatividade',
+            
+            # Comunicação e Diálogo
+            'comunicação', 'comunicacao', 'diálogo', 'dialogo', 'escuta', 'ouvir', 'conversa',
+            'debate', 'discussão', 'discussao', 'colaboração', 'colaboracao', 'trabalho em equipe',
+            
+            # Confiança e Respeito
+            'confiança', 'confianca', 'respeito', 'dignidade', 'humanidade', 'honestidade',
+            'transparência', 'transparencia', 'ética', 'etica', 'moral', 'valores',
+            
+            # Prevenção e Gestão (NOVAS - para capturar questões de prevenção)
+            'prevenção', 'prevencao', 'evitar', 'reduzir', 'diminuir', 'controlar', 'gerenciar',
+            'administrar', 'organizar', 'planejar', 'estratégia', 'estrategia', 'método', 'metodo',
+            'técnica', 'tecnica', 'ferramenta', 'recurso', 'solução', 'solucao', 'alternativa',
+            'opção', 'opcao', 'escolha', 'decisão', 'decisao', 'ação', 'acao', 'medida',
+            'política', 'politica', 'procedimento', 'protocolo', 'norma', 'regra', 'padrão', 'padrao',
+            
+            # Prevenção de Estresse - Palavras-chave ESPECÍFICAS das suas afirmações
+            'preocupa com o tempo', 'preocupa com detalhes', 'preocupa se', 'preocupa com',
+            'necessidade de se aprofundar', 'aprofundar nos detalhes', 'detalhes na execução',
+            'detalhes de realização', 'detalhes do trabalho', 'sem necessidade de ficar de olho',
+            'fazer todo o possivel', 'resolver problemas particulares', 'problemas particulares urgentes',
+            'atuar na solução de conflitos', 'solução de conflitos em sua equipe',
+            'risco calculado', 'resultasse em algo negativo', 'seriam apoiados',
+            'leais uns com os outros', 'mais elogiados e incentivados', 'do que criticados'
+        ]
     
     afirmacoes_se = []
     codigos_ja_processados = set()  # Para evitar repetições
