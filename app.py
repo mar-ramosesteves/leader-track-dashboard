@@ -1526,10 +1526,14 @@ if matriz_arq is not None and matriz_micro is not None:
             # Analisar afirmações de saúde emocional
             with st.spinner("Identificando afirmações de saúde emocional..."):
                 afirmacoes_saude_emocional, df_arq_filtrado, df_micro_filtrado = analisar_afirmacoes_saude_emocional(matriz_arq, matriz_micro, df_arquetipos, df_microambiente, filtros)
-                compliance_nr1 = mapear_compliance_nr1(afirmacoes_saude_emocional)
                 
                 # Separar afirmações por tipo
                 afirmacoes_arq = [a for a in afirmacoes_saude_emocional if a['tipo'] == 'Arquétipo']
+                
+                # ✅ CALCULAR COMPLIANCE AQUI (DEPOIS DOS FILTROS!)
+                compliance_nr1 = mapear_compliance_nr1(afirmacoes_saude_emocional)
+    
+    
             
             if afirmacoes_saude_emocional:
                 # Métricas principais
