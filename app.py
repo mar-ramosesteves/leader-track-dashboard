@@ -1557,11 +1557,48 @@ if matriz_arq is not None and matriz_micro is not None:
                 # ==================== GRÁFICO 1: COMPLIANCE NR-1 ====================
                 st.subheader("�� Compliance com NR-1 + Adendo Saúde Mental")
                 
-                # Calcular percentuais de cada categoria
+                # ✅ RECALCULAR COMPLIANCE BASEADO NOS DADOS FILTRADOS
+                compliance_filtrado = {
+                    'Prevenção de Estresse': [],
+                    'Ambiente Psicológico Seguro': [],
+                    'Suporte Emocional': [],
+                    'Comunicação Positiva': [],
+                    'Equilíbrio Vida-Trabalho': []
+                }
+                
+                # Reclassificar afirmações baseado nos dados filtrados
+                for af in afirmacoes_saude_emocional:
+                    af_lower = af['afirmacao'].lower()
+                    
+                    # Prevenção de Estresse
+                    if any(palavra in af_lower for palavra in ['estresse', 'ansiedade', 'pressão', 'pressao', 'cobrança', 'cobranca', 'deadline', 'prazos', 'tensão', 'tensao', 'sobrecarga']):
+                        compliance_filtrado['Prevenção de Estresse'].append(af)
+                    
+                    # Ambiente Psicológico Seguro
+                    elif any(palavra in af_lower for palavra in ['ambiente', 'seguro', 'proteção', 'protecao', 'respeito', 'cuidadoso', 'palavras']):
+                        compliance_filtrado['Ambiente Psicológico Seguro'].append(af)
+                    
+                    # Suporte Emocional
+                    elif any(palavra in af_lower for palavra in ['suporte', 'apoio', 'ajuda', 'assistência', 'assistencia', 'ajudar', 'resolver', 'percebe', 'oferece']):
+                        compliance_filtrado['Suporte Emocional'].append(af)
+                    
+                    # Comunicação Positiva
+                    elif any(palavra in af_lower for palavra in ['feedback', 'positivo', 'construtivo', 'encorajamento', 'comentários', 'comentarios', 'positivos', 'desenvolvimento', 'futuro']):
+                        compliance_filtrado['Comunicação Positiva'].append(af)
+                    
+                    # Equilíbrio Vida-Trabalho
+                    elif any(palavra in af_lower for palavra in ['equilíbrio', 'equilibrio', 'flexibilidade', 'horários', 'horarios', 'tempo', 'família', 'familia', 'pessoal', 'relação', 'relacao', 'vida pessoal']):
+                        compliance_filtrado['Equilíbrio Vida-Trabalho'].append(af)
+                    
+                    # Se não couber em nenhuma categoria, coloca em Suporte Emocional
+                    else:
+                        compliance_filtrado['Suporte Emocional'].append(af)
+                
+                # Calcular percentuais baseado no compliance filtrado
                 compliance_percentuais = {}
                 total_afirmacoes = len(afirmacoes_saude_emocional)
                 
-                for categoria, afirmacoes in compliance_nr1.items():
+                for categoria, afirmacoes in compliance_filtrado.items():
                     if total_afirmacoes > 0:
                         percentual = (len(afirmacoes) / total_afirmacoes) * 100
                         compliance_percentuais[categoria] = percentual
