@@ -1447,7 +1447,7 @@ if matriz_arq is not None and matriz_micro is not None:
             else:
                 st.warning("⚠️ Nenhum dado encontrado com os filtros aplicados.")
                 
-                                # ==================== TAB SAÚDE EMOCIONAL ====================
+                                        # ==================== TAB SAÚDE EMOCIONAL ====================
         with tab3:
             st.header("💚 Análise de Saúde Emocional + Compliance NR-1")
             st.markdown("**🔍 Analisando afirmações existentes relacionadas à saúde emocional...**")
@@ -1529,12 +1529,6 @@ if matriz_arq is not None and matriz_micro is not None:
                 )
                 
                 st.plotly_chart(fig_compliance, use_container_width=True)
-                
-                # Verificar categorias zeradas
-                categorias_zeradas = [k for k, v in compliance_percentuais.items() if v == 0]
-                if categorias_zeradas:
-                    st.warning(f"⚠️ **Categorias sem questões:** {', '.join(categorias_zeradas)}")
-                    st.info("💡 **Dica:** As palavras-chave podem estar muito específicas. Considere expandir os termos de busca.")
                 
                 st.divider()
                 
@@ -1638,12 +1632,12 @@ if matriz_arq is not None and matriz_micro is not None:
                             textposition='auto'
                         ))
                         
-                        # Barras para Gap (3ª barra)
+                        # Barras para Gap (3ª barra) - COR DIFERENTE
                         fig_micro.add_trace(go.Bar(
                             name='Gap (Ideal - Real)',
                             x=questoes_micro,
                             y=gaps,
-                            marker_color=cores_gap,
+                            marker_color='rgba(138, 43, 226, 0.7)',  # AZUL ROXO para diferenciar
                             text=[f"{v:.1f}" for v in gaps],
                             textposition='auto'
                         ))
