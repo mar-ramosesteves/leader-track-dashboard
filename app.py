@@ -10,26 +10,86 @@ import openpyxl
 
 # ==================== FUNÇÕES SAÚDE EMOCIONAL ====================
 
-# ANALISAR AFIRMAÇÕES EXISTENTES PARA SAÚDE EMOCIONAL
-def analisar_afirmacoes_saude_emocional(matriz_arq, matriz_micro):
-    """Analisa afirmações existentes e identifica as relacionadas à saúde emocional"""
+# ==================== FUNÇÕES SAÚDE EMOCIONAL ====================
+
+# ANALISAR AFIRMAÇÕES EXISTENTES PARA SAÚDE EMOCIONAL (COM FILTROS)
+def analisar_afirmacoes_saude_emocional(matriz_arq, matriz_micro, df_arquetipos, df_microambiente, filtros):
+    """Analisa afirmações existentes e identifica as relacionadas à saúde emocional com filtros aplicados"""
     
-    # Palavras-chave MAIS REALISTAS para saúde emocional
+    # Palavras-chave EXPANDIDAS para capturar mais questões
     palavras_chave_saude_emocional = [
-        'empatia', 'compreensão', 'compreensao', 'entendimento',
-        'suporte', 'apoio', 'ajuda', 'assistência', 'assistencia',
-        'estresse', 'ansiedade', 'pressão', 'pressao',
-        'bem-estar', 'bem estar', 'saúde', 'saude', 'mental',
-        'reconhecimento', 'celebração', 'celebracao', 'valorização', 'valorizacao',
-        'feedback', 'positivo', 'construtivo', 'encorajamento',
-        'ambiente', 'seguro', 'proteção', 'protecao', 'respeito',
-        'equilíbrio', 'equilibrio', 'flexibilidade', 'horários', 'horarios',
-        'desenvolvimento', 'crescimento', 'pessoal', 'participação', 'participacao',
-        'motivação', 'motivacao', 'satisfação', 'satisfacao', 'felicidade'
+        # Empatia e Compreensão
+        'empatia', 'compreensão', 'compreensao', 'entendimento', 'percebe', 'oferece',
+        
+        # Suporte e Apoio
+        'suporte', 'apoio', 'ajuda', 'assistência', 'assistencia', 'ajudar', 'resolver',
+        
+        # Estresse e Pressão (EXPANDIDO)
+        'estresse', 'ansiedade', 'pressão', 'pressao', 'cobrança', 'cobranca', 'deadline', 
+        'prazos', 'tensão', 'tensao', 'sobrecarga', 'sobrecarga',
+        
+        # Bem-estar e Saúde
+        'bem-estar', 'bem estar', 'saúde', 'saude', 'mental', 'felicidade', 'satisfação', 'satisfacao',
+        
+        # Reconhecimento
+        'reconhecimento', 'celebração', 'celebracao', 'valorização', 'valorizacao', 'elogio',
+        
+        # Feedback e Comunicação
+        'feedback', 'positivo', 'construtivo', 'encorajamento', 'comentários', 'comentarios',
+        
+        # Ambiente e Segurança
+        'ambiente', 'seguro', 'proteção', 'protecao', 'respeito', 'cuidadoso', 'palavras',
+        
+        # Equilíbrio Vida-Trabalho (EXPANDIDO)
+        'equilíbrio', 'equilibrio', 'flexibilidade', 'horários', 'horarios', 'tempo', 'família', 'familia',
+        'pessoal', 'relação', 'relacao', 'vida pessoal', 'vida pessoal',
+        
+        # Desenvolvimento
+        'desenvolvimento', 'crescimento', 'pessoal', 'participação', 'participacao', 'motivação', 'motivacao'
     ]
     
     afirmacoes_se = []
     codigos_ja_processados = set()  # Para evitar repetições
+    
+    # Aplicar filtros aos dados
+    df_arq_filtrado = df_arquetipos.copy()
+    df_micro_filtrado = df_microambiente.copy()
+    
+    # Filtrar arquétipos
+    if filtros['empresa'] != "Todas":
+        df_arq_filtrado = df_arq_filtrado[df_arq_filtrado['empresa'] == filtros['empresa']]
+    if filtros['codrodada'] != "Todas":
+        df_arq_filtrado = df_arq_filtrado[df_arq_filtrado['codrodada'] == filtros['codrodada']]
+    if filtros['emaillider'] != "Todos":
+        df_arq_filtrado = df_arq_filtrado[df_arq_filtrado['emailLider'] == filtros['emaillider']]
+    if filtros['estado'] != "Todos":
+        df_arq_filtrado = df_arq_filtrado[df_arq_filtrado['estado'] == filtros['estado']]
+    if filtros['sexo'] != "Todos":
+        df_arq_filtrado = df_arq_filtrado[df_arq_filtrado['sexo'] == filtros['sexo']]
+    if filtros['etnia'] != "Todas":
+        df_arq_filtrado = df_arq_filtrado[df_arq_filtrado['etnia'] == filtros['etnia']]
+    if filtros['departamento'] != "Todos":
+        df_arq_filtrado = df_arq_filtrado[df_arq_filtrado['departamento'] == filtros['departamento']]
+    if filtros['cargo'] != "Todos":
+        df_arq_filtrado = df_arq_filtrado[df_arq_filtrado['cargo'] == filtros['cargo']]
+    
+    # Filtrar microambiente
+    if filtros['empresa'] != "Todas":
+        df_micro_filtrado = df_micro_filtrado[df_micro_filtrado['empresa'] == filtros['empresa']]
+    if filtros['codrodada'] != "Todas":
+        df_micro_filtrado = df_micro_filtrado[df_micro_filtrado['codrodada'] == filtros['codrodada']]
+    if filtros['emaillider'] != "Todos":
+        df_micro_filtrado = df_micro_filtrado[df_micro_filtrado['emailLider'] == filtros['emaillider']]
+    if filtros['estado'] != "Todos":
+        df_micro_filtrado = df_micro_filtrado[df_micro_filtrado['estado'] == filtros['estado']]
+    if filtros['sexo'] != "Todos":
+        df_micro_filtrado = df_micro_filtrado[df_micro_filtrado['sexo'] == filtros['sexo']]
+    if filtros['etnia'] != "Todas":
+        df_micro_filtrado = df_micro_filtrado[df_micro_filtrado['etnia'] == filtros['etnia']]
+    if filtros['departamento'] != "Todos":
+        df_micro_filtrado = df_micro_filtrado[df_micro_filtrado['departamento'] == filtros['departamento']]
+    if filtros['cargo'] != "Todos":
+        df_micro_filtrado = df_micro_filtrado[df_micro_filtrado['cargo'] == filtros['cargo']]
     
     # Analisar matriz de arquétipos
     for _, row in matriz_arq.iterrows():
@@ -61,10 +121,9 @@ def analisar_afirmacoes_saude_emocional(matriz_arq, matriz_micro):
                 })
                 codigos_ja_processados.add(codigo)  # Marca como processado
     
-    return afirmacoes_se
+    return afirmacoes_se, df_arq_filtrado, df_micro_filtrado
 
-
-# MAPEAR COMPLIANCE COM NR-1
+# MAPEAR COMPLIANCE COM NR-1 (MANTIDO IGUAL)
 def mapear_compliance_nr1(afirmacoes_se):
     """Mapeia afirmações de saúde emocional com requisitos da NR-1"""
     
@@ -79,19 +138,31 @@ def mapear_compliance_nr1(afirmacoes_se):
     for afirmacao in afirmacoes_se:
         af = afirmacao['afirmacao'].lower()
         
-        if any(palavra in af for palavra in ['estresse', 'ansiedade', 'pressão', 'pressao']):
+        # Prevenção de Estresse (EXPANDIDO)
+        if any(palavra in af for palavra in ['estresse', 'ansiedade', 'pressão', 'pressao', 'cobrança', 'cobranca', 'deadline', 'prazos', 'tensão', 'tensao', 'sobrecarga']):
             compliance['Prevenção de Estresse'].append(afirmacao)
-        elif any(palavra in af for palavra in ['ambiente', 'seguro', 'proteção', 'protecao']):
+        
+        # Ambiente Psicológico Seguro
+        elif any(palavra in af for palavra in ['ambiente', 'seguro', 'proteção', 'protecao', 'respeito', 'cuidadoso', 'palavras']):
             compliance['Ambiente Psicológico Seguro'].append(afirmacao)
-        elif any(palavra in af for palavra in ['suporte', 'apoio', 'ajuda', 'assistência', 'assistencia']):
+        
+        # Suporte Emocional
+        elif any(palavra in af for palavra in ['suporte', 'apoio', 'ajuda', 'assistência', 'assistencia', 'ajudar', 'resolver', 'percebe', 'oferece']):
             compliance['Suporte Emocional'].append(afirmacao)
-        elif any(palavra in af for palavra in ['feedback', 'positivo', 'construtivo', 'encorajamento']):
+        
+        # Comunicação Positiva
+        elif any(palavra in af for palavra in ['feedback', 'positivo', 'construtivo', 'encorajamento', 'comentários', 'comentarios', 'positivos', 'desenvolvimento', 'futuro']):
             compliance['Comunicação Positiva'].append(afirmacao)
-        elif any(palavra in af for palavra in ['equilíbrio', 'equilibrio', 'flexibilidade', 'horários', 'horarios']):
+        
+        # Equilíbrio Vida-Trabalho (EXPANDIDO)
+        elif any(palavra in af for palavra in ['equilíbrio', 'equilibrio', 'flexibilidade', 'horários', 'horarios', 'tempo', 'família', 'familia', 'pessoal', 'relação', 'relacao', 'vida pessoal']):
             compliance['Equilíbrio Vida-Trabalho'].append(afirmacao)
+        
+        # Se não couber em nenhuma categoria, coloca em Suporte Emocional (mais genérico)
+        else:
+            compliance['Suporte Emocional'].append(afirmacao)
     
     return compliance
-
 
 # Limpar cache para forçar atualização
 st.cache_data.clear()
@@ -1454,7 +1525,7 @@ if matriz_arq is not None and matriz_micro is not None:
             
             # Analisar afirmações de saúde emocional
             with st.spinner("Identificando afirmações de saúde emocional..."):
-                afirmacoes_saude_emocional = analisar_afirmacoes_saude_emocional(matriz_arq, matriz_micro)
+                afirmacoes_saude_emocional, df_arq_filtrado, df_micro_filtrado = analisar_afirmacoes_saude_emocional(matriz_arq, matriz_micro, df_arquetipos, df_microambiente, filtros)
                 compliance_nr1 = mapear_compliance_nr1(afirmacoes_saude_emocional)
                 
                 # Separar afirmações por tipo
