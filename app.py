@@ -14,47 +14,53 @@ import openpyxl
 def analisar_afirmacoes_saude_emocional(matriz_arq, matriz_micro):
     """Analisa afirmações existentes e identifica as relacionadas à saúde emocional"""
     
-    # Palavras-chave relacionadas à saúde emocional
+    # Palavras-chave MAIS ESPECÍFICAS para saúde emocional
     palavras_chave_saude_emocional = [
-        'empatia', 'empatia', 'compreensão', 'compreensao', 'entendimento',
-        'suporte', 'apoio', 'ajuda', 'assistência', 'assistencia',
-        'estresse', 'estresse', 'ansiedade', 'pressão', 'pressao',
-        'bem-estar', 'bem estar', 'saúde', 'saude', 'mental',
-        'reconhecimento', 'celebração', 'celebracao', 'valorização', 'valorizacao',
-        'feedback', 'positivo', 'construtivo', 'encorajamento',
-        'ambiente', 'seguro', 'proteção', 'protecao', 'respeito',
-        'equilíbrio', 'equilibrio', 'flexibilidade', 'horários', 'horarios',
-        'desenvolvimento', 'crescimento', 'pessoal', 'participação', 'participacao'
+        'empatia', 'compreensão', 'compreensao', 'entendimento',
+        'suporte emocional', 'apoio pessoal', 'ajuda pessoal',
+        'estresse', 'ansiedade', 'pressão psicológica', 'pressao psicologica',
+        'bem-estar mental', 'bem estar mental', 'saúde mental', 'saude mental',
+        'reconhecimento pessoal', 'valorização pessoal', 'valorizacao pessoal',
+        'feedback positivo', 'encorajamento pessoal',
+        'ambiente seguro', 'proteção pessoal', 'protecao pessoal', 'respeito pessoal',
+        'equilíbrio pessoal', 'equilibrio pessoal', 'flexibilidade pessoal',
+        'desenvolvimento pessoal', 'crescimento pessoal'
     ]
     
     afirmacoes_se = []
+    codigos_ja_processados = set()  # Para evitar repetições
     
-    # Analisar matriz de arquétipos (usa ARQUETIPO em vez de DIMENSAO)
+    # Analisar matriz de arquétipos
     for _, row in matriz_arq.iterrows():
-        afirmacao = str(row['AFIRMACAO']).lower()
-        if any(palavra in afirmacao for palavra in palavras_chave_saude_emocional):
-            afirmacoes_se.append({
-                'tipo': 'Arquétipo',
-                'afirmacao': row['AFIRMACAO'],
-                'dimensao': row['ARQUETIPO'],  # CORRIGIDO: usa ARQUETIPO
-                'subdimensao': 'N/A',  # Arquétipos não têm subdimensão
-                'chave': row['COD_AFIRMACAO']  # CORRIGIDO: usa COD_AFIRMACAO
-            })
+        codigo = row['COD_AFIRMACAO']
+        if codigo not in codigos_ja_processados:  # Evita repetições
+            afirmacao = str(row['AFIRMACAO']).lower()
+            if any(palavra in afirmacao for palavra in palavras_chave_saude_emocional):
+                afirmacoes_se.append({
+                    'tipo': 'Arquétipo',
+                    'afirmacao': row['AFIRMACAO'],
+                    'dimensao': row['ARQUETIPO'],
+                    'subdimensao': 'N/A',
+                    'chave': codigo
+                })
+                codigos_ja_processados.add(codigo)  # Marca como processado
     
-    # Analisar matriz de microambiente (usa DIMENSAO e SUBDIMENSAO)
+    # Analisar matriz de microambiente
     for _, row in matriz_micro.iterrows():
-        afirmacao = str(row['AFIRMACAO']).lower()
-        if any(palavra in afirmacao for palavra in palavras_chave_saude_emocional):
-            afirmacoes_se.append({
-                'tipo': 'Microambiente',
-                'afirmacao': row['AFIRMACAO'],
-                'dimensao': row['DIMENSAO'],  # CORRETO: usa DIMENSAO
-                'subdimensao': row['SUBDIMENSAO'],  # CORRETO: usa SUBDIMENSAO
-                'chave': row['CHAVE']  # CORRETO: usa CHAVE
-            })
+        codigo = row['COD']
+        if codigo not in codigos_ja_processados:  # Evita repetições
+            afirmacao = str(row['AFIRMACAO']).lower()
+            if any(palavra in afirmacao for palavra in palavras_chave_saude_emocional):
+                afirmacoes_se.append({
+                    'tipo': 'Microambiente',
+                    'afirmacao': row['AFIRMACAO'],
+                    'dimensao': row['DIMENSAO'],
+                    'subdimensao': row['SUBDIMENSAO'],
+                    'chave': codigo
+                })
+                codigos_ja_processados.add(codigo)  # Marca como processado
     
     return afirmacoes_se
-
 
 # MAPEAR COMPLIANCE COM NR-1
 def mapear_compliance_nr1(afirmacoes_se):
