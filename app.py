@@ -1456,6 +1456,7 @@ if matriz_arq is not None and matriz_micro is not None:
             with st.spinner("Identificando afirmações de saúde emocional..."):
                 afirmacoes_saude_emocional = analisar_afirmacoes_saude_emocional(matriz_arq, matriz_micro)
                 compliance_nr1 = mapear_compliance_nr1(afirmacoes_saude_emocional)
+                afirmacoes_arq = [a for a in afirmacoes_saude_emocional if a['tipo'] == 'Arquétipo']
             
             if afirmacoes_saude_emocional:
                 # Métricas principais
