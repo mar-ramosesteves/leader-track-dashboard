@@ -14,17 +14,18 @@ import openpyxl
 def analisar_afirmacoes_saude_emocional(matriz_arq, matriz_micro):
     """Analisa afirmações existentes e identifica as relacionadas à saúde emocional"""
     
-    # Palavras-chave MAIS ESPECÍFICAS para saúde emocional
+    # Palavras-chave MAIS REALISTAS para saúde emocional
     palavras_chave_saude_emocional = [
         'empatia', 'compreensão', 'compreensao', 'entendimento',
-        'suporte emocional', 'apoio pessoal', 'ajuda pessoal',
-        'estresse', 'ansiedade', 'pressão psicológica', 'pressao psicologica',
-        'bem-estar mental', 'bem estar mental', 'saúde mental', 'saude mental',
-        'reconhecimento pessoal', 'valorização pessoal', 'valorizacao pessoal',
-        'feedback positivo', 'encorajamento pessoal',
-        'ambiente seguro', 'proteção pessoal', 'protecao pessoal', 'respeito pessoal',
-        'equilíbrio pessoal', 'equilibrio pessoal', 'flexibilidade pessoal',
-        'desenvolvimento pessoal', 'crescimento pessoal'
+        'suporte', 'apoio', 'ajuda', 'assistência', 'assistencia',
+        'estresse', 'ansiedade', 'pressão', 'pressao',
+        'bem-estar', 'bem estar', 'saúde', 'saude', 'mental',
+        'reconhecimento', 'celebração', 'celebracao', 'valorização', 'valorizacao',
+        'feedback', 'positivo', 'construtivo', 'encorajamento',
+        'ambiente', 'seguro', 'proteção', 'protecao', 'respeito',
+        'equilíbrio', 'equilibrio', 'flexibilidade', 'horários', 'horarios',
+        'desenvolvimento', 'crescimento', 'pessoal', 'participação', 'participacao',
+        'motivação', 'motivacao', 'satisfação', 'satisfacao', 'felicidade'
     ]
     
     afirmacoes_se = []
@@ -61,6 +62,7 @@ def analisar_afirmacoes_saude_emocional(matriz_arq, matriz_micro):
                 codigos_ja_processados.add(codigo)  # Marca como processado
     
     return afirmacoes_se
+
 
 # MAPEAR COMPLIANCE COM NR-1
 def mapear_compliance_nr1(afirmacoes_se):
