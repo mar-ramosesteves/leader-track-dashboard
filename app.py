@@ -8,6 +8,86 @@ from datetime import datetime
 import numpy as np
 import openpyxl
 
+# ==================== FUNÇÕES SAÚDE EMOCIONAL ====================
+
+# ANALISAR AFIRMAÇÕES EXISTENTES PARA SAÚDE EMOCIONAL
+def analisar_afirmacoes_saude_emocional(matriz_arq, matriz_micro):
+    """Analisa afirmações existentes e identifica as relacionadas à saúde emocional"""
+    
+    # Palavras-chave relacionadas à saúde emocional
+    palavras_chave_saude_emocional = [
+        'empatia', 'empatia', 'compreensão', 'compreensao', 'entendimento',
+        'suporte', 'apoio', 'ajuda', 'assistência', 'assistencia',
+        'estresse', 'estresse', 'ansiedade', 'pressão', 'pressao',
+        'bem-estar', 'bem estar', 'saúde', 'saude', 'mental',
+        'reconhecimento', 'celebração', 'celebracao', 'valorização', 'valorizacao',
+        'feedback', 'construtivo', 'positivo', 'encorajamento',
+        'ambiente', 'seguro', 'proteção', 'protecao', 'respeito',
+        'equilíbrio', 'equilibrio', 'flexibilidade', 'horários', 'horarios',
+        'desenvolvimento', 'crescimento', 'pessoal', 'participação', 'participacao'
+    ]
+    
+    afirmacoes_se = []
+    
+    # Analisar matriz de arquétipos
+    for _, row in matriz_arq.iterrows():
+        afirmacao = str(row['AFIRMACAO']).lower()
+        if any(palavra in afirmacao for palavra in palavras_chave_saude_emocional):
+            afirmacoes_se.append({
+                'tipo': 'Arquétipo',
+                'afirmacao': row['AFIRMACAO'],
+                'dimensao': row['DIMENSAO'],
+                'subdimensao': row['SUBDIMENSAO'],
+                'chave': row['CHAVE']
+            })
+    
+    # Analisar matriz de microambiente
+    for _, row in matriz_micro.iterrows():
+        afirmacao = str(row['AFIRMACAO']).lower()
+        if any(palavra in afirmacao for palavra in palavras_chave_saude_emocional):
+            afirmacoes_se.append({
+                'tipo': 'Microambiente',
+                'afirmacao': row['AFIRMACAO'],
+                'dimensao': row['DIMENSAO'],
+                'subdimensao': row['SUBDIMENSAO'],
+                'chave': row['CHAVE']
+            })
+    
+    return afirmacoes_se
+
+# MAPEAR COMPLIANCE COM NR-1
+def mapear_compliance_nr1(afirmacoes_se):
+    """Mapeia afirmações de saúde emocional com requisitos da NR-1"""
+    
+    compliance = {
+        'Prevenção de Estresse': [],
+        'Ambiente Psicológico Seguro': [],
+        'Suporte Emocional': [],
+        'Comunicação Positiva': [],
+        'Equilíbrio Vida-Trabalho': []
+    }
+    
+    for afirmacao in afirmacoes_se:
+        af = afirmacao['afirmacao'].lower()
+        
+        if any(palavra in af for palavra in ['estresse', 'ansiedade', 'pressão', 'pressao']):
+            compliance['Prevenção de Estresse'].append(afirmacao)
+        elif any(palavra in af for palavra in ['ambiente', 'seguro', 'proteção', 'protecao']):
+            compliance['Ambiente Psicológico Seguro'].append(afirmacao)
+        elif any(palavra in af for palavra in ['suporte', 'apoio', 'ajuda', 'assistência', 'assistencia']):
+            compliance['Suporte Emocional'].append(afirmacao)
+        elif any(palavra in af for palavra in ['feedback', 'positivo', 'construtivo', 'encorajamento']):
+            compliance['Comunicação Positiva'].append(afirmacao)
+        elif any(palavra in af for palavra in ['equilíbrio', 'equilibrio', 'flexibilidade', 'horários', 'horarios']):
+            compliance['Equilíbrio Vida-Trabalho'].append(afirmacao)
+    
+    return compliance
+
+
+
+
+
+
 # Limpar cache para forçar atualização
 st.cache_data.clear()
 
@@ -892,7 +972,7 @@ if matriz_arq is not None and matriz_micro is not None:
         }
         
         # TABS PRINCIPAIS
-        tab1, tab2 = st.tabs(["📊 Arquétipos", "🏢 Microambiente"])
+        tab1, tab2, tab3 = st.tabs(["📊 Arquétipos", "🏢 Microambiente", "💚 Saúde Emocional"])
         
         # ==================== TAB ARQUÉTIPOS ====================
         with tab1:
@@ -1361,7 +1441,77 @@ if matriz_arq is not None and matriz_micro is not None:
                 
             else:
                 st.warning("⚠️ Nenhum dado encontrado com os filtros aplicados.")
-        
+                # ==================== TAB SAÚDE EMOCIONAL ====================
+        with tab3:
+            st.header("💚 Análise de Saúde Emocional + Compliance NR-1")
+            st.markdown("**🔍 Analisando afirmações existentes relacionadas à saúde emocional...**")
+            
+            # Analisar afirmações de saúde emocional
+            with st.spinner("Identificando afirmações de saúde emocional..."):
+                afirmacoes_saude_emocional = analisar_afirmacoes_saude_emocional(matriz_arq, matriz_micro)
+                compliance_nr1 = mapear_compliance_nr1(afirmacoes_saude_emocional)
+            
+            if afirmacoes_saude_emocional:
+                # Métricas principais
+                col1, col2, col3, col4 = st.columns(4)
+                
+                with col1:
+                    st.metric("🧠 Arquétipos SE", len([a for a in afirmacoes_saude_emocional if a['tipo'] == 'Arquétipo']))
+                
+                with col2:
+                    st.metric("�� Microambiente SE", len([a for a in afirmacoes_saude_emocional if a['tipo'] == 'Microambiente']))
+                
+                with col3:
+                    st.metric("💚 Total SE", len(afirmacoes_saude_emocional))
+                
+                with col4:
+                    percentual = (len(afirmacoes_saude_emocional) / 97) * 100
+                    st.metric("📊 % das 97 Afirmações", f"{percentual:.1f}%")
+                
+                st.divider()
+                
+                # Compliance NR-1
+                st.subheader("�� Compliance com NR-1 + Adendo Saúde Mental")
+                
+                # Gráfico de compliance
+                compliance_data = {k: len(v) for k, v in compliance_nr1.items()}
+                fig_compliance = px.bar(
+                    x=list(compliance_data.keys()),
+                    y=list(compliance_data.values()),
+                    title="Mapeamento de Compliance NR-1",
+                    color=list(compliance_data.values()),
+                    color_continuous_scale="RdYlGn"
+                )
+                fig_compliance.update_layout(height=400)
+                st.plotly_chart(fig_compliance, use_container_width=True)
+                
+                # Detalhamento por categoria
+                for categoria, afirmacoes in compliance_nr1.items():
+                    if afirmacoes:
+                        with st.expander(f"�� {categoria} ({len(afirmacoes)} afirmações)"):
+                            for af in afirmacoes:
+                                st.markdown(f"**{af['tipo']} - {af['dimensao']}:** {af['afirmacao']}")
+                
+                st.divider()
+                
+                # Lista completa de afirmações de saúde emocional
+                st.subheader("📝 Todas as Afirmações de Saúde Emocional Identificadas")
+                
+                df_se = pd.DataFrame(afirmacoes_saude_emocional)
+                st.dataframe(df_se, use_container_width=True)
+                
+                # Download dos dados
+                csv_se = df_se.to_csv(index=False)
+                st.download_button(
+                    label="📥 Download CSV - Saúde Emocional",
+                    data=csv_se,
+                    file_name="saude_emocional_afirmacoes.csv",
+                    mime="text/csv"
+                )
+                
+            else:
+                st.warning("⚠️ Nenhuma afirmação relacionada à saúde emocional foi identificada.")
+                st.info("�� Dica: Verifique se as palavras-chave estão presentes nas afirmações existentes.")
     else:
         st.error("❌ Erro ao carregar dados do Supabase.")
 else:
