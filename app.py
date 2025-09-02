@@ -1554,11 +1554,11 @@ if matriz_arq is not None and matriz_micro is not None:
                 
                 st.divider()
                 
-                # ==================== GRÁFICO 1: COMPLIANCE NR-1 ====================
-                st.subheader("�� Compliance com NR-1 + Adendo Saúde Mental")
-                
-                # ✅ RECALCULAR COMPLIANCE BASEADO NOS DADOS FILTRADOS
-                compliance_filtrado = {
+                # ==================== GRÁFICO 1: COMPLIANCE NR-1 COM VALORES ====================
+                st.subheader("📊 Compliance NR-1 + Adendo Saúde Mental - Valores das Questões")
+
+                # Calcular VALORES das questões por categoria (não contagem)
+                categoria_valores = {
                     'Prevenção de Estresse': [],
                     'Ambiente Psicológico Seguro': [],
                     'Suporte Emocional': [],
@@ -1566,74 +1566,125 @@ if matriz_arq is not None and matriz_micro is not None:
                     'Equilíbrio Vida-Trabalho': []
                 }
                 
-                # Reclassificar afirmações baseado nos dados filtrados
+                # Para cada afirmação, calcular seu valor baseado nos dados filtrados
                 for af in afirmacoes_saude_emocional:
+                    codigo = af['chave']
+                    categoria = None
+                    
+                    # Identificar categoria
                     af_lower = af['afirmacao'].lower()
-                    
-                    # Prevenção de Estresse
                     if any(palavra in af_lower for palavra in ['estresse', 'ansiedade', 'pressão', 'pressao', 'cobrança', 'cobranca', 'deadline', 'prazos', 'tensão', 'tensao', 'sobrecarga']):
-                        compliance_filtrado['Prevenção de Estresse'].append(af)
-                    
-                    # Ambiente Psicológico Seguro
+                        categoria = 'Prevenção de Estresse'
                     elif any(palavra in af_lower for palavra in ['ambiente', 'seguro', 'proteção', 'protecao', 'respeito', 'cuidadoso', 'palavras']):
-                        compliance_filtrado['Ambiente Psicológico Seguro'].append(af)
-                    
-                    # Suporte Emocional
+                        categoria = 'Ambiente Psicológico Seguro'
                     elif any(palavra in af_lower for palavra in ['suporte', 'apoio', 'ajuda', 'assistência', 'assistencia', 'ajudar', 'resolver', 'percebe', 'oferece']):
-                        compliance_filtrado['Suporte Emocional'].append(af)
-                    
-                    # Comunicação Positiva
+                        categoria = 'Suporte Emocional'
                     elif any(palavra in af_lower for palavra in ['feedback', 'positivo', 'construtivo', 'encorajamento', 'comentários', 'comentarios', 'positivos', 'desenvolvimento', 'futuro']):
-                        compliance_filtrado['Comunicação Positiva'].append(af)
-                    
-                    # Equilíbrio Vida-Trabalho
+                        categoria = 'Comunicação Positiva'
                     elif any(palavra in af_lower for palavra in ['equilíbrio', 'equilibrio', 'flexibilidade', 'horários', 'horarios', 'tempo', 'família', 'familia', 'pessoal', 'relação', 'relacao', 'vida pessoal']):
-                        compliance_filtrado['Equilíbrio Vida-Trabalho'].append(af)
+                        categoria = 'Equilíbrio Vida-Trabalho'
+                    else:
+                        categoria = 'Suporte Emocional'
                     
-                    # Se não couber em nenhuma categoria, coloca em Suporte Emocional
+                    # Calcular valor da questão
+                    if af['tipo'] == 'Arquétipo':
+                        # Para arquétipos, usar % tendência
+                        arquétipo = af['dimensao']
+                        estrelas_questao = []
+                        
+                        for _, respondente in df_arq_filtrado.iterrows():
+                            if 'respostas' in respondente and codigo in respondente['respostas']:
+                                estrelas = int(respondente['respostas'][codigo])
+                                estrelas_questao.append(estrelas)
+                        
+                        if estrelas_questao:
+                            media_estrelas = np.mean(estrelas_questao)
+                            media_arredondada = round(media_estrelas)
+                            
+                            # Buscar % tendência
+                            chave = f"{arquétipo}{media_arredondada}{codigo}"
+                            linha_tendencia = matriz_arq[matriz_arq['CHAVE'] == chave]
+                            
+                            if not linha_tendencia.empty:
+                                tendencia_percentual = linha_tendencia['% Tendência'].iloc[0] * 100
+                                tendencia_info = linha_tendencia['Tendência'].iloc[0]
+                                
+                                # Converter para score positivo
+                                if 'DESFAVORÁVEL' in tendencia_info:
+                                    valor = max(0, 100 - tendencia_percentual)
+                                else:
+                                    valor = tendencia_percentual
+                                
+                                categoria_valores[categoria].append(valor)
+                    
+                    else:  # Microambiente
+                        # Para microambiente, usar gap (gap baixo = valor alto)
+                        estrelas_real = []
+                        estrelas_ideal = []
+                        
+                        for _, respondente in df_micro_filtrado.iterrows():
+                            if 'respostas' in respondente:
+                                respostas = respondente['respostas']
+                                questao_real = f"{codigo}C"
+                                questao_ideal = f"{codigo}k"
+                                
+                                if questao_real in respostas:
+                                    estrelas_real.append(int(respostas[questao_real]))
+                                if questao_ideal in respostas:
+                                    estrelas_ideal.append(int(respostas[questao_ideal]))
+                        
+                        if estrelas_real and estrelas_ideal:
+                            media_real = np.mean(estrelas_real)
+                            media_ideal = np.mean(estrelas_ideal)
+                            
+                            # Converter para percentual
+                            percentual_real = (media_real / 5) * 100
+                            percentual_ideal = (media_ideal / 5) * 100
+                            gap = percentual_ideal - percentual_real
+                            
+                            # Converter gap para valor (gap baixo = valor alto)
+                            valor = max(0, 100 - gap)
+                            categoria_valores[categoria].append(valor)
+                
+                # Calcular médias por categoria
+                categoria_medias = {}
+                for categoria, valores in categoria_valores.items():
+                    if valores:
+                        categoria_medias[categoria] = np.mean(valores)
                     else:
-                        compliance_filtrado['Suporte Emocional'].append(af)
+                        categoria_medias[categoria] = 0
                 
-                # Calcular percentuais baseado no compliance filtrado
-                compliance_percentuais = {}
-                total_afirmacoes = len(afirmacoes_saude_emocional)
-                
-                for categoria, afirmacoes in compliance_filtrado.items():
-                    if total_afirmacoes > 0:
-                        percentual = (len(afirmacoes) / total_afirmacoes) * 100
-                        compliance_percentuais[categoria] = percentual
-                    else:
-                        compliance_percentuais[categoria] = 0
-                
-                # Gráfico de barras horizontais
+                # Gráfico de barras horizontais com VALORES
                 fig_compliance = go.Figure()
                 
-                # Cores baseadas no percentual
+                # Cores baseadas no valor (não no percentual)
                 cores_compliance = []
-                for percentual in compliance_percentuais.values():
-                    if percentual >= 30:
-                        cores_compliance.append('rgba(0, 128, 0, 0.8)')  # Verde (bom)
-                    elif percentual >= 20:
+                for valor in categoria_medias.values():
+                    if valor >= 80:
+                        cores_compliance.append('rgba(0, 128, 0, 0.8)')  # Verde (excelente)
+                    elif valor >= 60:
+                        cores_compliance.append('rgba(144, 238, 144, 0.7)')  # Verde claro (bom)
+                    elif valor >= 40:
                         cores_compliance.append('rgba(255, 255, 0, 0.7)')  # Amarelo (regular)
-                    elif percentual >= 10:
+                    elif valor >= 20:
                         cores_compliance.append('rgba(255, 165, 0, 0.7)')  # Laranja (ruim)
                     else:
                         cores_compliance.append('rgba(255, 0, 0, 0.8)')    # Vermelho (muito ruim)
                 
                 fig_compliance.add_trace(go.Bar(
-                    y=list(compliance_percentuais.keys()),
-                    x=list(compliance_percentuais.values()),
+                    y=list(categoria_medias.keys()),
+                    x=list(categoria_medias.values()),
                     orientation='h',
                     marker_color=cores_compliance,
-                    text=[f"{v:.1f}%" for v in compliance_percentuais.values()],
+                    text=[f"{v:.1f}%" for v in categoria_medias.values()],
                     textposition='auto',
-                    hovertemplate='<b>%{y}</b><br>Percentual: %{x:.1f}%<br>Questões: %{customdata}<extra></extra>',
-                    customdata=[len(compliance_nr1[k]) for k in compliance_percentuais.keys()]
+                    hovertemplate='<b>%{y}</b><br>Score Médio: %{x:.1f}%<br>Questões: %{customdata}<extra></extra>',
+                    customdata=[len(categoria_valores[k]) for k in categoria_medias.keys()]
                 ))
                 
                 fig_compliance.update_layout(
-                    title="📊 Distribuição de Questões por Categoria NR-1",
-                    xaxis_title="Percentual das Questões de Saúde Emocional",
+                    title="📊 Score Médio por Categoria NR-1 (Baseado nos Dados Filtrados)",
+                    xaxis_title="Score Médio (%)",
                     yaxis_title="Categorias de Compliance",
                     xaxis=dict(range=[0, 100]),
                     height=400,
