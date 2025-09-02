@@ -1539,7 +1539,7 @@ if matriz_arq is not None and matriz_micro is not None:
                     st.metric("🧠 Arquétipos SE", len([a for a in afirmacoes_saude_emocional if a['tipo'] == 'Arquétipo']))
                 
                 with col2:
-                    st.metric(" Microambiente SE", len([a for a in afirmacoes_saude_emocional if a['tipo'] == 'Microambiente']))
+                    st.metric("�� Microambiente SE", len([a for a in afirmacoes_saude_emocional if a['tipo'] == 'Microambiente']))
                 
                 with col3:
                     st.metric("💚 Total SE", len(afirmacoes_saude_emocional))
@@ -1551,7 +1551,7 @@ if matriz_arq is not None and matriz_micro is not None:
                 st.divider()
                 
                 # ==================== GRÁFICO 1: COMPLIANCE NR-1 ====================
-                st.subheader(" Compliance com NR-1 + Adendo Saúde Mental")
+                st.subheader("�� Compliance com NR-1 + Adendo Saúde Mental")
                 
                 # Calcular percentuais de cada categoria
                 compliance_percentuais = {}
@@ -1642,7 +1642,7 @@ if matriz_arq is not None and matriz_micro is not None:
                         estrelas_real = []
                         estrelas_ideal = []
                         
-                        for _, respondente in df_microambiente.iterrows():
+                        for _, respondente in df_micro_filtrado.iterrows():  # ✅ SUBSTITUÍDO
                             if 'respostas' in respondente:
                                 respostas = respondente['respostas']
                                 questao_real = f"{codigo}C"
@@ -1758,7 +1758,7 @@ if matriz_arq is not None and matriz_micro is not None:
                         if not linha.empty:
                             # Calcular média de estrelas
                             estrelas_questao = []
-                            for _, respondente in df_arquetipos.iterrows():
+                            for _, respondente in df_arq_filtrado.iterrows():  # ✅ SUBSTITUÍDO
                                 if 'respostas' in respondente and codigo in respondente['respostas']:
                                     estrelas = int(respondente['respostas'][codigo])
                                     estrelas_questao.append(estrelas)
@@ -1810,7 +1810,7 @@ if matriz_arq is not None and matriz_micro is not None:
                     interpretacao = "🟡 BOM - Ambiente saudável com melhorias"
                     cor_score = "orange"
                 elif score_final >= 40:
-                    interpretacao = " REGULAR - Ambiente com problemas moderados"
+                    interpretacao = "�� REGULAR - Ambiente com problemas moderados"
                     cor_score = "darkorange"
                 else:
                     interpretacao = "🔴 RUIM - Ambiente com problemas sérios"
@@ -1847,7 +1847,7 @@ if matriz_arq is not None and matriz_micro is not None:
                 
                 # ==================== TABELA 1: ARQUÉTIPOS ====================
                 if afirmacoes_arq:
-                    st.markdown("** Questões de Arquétipos - Saúde Emocional**")
+                    st.markdown("**�� Questões de Arquétipos - Saúde Emocional**")
                     
                     # Criar DataFrame para arquétipos
                     df_arq_detalhado = pd.DataFrame(afirmacoes_arq)
@@ -1865,7 +1865,7 @@ if matriz_arq is not None and matriz_micro is not None:
                         if not linha.empty:
                             # Calcular média de estrelas
                             estrelas_questao = []
-                            for _, respondente in df_arquetipos.iterrows():
+                            for _, respondente in df_arq_filtrado.iterrows():  # ✅ SUBSTITUÍDO
                                 if 'respostas' in respondente and codigo in respondente['respostas']:
                                     estrelas = int(respondente['respostas'][codigo])
                                     estrelas_questao.append(estrelas)
@@ -1955,7 +1955,7 @@ if matriz_arq is not None and matriz_micro is not None:
                         estrelas_real = []
                         estrelas_ideal = []
                         
-                        for _, respondente in df_microambiente.iterrows():
+                        for _, respondente in df_micro_filtrado.iterrows():  # ✅ SUBSTITUÍDO
                             if 'respostas' in respondente:
                                 respostas = respondente['respostas']
                                 questao_real = f"{codigo}C"
@@ -2019,15 +2019,7 @@ if matriz_arq is not None and matriz_micro is not None:
                         file_name="saude_emocional_microambiente.csv",
                         mime="text/csv"
                     )
-                
+            
             else:
                 st.warning("⚠️ Nenhuma afirmação relacionada à saúde emocional foi identificada.")
-                st.info(" Dica: Verifique se as palavras-chave estão presentes nas afirmações existentes.")
-        
-    else:
-        st.error("❌ Erro ao carregar dados do Supabase.")
-else:
-    st.error("❌ Erro ao carregar matrizes.")
-
-st.markdown("---")
-st.markdown("🎯 **LeaderTrack Dashboard** - Desenvolvido com Streamlit + Supabase + Cálculo Individual")
+                st.info("�� Dica: Verifique se as palavras-chave estão presentes nas afirmações existentes.")
