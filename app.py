@@ -1907,24 +1907,30 @@ with tab3:
                             if estrelas_real and estrelas_ideal:
                                 media_real = np.mean(estrelas_real)
                                 media_ideal = np.mean(estrelas_ideal)
-                                gap = media_ideal - media_real
+                                
+                                # ✅ CORREÇÃO: Converter para percentual como na tabela
+                                percentual_real = (media_real / 5) * 100
+                                percentual_ideal = (media_ideal / 5) * 100
+                                gap = percentual_ideal - percentual_real  # Agora igual à tabela!
                                 
                                 col1, col2, col3, col4 = st.columns(4)
                                 with col1:
-                                    st.metric("⭐ Real", f"{media_real:.1f}")
+                                    st.metric("⭐ Real", f"{media_real:.1f} ({percentual_real:.1f}%)")
                                 with col2:
-                                    st.metric("⭐ Ideal", f"{media_ideal:.1f}")
+                                    st.metric("⭐ Ideal", f"{media_ideal:.1f} ({percentual_ideal:.1f}%)")
                                 with col3:
-                                    st.metric("📊 Gap", f"{gap:.1f}")
+                                    st.metric("�� Gap", f"{gap:.1f}%")
                                 with col4:
                                     st.metric("Nº Respostas", len(estrelas_real))
                                 
-                                if gap > 0:
-                                    st.warning(f"⚠️ **Gap Positivo:** Ideal ({media_ideal:.1f}) > Real ({media_real:.1f})")
-                                elif gap < 0:
-                                    st.success(f"✅ **Gap Negativo:** Real ({media_real:.1f}) > Ideal ({media_ideal:.1f})")
+                                if gap > 40:
+                                    st.error(f"�� **Gap Alto:** {gap:.1f}% (Ideal: {percentual_ideal:.1f}% > Real: {percentual_real:.1f}%)")
+                                elif gap > 20:
+                                    st.warning(f"🟠 **Gap Moderado:** {gap:.1f}% (Ideal: {percentual_ideal:.1f}% > Real: {percentual_real:.1f}%)")
+                                elif gap > 10:
+                                    st.warning(f"🟡 **Gap Baixo:** {gap:.1f}% (Ideal: {percentual_ideal:.1f}% > Real: {percentual_real:.1f}%)")
                                 else:
-                                    st.info(f"ℹ️ **Sem Gap:** Real = Ideal = {media_real:.1f}")
+                                    st.success(f"✅ **Gap Mínimo:** {gap:.1f}% (Ideal: {percentual_ideal:.1f}% > Real: {percentual_real:.1f}%)")
                             else:
                                 st.warning("⚠️ Dados insuficientes para calcular gap")
         else:
