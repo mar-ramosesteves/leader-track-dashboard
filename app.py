@@ -1668,7 +1668,8 @@ with tab3:
                         categoria_valores[categoria].append(valor)
             
             else:  # Microambiente
-                # Para microambiente, usar gap (gap baixo = valor alto)
+                # Para microambiente, usar a mesma lógica da função gerar_drill_down_microambiente
+                codigo = af['chave']
                 estrelas_real = []
                 estrelas_ideal = []
                 
@@ -1684,258 +1685,49 @@ with tab3:
                             estrelas_ideal.append(int(respostas[questao_ideal]))
                 
                 if estrelas_real and estrelas_ideal:
+                    # Calcular médias
                     media_real = np.mean(estrelas_real)
                     media_ideal = np.mean(estrelas_ideal)
                     
-                    # Converter para percentual
-                    percentual_real = (media_real / 5) * 100
-                    percentual_ideal = (media_ideal / 5) * 100
-                    gap = percentual_ideal - percentual_real
+                    # ✅ CORREÇÃO: Arredondar para buscar na matriz (igual à função)
+                    media_real_arredondada = round(media_real)
+                    media_ideal_arredondada = round(media_ideal)
                     
-                    # Converter gap para valor (gap baixo = valor alto)
-                    valor = max(0, 100 - gap)
-                    categoria_valores[categoria].append(valor)
-        
-        # Calcular médias por categoria
-        categoria_medias = {}
-        for categoria, valores in categoria_valores.items():
-            if valores:
-                categoria_medias[categoria] = np.mean(valores)
-            else:
-                categoria_medias[categoria] = 0
-        
-        # Gráfico de barras horizontais com VALORES
-        fig_compliance = go.Figure()
-        
-        # Cores baseadas no valor (não no percentual)
-        cores_compliance = []
-        for valor in categoria_medias.values():
-            if valor >= 80:
-                cores_compliance.append('rgba(0, 128, 0, 0.8)')  # Verde (excelente)
-            elif valor >= 60:
-                cores_compliance.append('rgba(144, 238, 144, 0.7)')  # Verde claro (bom)
-            elif valor >= 40:
-                cores_compliance.append('rgba(255, 255, 0, 0.7)')  # Amarelo (regular)
-            elif valor >= 20:
-                cores_compliance.append('rgba(255, 165, 0, 0.7)')  # Laranja (ruim)
-            else:
-                cores_compliance.append('rgba(255, 0, 0, 0.8)')    # Vermelho (muito ruim)
-        
-        fig_compliance.add_trace(go.Bar(
-            y=list(categoria_medias.keys()),
-            x=list(categoria_medias.values()),
-            orientation='h',
-            marker_color=cores_compliance,
-            text=[f"{v:.1f}%" for v in categoria_medias.values()],
-            textposition='auto',
-            hovertemplate='<b>%{y}</b><br>Score Médio: %{x:.1f}%<br>Questões: %{customdata}<br><extra>Clique para ver detalhes!</extra>',
-            customdata=[len(categoria_valores[k]) for k in categoria_medias.keys()]
-        ))
-        
-        fig_compliance.update_layout(
-            title="📊 Score Médio por Categoria NR-1 (Baseado nos Dados Filtrados)",
-            xaxis_title="Score Médio (%)",
-            yaxis_title="Categorias de Compliance",
-            xaxis=dict(range=[0, 100]),
-            height=400,
-            showlegend=False,
-            clickmode='event+select',  # Adicionar interatividade
-            hovermode='closest'
-        )
-        
-        st.plotly_chart(fig_compliance, use_container_width=True)
-        
-        st.divider()
-
-        # ==================== DRILL-DOWN POR CATEGORIA ====================
-        st.subheader("🔍 Drill-Down por Categoria de Compliance")
-
-        # Seleção da categoria para drill-down
-        col1, col2 = st.columns([2, 1])
-        
-        with col1:
-            categoria_selecionada = st.selectbox(
-                "Selecione uma categoria para ver as questões detalhadas:",
-                ["Todas"] + list(categoria_medias.keys()),
-                index=None,
-                placeholder="Escolha uma categoria...",
-                key="categoria_compliance_select"
-            )
-        
-        with col2:
-            st.markdown("**💡 Dica:** Você também pode clicar diretamente nas barras do gráfico acima!")
-        
-        # Adicionar seleção automática via gráfico
-        if st.session_state.get('categoria_clicada'):
-            categoria_selecionada = st.session_state.categoria_clicada
-            st.success(f" Categoria selecionada via gráfico: **{categoria_selecionada}**")
-        
-        # ==================== APLICAR FILTRO NOS DADOS DOS GRÁFICOS ====================
-        # Usar dados filtrados se uma categoria específica foi selecionada
-        if categoria_selecionada and categoria_selecionada != "Todas":
-            # Filtrar apenas questões da categoria selecionada
-            questoes_filtradas = []
-            for af in afirmacoes_saude_emocional:
-                af_lower = af['afirmacao'].lower()
-                
-                # Aplicar a mesma lógica de categorização
-                if categoria_selecionada == 'Prevenção de Estresse':
-                    if any(palavra in af_lower for palavra in ['estresse', 'ansiedade', 'pressão', 'pressao', 'cobrança', 'cobranca', 'deadline', 'prazos', 'tensão', 'tensao', 'sobrecarga', 'preocupa com o tempo', 'preocupa com detalhes', 'preocupa se', 'preocupa com', 'necessidade de se aprofundar', 'aprofundar nos detalhes', 'detalhes na execução', 'detalhes de realização', 'detalhes do trabalho', 'sem necessidade de ficar de olho', 'fazer todo o possivel', 'resolver problemas particulares', 'problemas particulares urgentes', 'atuar na solução de conflitos', 'solução de conflitos em sua equipe', 'risco calculado', 'resultasse em algo negativo', 'seriam apoiados', 'leais uns com os outros', 'mais elogiados e incentivados', 'do que criticados']):
-                        questoes_filtradas.append(af)
-                elif categoria_selecionada == 'Ambiente Psicológico Seguro':
-                    if any(palavra in af_lower for palavra in ['ambiente', 'seguro', 'proteção', 'protecao', 'respeito', 'cuidadoso', 'palavras']):
-                        questoes_filtradas.append(af)
-                elif categoria_selecionada == 'Suporte Emocional':
-                    if any(palavra in af_lower for palavra in ['suporte', 'apoio', 'ajuda', 'assistência', 'assistencia', 'ajudar', 'resolver', 'percebe', 'oferece']):
-                        questoes_filtradas.append(af)
-                elif categoria_selecionada == 'Comunicação Positiva':
-                    if any(palavra in af_lower for palavra in ['feedback', 'positivo', 'construtivo', 'encorajamento', 'comentários', 'comentarios', 'positivos', 'desenvolvimento', 'futuro']):
-                        questoes_filtradas.append(af)
-                elif categoria_selecionada == 'Equilíbrio Vida-Trabalho':
-                    if any(palavra in af_lower for palavra in ['equilíbrio', 'equilibrio', 'flexibilidade', 'horários', 'horarios', 'tempo', 'família', 'familia', 'pessoal', 'relação', 'relacao', 'vida pessoal']):
-                        questoes_filtradas.append(af)
-        
-            # Usar apenas questões filtradas para os gráficos
-            if questoes_filtradas:
-                afirmacoes_saude_emocional_filtradas = questoes_filtradas
-                st.success(f"✅ **Filtro aplicado:** {len(questoes_filtradas)} questões da categoria '{categoria_selecionada}'")
-            else:
-                afirmacoes_saude_emocional_filtradas = afirmacoes_saude_emocional
-                st.warning(f"⚠️ **Nenhuma questão encontrada** para a categoria '{categoria_selecionada}'. Mostrando todas as questões.")
-        else:
-            # Sem filtro ou "Todas" selecionada
-            afirmacoes_saude_emocional_filtradas = afirmacoes_saude_emocional
-        
-        # Separar afirmações por tipo (DEPOIS do filtro)
-        afirmacoes_arq = [a for a in afirmacoes_saude_emocional_filtradas if a['tipo'] == 'Arquétipo']
-        
-        if categoria_selecionada:
-            st.markdown(f"### 📋 Questões da Categoria: **{categoria_selecionada}**")
-            
-            # Filtrar afirmações da categoria selecionada
-            afirmacoes_categoria = []
-            for af in afirmacoes_saude_emocional_filtradas:
-                af_lower = af['afirmacao'].lower()
-                
-                # Aplicar a mesma lógica de categorização
-                if categoria_selecionada == 'Prevenção de Estresse':
-                    if any(palavra in af_lower for palavra in ['estresse', 'ansiedade', 'pressão', 'pressao', 'cobrança', 'cobranca', 'deadline', 'prazos', 'tensão', 'tensao', 'sobrecarga', 'preocupa com o tempo', 'preocupa com detalhes', 'preocupa se', 'preocupa com', 'necessidade de se aprofundar', 'aprofundar nos detalhes', 'detalhes na execução', 'detalhes de realização', 'detalhes do trabalho', 'sem necessidade de ficar de olho', 'fazer todo o possivel', 'resolver problemas particulares', 'problemas particulares urgentes', 'atuar na solução de conflitos', 'solução de conflitos em sua equipe', 'risco calculado', 'resultasse em algo negativo', 'seriam apoiados', 'leais uns com os outros', 'mais elogiados e incentivados', 'do que criticados']):
-                        afirmacoes_categoria.append(af)
-                elif categoria_selecionada == 'Ambiente Psicológico Seguro':
-                    if any(palavra in af_lower for palavra in ['ambiente', 'seguro', 'proteção', 'protecao', 'respeito', 'cuidadoso', 'palavras']):
-                        afirmacoes_categoria.append(af)
-                elif categoria_selecionada == 'Suporte Emocional':
-                    if any(palavra in af_lower for palavra in ['suporte', 'apoio', 'ajuda', 'assistência', 'assistencia', 'ajudar', 'resolver', 'percebe', 'oferece']):
-                        afirmacoes_categoria.append(af)
-                elif categoria_selecionada == 'Comunicação Positiva':
-                    if any(palavra in af_lower for palavra in ['feedback', 'positivo', 'construtivo', 'encorajamento', 'comentários', 'comentarios', 'positivos', 'desenvolvimento', 'futuro']):
-                        afirmacoes_categoria.append(af)
-                elif categoria_selecionada == 'Equilíbrio Vida-Trabalho':
-                    if any(palavra in af_lower for palavra in ['equilíbrio', 'equilibrio', 'flexibilidade', 'horários', 'horarios', 'tempo', 'família', 'familia', 'pessoal', 'relação', 'relacao', 'vida pessoal']):
-                        afirmacoes_categoria.append(af)
-            
-            if afirmacoes_categoria:
-                st.success(f"✅ Encontradas {len(afirmacoes_categoria)} questões na categoria {categoria_selecionada}")
-                
-                # Mostrar questões encontradas com dados enriquecidos
-                for i, af in enumerate(afirmacoes_categoria, 1):
-                    with st.expander(f" Questão {i}: {af['afirmacao'][:100]}..."):
-                        st.markdown(f"**Tipo:** {af['tipo']}")
-                        st.markdown(f"**Dimensão:** {af['dimensao']}")
-                        if af['subdimensao'] != 'N/A':
-                            st.markdown(f"**Subdimensão:** {af['subdimensao']}")
-                        st.markdown(f"**Afirmação completa:** {af['afirmacao']}")
-                        
-                        # Adicionar dados da questão
-                        st.divider()
-                        st.markdown("**📊 Dados da Questão:**")
-                        
-                        if af['tipo'] == 'Arquétipo':
-                            # Para arquétipos, calcular % tendência
-                            codigo = af['chave']
-                            arquétipo = af['dimensao']
-                            estrelas_questao = []
-                            
-                            for _, respondente in df_arq_filtrado.iterrows():
-                                if 'respostas' in respondente and codigo in respondente['respostas']:
-                                    estrelas = int(respondente['respostas'][codigo])
-                                    estrelas_questao.append(estrelas)
-                            
-                            if estrelas_questao:
-                                media_estrelas = np.mean(estrelas_questao)
-                                media_arredondada = round(media_estrelas)
-                                
-                                # Buscar % tendência
-                                chave = f"{arquétipo}{media_arredondada}{codigo}"
-                                linha_tendencia = matriz_arq[matriz_arq['CHAVE'] == chave]
-                                
-                                if not linha_tendencia.empty:
-                                    tendencia_percentual = linha_tendencia['% Tendência'].iloc[0] * 100
-                                    tendencia_info = linha_tendencia['Tendência'].iloc[0]
-                                    
-                                    col1, col2, col3 = st.columns(3)
-                                    with col1:
-                                        st.metric("⭐ Média Estrelas", f"{media_estrelas:.1f}")
-                                    with col2:
-                                        st.metric("% Tendência", f"{tendencia_percentual:.1f}%")
-                                    with col3:
-                                        st.metric("Nº Respostas", len(estrelas_questao))
-                                    
-                                    st.info(f"**Tendência:** {tendencia_info}")
-                                else:
-                                    st.warning("⚠️ Dados de tendência não encontrados")
-                            else:
-                                st.warning("⚠️ Nenhuma resposta encontrada para esta questão")
-                        
-                        else:  # Microambiente
-                            # Para microambiente, calcular gap
-                            codigo = af['chave']
-                            estrelas_real = []
-                            estrelas_ideal = []
-                            
-                            for _, respondente in df_micro_filtrado.iterrows():
-                                if 'respostas' in respondente:
-                                    respostas = respondente['respostas']
-                                    questao_real = f"{codigo}C"
-                                    questao_ideal = f"{codigo}k"
-                                    
-                                    if questao_real in respostas:
-                                        estrelas_real.append(int(respostas[questao_real]))
-                                    if questao_ideal in respostas:
-                                        estrelas_ideal.append(int(respostas[questao_ideal]))
-                            
-                            if estrelas_real and estrelas_ideal:
-                                media_real = np.mean(estrelas_real)
-                                media_ideal = np.mean(estrelas_ideal)
-                                
-                                # ✅ CORREÇÃO: Converter para percentual como na tabela
-                                percentual_real = (media_real / 5) * 100
-                                percentual_ideal = (media_ideal / 5) * 100
-                                gap = percentual_ideal - percentual_real  # Agora igual à tabela!
-                                
-                                col1, col2, col3, col4 = st.columns(4)
-                                with col1:
-                                    st.metric("⭐ Real", f"{media_real:.1f} ({percentual_real:.1f}%)")
-                                with col2:
-                                    st.metric("⭐ Ideal", f"{media_ideal:.1f} ({percentual_ideal:.1f}%)")
-                                with col3:
-                                    st.metric("�� Gap", f"{gap:.1f}%")
-                                with col4:
-                                    st.metric("Nº Respostas", len(estrelas_real))
-                                
-                                if gap > 40:
-                                    st.error(f"�� **Gap Alto:** {gap:.1f}% (Ideal: {percentual_ideal:.1f}% > Real: {percentual_real:.1f}%)")
-                                elif gap > 20:
-                                    st.warning(f"🟠 **Gap Moderado:** {gap:.1f}% (Ideal: {percentual_ideal:.1f}% > Real: {percentual_real:.1f}%)")
-                                elif gap > 10:
-                                    st.warning(f"🟡 **Gap Baixo:** {gap:.1f}% (Ideal: {percentual_ideal:.1f}% > Real: {percentual_real:.1f}%)")
-                                else:
-                                    st.success(f"✅ **Gap Mínimo:** {gap:.1f}% (Ideal: {percentual_ideal:.1f}% > Real: {percentual_real:.1f}%)")
-                            else:
-                                st.warning("⚠️ Dados insuficientes para calcular gap")
-        else:
-            st.warning(f"⚠️ Nenhuma questão encontrada na categoria {categoria_selecionada}")
-
+                    # ✅ CORREÇÃO: Buscar pontuações na matriz usando a chave
+                    chave = f"{codigo}_I{media_ideal_arredondada}_R{media_real_arredondada}"
+                    linha = matriz_micro[matriz_micro['CHAVE'] == chave]
+                    
+                    if not linha.empty:
+                        pontuacao_real = linha['PONTUACAO_REAL'].iloc[0]
+                        pontuacao_ideal = linha['PONTUACAO_IDEAL'].iloc[0]
+                        gap = pontuacao_ideal - pontuacao_real  # ✅ Gap correto da matriz!
+                    else:
+                        pontuacao_real = 0
+                        pontuacao_ideal = 0
+                        gap = 0
+                    
+                    col1, col2, col3, col4 = st.columns(4)
+                    with col1:
+                        st.metric("⭐ Real", f"{media_real:.1f} ({pontuacao_real:.1f}%)")
+                    with col2:
+                        st.metric("⭐ Ideal", f"{media_ideal:.1f} ({pontuacao_ideal:.1f}%)")
+                    with col3:
+                        st.metric("�� Gap", f"{gap:.1f}%")
+                    with col4:
+                        st.metric("Nº Respostas", len(estrelas_real))
+                    
+                    if gap > 80:
+                        st.error(f"�� **Gap Alto:** {gap:.1f}%")
+                    elif gap > 60:
+                        st.error(f"�� **Gap Alto:** {gap:.1f}%")
+                    elif gap > 40:
+                        st.warning(f"🟠 **Gap Moderado:** {gap:.1f}%")
+                    elif gap > 20:
+                        st.warning(f"🟡 **Gap Baixo:** {gap:.1f}%")
+                    else:
+                        st.success(f"✅ **Gap Mínimo:** {gap:.1f}%")
+                else:
+                    st.warning("⚠️ Dados insuficientes para calcular gap")
     
         # ==================== GRÁFICO 2: MICROAMBIENTE REAL VS IDEAL + GAP ====================
         st.subheader("🏢 Microambiente: Como é vs Como deveria ser vs Gap")
@@ -2285,7 +2077,7 @@ with tab3:
             for _, row in df_micro_detalhado.iterrows():
                 codigo = row['chave']
                 
-                # Calcular médias
+                # ✅ CORREÇÃO: Usar a mesma lógica da função
                 estrelas_real = []
                 estrelas_ideal = []
                 
@@ -2304,22 +2096,32 @@ with tab3:
                     media_real = np.mean(estrelas_real)
                     media_ideal = np.mean(estrelas_ideal)
                     
-                    # Converter para percentual
-                    percentual_real = (media_real / 5) * 100
-                    percentual_ideal = (media_ideal / 5) * 100
-                    gap = percentual_ideal - percentual_real
+                    # ✅ CORREÇÃO: Arredondar para buscar na matriz
+                    media_real_arredondada = round(media_real)
+                    media_ideal_arredondada = round(media_ideal)
                     
-                    reais_micro.append(f"{percentual_real:.1f}%")
-                    ideais_micro.append(f"{percentual_ideal:.1f}%")
+                    # ✅ CORREÇÃO: Buscar pontuações na matriz
+                    chave = f"{codigo}_I{media_ideal_arredondada}_R{media_real_arredondada}"
+                    linha = matriz_micro[matriz_micro['CHAVE'] == chave]
+                    
+                    if not linha.empty:
+                        pontuacao_real = linha['PONTUACAO_REAL'].iloc[0]
+                        pontuacao_ideal = linha['PONTUACAO_IDEAL'].iloc[0]
+                        gap = pontuacao_ideal - pontuacao_real  # ✅ Gap correto!
+                    else:
+                        pontuacao_real = 0
+                        pontuacao_ideal = 0
+                        gap = 0
+                    
+                    reais_micro.append(f"{pontuacao_real:.1f}%")
+                    ideais_micro.append(f"{pontuacao_ideal:.1f}%")
                     gaps_micro.append(f"{gap:.1f}")
                 else:
                     reais_micro.append("N/A")
                     ideais_micro.append("N/A")
                     gaps_micro.append("N/A")
-            
-            df_micro_detalhado['Real'] = reais_micro
-            df_micro_detalhado['Ideal'] = ideais_micro
-            df_micro_detalhado['Gap'] = gaps_micro
+
+
             
             # Função para aplicar cores baseadas no gap
             def color_gap_micro(val):
