@@ -1714,7 +1714,7 @@ if matriz_arq is not None and matriz_micro is not None:
                 }
                 
                 # Para cada afirmação, calcular seu valor baseado nos dados filtrados
-                for af in afirmacoes_saude_emocional:
+                for af in afirmacoes_saude_emocional_filtradas:
                     codigo = af['chave']
                     categoria = None
                     
@@ -1880,7 +1880,7 @@ if matriz_arq is not None and matriz_micro is not None:
                     
                     # Filtrar afirmações da categoria selecionada
                     afirmacoes_categoria = []
-                    for af in afirmacoes_saude_emocional:
+                    for af in afirmacoes_saude_emocional_filtradas:
                         af_lower = af['afirmacao'].lower()
                         
                         # Aplicar a mesma lógica de categorização
@@ -2006,7 +2006,7 @@ if matriz_arq is not None and matriz_micro is not None:
                 st.subheader("🏢 Microambiente: Como é vs Como deveria ser vs Gap")
                 
                 # Filtrar apenas questões de microambiente
-                afirmacoes_micro = [a for a in afirmacoes_saude_emocional if a['tipo'] == 'Microambiente']
+                afirmacoes_micro = [a for a in afirmacoes_saude_emocional_filtradas if a['tipo'] == 'Microambiente']
                 
                 if afirmacoes_micro:
                     # Calcular médias Real vs Ideal para cada questão
