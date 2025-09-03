@@ -1798,13 +1798,96 @@ if matriz_arq is not None and matriz_micro is not None:
                         st.success(f"✅ Encontradas {len(afirmacoes_categoria)} questões na categoria {categoria_selecionada}")
                         
                         # Mostrar questões encontradas
+                        # Mostrar questões encontradas com dados enriquecidos
                         for i, af in enumerate(afirmacoes_categoria, 1):
-                            with st.expander(f"�� Questão {i}: {af['afirmacao'][:100]}..."):
+                            with st.expander(f" Questão {i}: {af['afirmacao'][:100]}..."):
                                 st.markdown(f"**Tipo:** {af['tipo']}")
                                 st.markdown(f"**Dimensão:** {af['dimensao']}")
                                 if af['subdimensao'] != 'N/A':
                                     st.markdown(f"**Subdimensão:** {af['subdimensao']}")
                                 st.markdown(f"**Afirmação completa:** {af['afirmacao']}")
+                                
+                                # Adicionar dados da questão
+                                st.divider()
+                                st.markdown("**📊 Dados da Questão:**")
+                                
+                                if af['tipo'] == 'Arquétipo':
+                                    # Para arquétipos, calcular % tendência
+                                    codigo = af['chave']
+                                    arquétipo = af['dimensao']
+                                    estrelas_questao = []
+                                    
+                                    for _, respondente in df_arq_filtrado.iterrows():
+                                        if 'respostas' in respondente and codigo in respondente['respostas']:
+                                            estrelas = int(respondente['respostas'][codigo])
+                                            estrelas_questao.append(estrelas)
+                                    
+                                    if estrelas_questao:
+                                        media_estrelas = np.mean(estrelas_questao)
+                                        media_arredondada = round(media_estrelas)
+                                        
+                                        # Buscar % tendência
+                                        chave = f"{arquétipo}{media_arredondada}{codigo}"
+                                        linha_tendencia = matriz_arq[matriz_arq['CHAVE'] == chave]
+                                        
+                                        if not linha_tendencia.empty:
+                                            tendencia_percentual = linha_tendencia['% Tendência'].iloc[0] * 100
+                                            tendencia_info = linha_tendencia['Tendência'].iloc[0]
+                                            
+                                            col1, col2, col3 = st.columns(3)
+                                            with col1:
+                                                st.metric("⭐ Média Estrelas", f"{media_estrelas:.1f}")
+                                            with col2:
+                                                st.metric("% Tendência", f"{tendencia_percentual:.1f}%")
+                                            with col3:
+                                                st.metric("Nº Respostas", len(estrelas_questao))
+                                            
+                                            st.info(f"**Tendência:** {tendencia_info}")
+                                        else:
+                                            st.warning("⚠️ Dados de tendência não encontrados")
+                                    else:
+                                        st.warning("⚠️ Nenhuma resposta encontrada para esta questão")
+                                
+                                else:  # Microambiente
+                                    # Para microambiente, calcular gap
+                                    codigo = af['chave']
+                                    estrelas_real = []
+                                    estrelas_ideal = []
+                                    
+                                    for _, respondente in df_micro_filtrado.iterrows():
+                                        if 'respostas' in respondente:
+                                            respostas = respondente['respostas']
+                                            questao_real = f"{codigo}C"
+                                            questao_ideal = f"{codigo}k"
+                                            
+                                            if questao_real in respostas:
+                                                estrelas_real.append(int(respostas[questao_real]))
+                                            if questao_ideal in respostas:
+                                                estrelas_ideal.append(int(respostas[questao_ideal]))
+                                    
+                                    if estrelas_real and estrelas_ideal:
+                                        media_real = np.mean(estrelas_real)
+                                        media_ideal = np.mean(estrelas_ideal)
+                                        gap = media_ideal - media_real
+                                        
+                                        col1, col2, col3, col4 = st.columns(4)
+                                        with col1:
+                                            st.metric("⭐ Real", f"{media_real:.1f}")
+                                        with col2:
+                                            st.metric("⭐ Ideal", f"{media_ideal:.1f}")
+                                        with col3:
+                                            st.metric("📊 Gap", f"{gap:.1f}")
+                                        with col4:
+                                            st.metric("Nº Respostas", len(estrelas_real))
+                                        
+                                        if gap > 0:
+                                            st.warning(f"⚠️ **Gap Positivo:** Ideal ({media_ideal:.1f}) > Real ({media_real:.1f})")
+                                        elif gap < 0:
+                                            st.success(f"✅ **Gap Negativo:** Real ({media_real:.1f}) > Ideal ({media_ideal:.1f})")
+                                        else:
+                                            st.info(f"ℹ️ **Sem Gap:** Real = Ideal = {media_real:.1f}")
+                                    else:
+                                        st.warning("⚠️ Dados insuficientes para calcular gap")
                     else:
                         st.warning(f"⚠️ Nenhuma questão encontrada na categoria {categoria_selecionada}")
 
