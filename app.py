@@ -1729,7 +1729,55 @@ with tab3:
                 else:
                     st.warning("⚠️ Dados insuficientes para calcular gap")
 
-
+        # Calcular médias por categoria
+        categoria_medias = {}
+        for categoria, valores in categoria_valores.items():
+            if valores:
+                categoria_medias[categoria] = np.mean(valores)
+            else:
+                categoria_medias[categoria] = 0
+        
+        # Gráfico de barras horizontais com VALORES
+        fig_compliance = go.Figure()
+        
+        # Cores baseadas no valor
+        cores_compliance = []
+        for valor in categoria_medias.values():
+            if valor >= 80:
+                cores_compliance.append('rgba(0, 128, 0, 0.8)')  # Verde
+            elif valor >= 60:
+                cores_compliance.append('rgba(144, 238, 144, 0.7)')  # Verde claro
+            elif valor >= 40:
+                cores_compliance.append('rgba(255, 255, 0, 0.7)')  # Amarelo
+            elif valor >= 20:
+                cores_compliance.append('rgba(255, 165, 0, 0.7)')  # Laranja
+            else:
+                cores_compliance.append('rgba(255, 0, 0, 0.8)')  # Vermelho
+        
+        fig_compliance.add_trace(go.Bar(
+            y=list(categoria_medias.keys()),
+            x=list(categoria_medias.values()),
+            orientation='h',
+            marker_color=cores_compliance,
+            text=[f"{v:.1f}%" for v in categoria_medias.values()],
+            textposition='auto',
+            hovertemplate='<b>%{y}</b><br>Score Médio: %{x:.1f}%<br>Questões: %{customdata}<br><extra>Clique para ver detalhes!</extra>',
+            customdata=[len(categoria_valores[k]) for k in categoria_medias.keys()]
+        ))
+        
+        fig_compliance.update_layout(
+            title="📊 Score Médio por Categoria NR-1",
+            xaxis_title="Score Médio (%)",
+            yaxis_title="Categorias de Compliance",
+            xaxis=dict(range=[0, 100]),
+            height=400,
+            showlegend=False,
+            clickmode='event+select',
+            hovermode='closest'
+        )
+        
+        st.plotly_chart(fig_compliance, use_container_width=True)
+        st.divider()
         # ==================== DRILL-DOWN POR CATEGORIA ====================
         st.subheader("🔍 Drill-Down por Categoria de Compliance")
         
