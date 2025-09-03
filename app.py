@@ -1620,7 +1620,9 @@ if matriz_arq is not None and matriz_micro is not None:
                     
                     # Identificar categoria
                     af_lower = af['afirmacao'].lower()
-                    if any(palavra in af_lower for palavra in ['estresse', 'ansiedade', 'pressão', 'pressao', 'cobrança', 'cobranca', 'deadline', 'prazos', 'tensão', 'tensao', 'sobrecarga']):
+                    if any(palavra in af_lower for palavra in ['estresse', 'ansiedade', 'pressão', 'pressao', 'cobrança', 'cobranca', 'deadline', 'prazos', 'tensão', 'tensao', 'sobrecarga' ,  'preocupa com o tempo', 'preocupa com detalhes', 'preocupa se', 'preocupa com',
+        'necessidade de se aprofundar', 'aprofundar nos detalhes', 'detalhes na execução', 'detalhes de realização', 'detalhes do trabalho', 'sem necessidade de ficar de olho', 'fazer todo o possivel', 'resolver problemas particulares', 'problemas particulares urgentes',
+        'atuar na solução de conflitos', 'solução de conflitos em sua equipe', 'risco calculado', 'resultasse em algo negativo', 'seriam apoiados', 'leais uns com os outros', 'mais elogiados e incentivados', 'do que criticados' ]):
                         categoria = 'Prevenção de Estresse'
                     elif any(palavra in af_lower for palavra in ['ambiente', 'seguro', 'proteção', 'protecao', 'respeito', 'cuidadoso', 'palavras']):
                         categoria = 'Ambiente Psicológico Seguro'
