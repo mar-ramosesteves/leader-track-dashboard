@@ -1568,6 +1568,8 @@ if matriz_arq is not None and matriz_micro is not None:
     
         # ==================== TAB SAÚDE EMOCIONAL ====================
 
+# ==================== TAB SAÚDE EMOCIONAL ====================
+
 with tab3:
     st.header("💚 Análise de Saúde Emocional + Compliance NR-1")
     st.markdown("**🔍 Analisando afirmações existentes relacionadas à saúde emocional...**")
@@ -1590,7 +1592,7 @@ with tab3:
             st.metric("🧠 Arquétipos SE", len([a for a in afirmacoes_saude_emocional if a['tipo'] == 'Arquétipo']))
         
         with col2:
-            st.metric("�� Microambiente SE", len([a for a in afirmacoes_saude_emocional if a['tipo'] == 'Microambiente']))
+            st.metric(" Microambiente SE", len([a for a in afirmacoes_saude_emocional if a['tipo'] == 'Microambiente']))
         
         with col3:
             st.metric("💚 Total SE", len(afirmacoes_saude_emocional))
@@ -1621,8 +1623,8 @@ with tab3:
             # Identificar categoria
             af_lower = af['afirmacao'].lower()
             if any(palavra in af_lower for palavra in ['estresse', 'ansiedade', 'pressão', 'pressao', 'cobrança', 'cobranca', 'deadline', 'prazos', 'tensão', 'tensao', 'sobrecarga' ,  'preocupa com o tempo', 'preocupa com detalhes', 'preocupa se', 'preocupa com',
-    'necessidade de se aprofundar', 'aprofundar nos detalhes', 'detalhes na execução', 'detalhes de realização', 'detalhes do trabalho', 'sem necessidade de ficar de olho', 'fazer todo o possivel', 'resolver problemas particulares', 'problemas particulares urgentes',
-    'atuar na solução de conflitos', 'solução de conflitos em sua equipe', 'risco calculado', 'resultasse em algo negativo', 'seriam apoiados', 'leais uns com os outros', 'mais elogiados e incentivados', 'do que criticados' ]):
+'necessidade de se aprofundar', 'aprofundar nos detalhes', 'detalhes na execução', 'detalhes de realização', 'detalhes do trabalho', 'sem necessidade de ficar de olho', 'fazer todo o possivel', 'resolver problemas particulares', 'problemas particulares urgentes',
+'atuar na solução de conflitos', 'solução de conflitos em sua equipe', 'risco calculado', 'resultasse em algo negativo', 'seriam apoiados', 'leais uns com os outros', 'mais elogiados e incentivados', 'do que criticados' ]):
                 categoria = 'Prevenção de Estresse'
             elif any(palavra in af_lower for palavra in ['ambiente', 'seguro', 'proteção', 'protecao', 'respeito', 'cuidadoso', 'palavras']):
                 categoria = 'Ambiente Psicológico Seguro'
@@ -1767,7 +1769,7 @@ with tab3:
         # Adicionar seleção automática via gráfico
         if st.session_state.get('categoria_clicada'):
             categoria_selecionada = st.session_state.categoria_clicada
-            st.success(f"�� Categoria selecionada via gráfico: **{categoria_selecionada}**")
+            st.success(f" Categoria selecionada via gráfico: **{categoria_selecionada}**")
 
         # ==================== APLICAR FILTRO NOS DADOS DOS GRÁFICOS ====================
         # Usar dados filtrados se uma categoria específica foi selecionada
@@ -1835,7 +1837,7 @@ with tab3:
                 
                 # Mostrar questões encontradas com dados enriquecidos
                 for i, af in enumerate(afirmacoes_categoria, 1):
-                    with st.expander(f"�� Questão {i}: {af['afirmacao'][:100]}..."):
+                    with st.expander(f" Questão {i}: {af['afirmacao'][:100]}..."):
                         st.markdown(f"**Tipo:** {af['tipo']}")
                         st.markdown(f"**Dimensão:** {af['dimensao']}")
                         if af['subdimensao'] != 'N/A':
@@ -2133,7 +2135,7 @@ with tab3:
             interpretacao = "🟡 BOM - Ambiente saudável com melhorias"
             cor_score = "orange"
         elif score_final >= 40:
-            interpretacao = "�� REGULAR - Ambiente com problemas moderados"
+            interpretacao = " REGULAR - Ambiente com problemas moderados"
             cor_score = "darkorange"
         else:
             interpretacao = "🔴 RUIM - Ambiente com problemas sérios"
@@ -2170,7 +2172,7 @@ with tab3:
         
         # ==================== TABELA 1: ARQUÉTIPOS ====================
         if afirmacoes_arq:
-            st.markdown("**�� Questões de Arquétipos - Saúde Emocional**")
+            st.markdown("** Questões de Arquétipos - Saúde Emocional**")
             
             # Criar DataFrame para arquétipos
             df_arq_detalhado = pd.DataFrame(afirmacoes_arq)
@@ -2332,4 +2334,19 @@ with tab3:
             # Aplicar cores
             df_micro_styled = df_micro_exibir.style.applymap(color_gap_micro, subset=['Gap'])
             
-            st.dataframe(df_micro_styled, use_container_width
+            st.dataframe(df_micro_styled, use_container_width=True)
+            
+                        # Download microambiente
+            csv_micro = df_micro_exibir.to_csv(index=False)
+            st.download_button(
+                label="📥 Download CSV - Microambiente SE",
+                data=csv_micro,
+                file_name="saude_emocional_microambiente.csv",
+                mime="text/csv"
+            )
+    
+    else:
+        st.warning("⚠️ Nenhuma afirmação relacionada à saúde emocional foi identificada.")
+        st.info(" Dica: Verifique se as palavras-chave estão presentes nas afirmações existentes.")
+
+            
