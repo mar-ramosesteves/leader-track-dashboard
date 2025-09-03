@@ -2335,21 +2335,27 @@ with tab3:
                     reais_micro.append("N/A")
                     ideais_micro.append("N/A")
                     gaps_micro.append("N/A")
-
-
+            
+            df_micro_detalhado['Real'] = reais_micro
+            df_micro_detalhado['Ideal'] = ideais_micro
+            df_micro_detalhado['Gap'] = gaps_micro
             
             # Função para aplicar cores baseadas no gap
             def color_gap_micro(val):
                 try:
                     gap_val = float(val)
-                    if gap_val > 40:
-                        return 'background-color: rgba(255, 0, 0, 0.8)'      # Vermelho
+                    if gap_val > 80:
+                        return 'background-color: rgba(255, 0, 0, 0.8)'  # Vermelho
+                    elif gap_val > 60:
+                        return 'background-color: rgba(255, 100, 0, 0.8)'  # Vermelho-laranja
+                    elif gap_val > 40:
+                        return 'background-color: rgba(255, 165, 0, 0.7)'  # Laranja
                     elif gap_val > 20:
-                        return 'background-color: rgba(255, 165, 0, 0.7)'    # Laranja
-                    elif gap_val > 10:
-                        return 'background-color: rgba(255, 255, 0, 0.7)'    # Amarelo
+                        return 'background-color: rgba(255, 255, 0, 0.6)'  # Amarelo
+                    elif gap_val > 0:
+                        return 'background-color: rgba(144, 238, 144, 0.6)'  # Verde claro
                     else:
-                        return 'background-color: rgba(0, 128, 0, 0.7)'      # Verde
+                        return 'background-color: rgba(0, 255, 0, 0.5)'  # Verde
                 except:
                     return 'background-color: transparent'
             
@@ -2362,7 +2368,7 @@ with tab3:
             
             st.dataframe(df_micro_styled, use_container_width=True)
             
-                        # Download microambiente
+            # Download microambiente
             csv_micro = df_micro_exibir.to_csv(index=False)
             st.download_button(
                 label="📥 Download CSV - Microambiente SE",
