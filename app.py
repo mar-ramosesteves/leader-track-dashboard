@@ -1637,6 +1637,7 @@ with tab3:
                 categoria = 'Suporte Emocional'
             
             # Calcular valor da questão
+            # Calcular valor da questão
             if af['tipo'] == 'Arquétipo':
                 # Para arquétipos, usar % tendência
                 arquétipo = af['dimensao']
@@ -1701,33 +1702,15 @@ with tab3:
                         pontuacao_real = linha['PONTUACAO_REAL'].iloc[0]
                         pontuacao_ideal = linha['PONTUACAO_IDEAL'].iloc[0]
                         gap = pontuacao_ideal - pontuacao_real  # ✅ Gap correto da matriz!
-                    else:
-                        pontuacao_real = 0
-                        pontuacao_ideal = 0
-                        gap = 0
-                    
-                    col1, col2, col3, col4 = st.columns(4)
-                    with col1:
-                        st.metric("⭐ Real", f"{media_real:.1f} ({pontuacao_real:.1f}%)")
-                    with col2:
-                        st.metric("⭐ Ideal", f"{media_ideal:.1f} ({pontuacao_ideal:.1f}%)")
-                    with col3:
-                        st.metric("�� Gap", f"{gap:.1f}%")
-                    with col4:
-                        st.metric("Nº Respostas", len(estrelas_real))
-                    
-                    if gap > 80:
-                        st.error(f"�� **Gap Alto:** {gap:.1f}%")
-                    elif gap > 60:
-                        st.error(f"�� **Gap Alto:** {gap:.1f}%")
-                    elif gap > 40:
-                        st.warning(f"🟠 **Gap Moderado:** {gap:.1f}%")
-                    elif gap > 20:
-                        st.warning(f"🟡 **Gap Baixo:** {gap:.1f}%")
-                    else:
-                        st.success(f"✅ **Gap Mínimo:** {gap:.1f}%")
-                else:
-                    st.warning("⚠️ Dados insuficientes para calcular gap")
+                        
+                        # Converter para score (gap baixo = score alto)
+                        valor = max(0, 100 - gap)
+                        categoria_valores[categoria].append(valor)
+
+
+
+
+
 
         # Calcular médias por categoria
         categoria_medias = {}
