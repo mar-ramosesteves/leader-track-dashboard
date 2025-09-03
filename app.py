@@ -1661,7 +1661,45 @@ if matriz_arq is not None and matriz_micro is not None:
                 
                 st.divider()
                                 
-                # ==================== GRÁFICO 1: COMPLIANCE NR-1 COM VALORES ====================
+                
+                # ==================== APLICAR FILTRO NOS DADOS DOS GRÁFICOS ====================
+                # Usar dados filtrados se uma categoria específica foi selecionada
+                if categoria_selecionada and categoria_selecionada != "Todas":
+                    # Filtrar apenas questões da categoria selecionada
+                    questoes_filtradas = []
+                    for af in afirmacoes_saude_emocional:
+                        af_lower = af['afirmacao'].lower()
+                        
+                        # Aplicar a mesma lógica de categorização
+                        if categoria_selecionada == 'Prevenção de Estresse':
+                            if any(palavra in af_lower for palavra in ['estresse', 'ansiedade', 'pressão', 'pressao', 'cobrança', 'cobranca', 'deadline', 'prazos', 'tensão', 'tensao', 'sobrecarga', 'preocupa com o tempo', 'preocupa com detalhes', 'preocupa se', 'preocupa com', 'necessidade de se aprofundar', 'aprofundar nos detalhes', 'detalhes na execução', 'detalhes de realização', 'detalhes do trabalho', 'sem necessidade de ficar de olho', 'fazer todo o possivel', 'resolver problemas particulares', 'problemas particulares urgentes', 'atuar na solução de conflitos', 'solução de conflitos em sua equipe', 'risco calculado', 'resultasse em algo negativo', 'seriam apoiados', 'leais uns com os outros', 'mais elogiados e incentivados', 'do que criticados']):
+                                questoes_filtradas.append(af)
+                        elif categoria_selecionada == 'Ambiente Psicológico Seguro':
+                            if any(palavra in af_lower for palavra in ['ambiente', 'seguro', 'proteção', 'protecao', 'respeito', 'cuidadoso', 'palavras']):
+                                questoes_filtradas.append(af)
+                        elif categoria_selecionada == 'Suporte Emocional':
+                            if any(palavra in af_lower for palavra in ['suporte', 'apoio', 'ajuda', 'assistência', 'assistencia', 'ajudar', 'resolver', 'percebe', 'oferece']):
+                                questoes_filtradas.append(af)
+                        elif categoria_selecionada == 'Comunicação Positiva':
+                            if any(palavra in af_lower for palavra in ['feedback', 'positivo', 'construtivo', 'encorajamento', 'comentários', 'comentarios', 'positivos', 'desenvolvimento', 'futuro']):
+                                questoes_filtradas.append(af)
+                        elif categoria_selecionada == 'Equilíbrio Vida-Trabalho':
+                            if any(palavra in af_lower for palavra in ['equilíbrio', 'equilibrio', 'flexibilidade', 'horários', 'horarios', 'tempo', 'família', 'familia', 'pessoal', 'relação', 'relacao', 'vida pessoal']):
+                                questoes_filtradas.append(af)
+                    
+                    # Usar apenas questões filtradas para os gráficos
+                    if questoes_filtradas:
+                        afirmacoes_saude_emocional_filtradas = questoes_filtradas
+                        st.success(f"✅ **Filtro aplicado:** {len(questoes_filtradas)} questões da categoria '{categoria_selecionada}'")
+                    else:
+                        afirmacoes_saude_emocional_filtradas = afirmacoes_saude_emocional
+                        st.warning(f"⚠️ **Nenhuma questão encontrada** para a categoria '{categoria_selecionada}'. Mostrando todas as questões.")
+                else:
+                    # Sem filtro ou "Todas" selecionada
+                    afirmacoes_saude_emocional_filtradas = afirmacoes_saude_emocional
+                
+                                
+                
                 # ==================== GRÁFICO 1: COMPLIANCE NR-1 COM VALORES ====================
                 st.subheader("📊 Compliance NR-1 + Adendo Saúde Mental - Valores das Questões")
 
