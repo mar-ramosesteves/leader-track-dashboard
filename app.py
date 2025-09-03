@@ -1749,7 +1749,7 @@ with tab3:
 
         # ==================== DRILL-DOWN POR CATEGORIA ====================
         st.subheader("🔍 Drill-Down por Categoria de Compliance")
-        
+
         # Seleção da categoria para drill-down
         col1, col2 = st.columns([2, 1])
         
@@ -1769,7 +1769,7 @@ with tab3:
         if st.session_state.get('categoria_clicada'):
             categoria_selecionada = st.session_state.categoria_clicada
             st.success(f" Categoria selecionada via gráfico: **{categoria_selecionada}**")
-
+        
         # ==================== APLICAR FILTRO NOS DADOS DOS GRÁFICOS ====================
         # Usar dados filtrados se uma categoria específica foi selecionada
         if categoria_selecionada and categoria_selecionada != "Todas":
@@ -1794,7 +1794,7 @@ with tab3:
                 elif categoria_selecionada == 'Equilíbrio Vida-Trabalho':
                     if any(palavra in af_lower for palavra in ['equilíbrio', 'equilibrio', 'flexibilidade', 'horários', 'horarios', 'tempo', 'família', 'familia', 'pessoal', 'relação', 'relacao', 'vida pessoal']):
                         questoes_filtradas.append(af)
-
+        
             # Usar apenas questões filtradas para os gráficos
             if questoes_filtradas:
                 afirmacoes_saude_emocional_filtradas = questoes_filtradas
@@ -1805,7 +1805,10 @@ with tab3:
         else:
             # Sem filtro ou "Todas" selecionada
             afirmacoes_saude_emocional_filtradas = afirmacoes_saude_emocional
-
+        
+        # Separar afirmações por tipo (DEPOIS do filtro)
+        afirmacoes_arq = [a for a in afirmacoes_saude_emocional_filtradas if a['tipo'] == 'Arquétipo']
+        
         if categoria_selecionada:
             st.markdown(f"### 📋 Questões da Categoria: **{categoria_selecionada}**")
             
@@ -1813,10 +1816,6 @@ with tab3:
             afirmacoes_categoria = []
             for af in afirmacoes_saude_emocional_filtradas:
                 af_lower = af['afirmacao'].lower()
-
-        # Separar afirmações por tipo
-        afirmacoes_arq = [a for a in afirmacoes_saude_emocional_filtradas if a['tipo'] == 'Arquétipo']
-                
                 
                 # Aplicar a mesma lógica de categorização
                 if categoria_selecionada == 'Prevenção de Estresse':
@@ -1931,6 +1930,7 @@ with tab3:
         else:
             st.warning(f"⚠️ Nenhuma questão encontrada na categoria {categoria_selecionada}")
 
+    
         # ==================== GRÁFICO 2: MICROAMBIENTE REAL VS IDEAL + GAP ====================
         st.subheader("🏢 Microambiente: Como é vs Como deveria ser vs Gap")
         
