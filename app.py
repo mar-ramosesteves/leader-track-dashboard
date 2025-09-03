@@ -1830,6 +1830,22 @@ if matriz_arq is not None and matriz_micro is not None:
                     categoria_selecionada = st.session_state.categoria_clicada
                     st.success(f"�� Categoria selecionada via gráfico: **{categoria_selecionada}**")
 
+                # ==================== FILTRO SIMPLES POR CATEGORIA ====================
+                # Mostrar mensagem de filtro ativo
+                if categoria_selecionada and categoria_selecionada != "Todas":
+                    st.info(f"🔍 **Filtro ativo:** Mostrando dados apenas da categoria '{categoria_selecionada}'")
+                    
+                    # Para simplificar, vamos apenas mostrar uma mensagem por enquanto
+                    st.warning("⚠️ **Funcionalidade em desenvolvimento:** O filtro dos gráficos será implementado na próxima versão!")
+                    
+                    # Por enquanto, usar dados originais
+                    df_arq_filtrado_cat = df_arq_filtrado
+                    df_micro_filtrado_cat = df_micro_filtrado
+                else:
+                    # Sem filtro ou "Todas" selecionada
+                    df_arq_filtrado_cat = df_arq_filtrado
+                    df_micro_filtrado_cat = df_micro_filtrado
+                
                 
                 
                 if categoria_selecionada:
