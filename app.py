@@ -1565,67 +1565,6 @@ if matriz_arq is not None and matriz_micro is not None:
             else:
                 st.warning("⚠️ Nenhum dado encontrado com os filtros aplicados.")
                 
-                                        # ==================== TAB SAÚDE EMOCIONAL ====================
-
-
-
-        def filtrar_dados_por_categoria(categoria, df_arq_filtrado, df_micro_filtrado):
-            """Filtra dados de arquétipos e microambiente por categoria de compliance"""
-    
-            if categoria == "Todas" or categoria is None:
-                return df_arq_filtrado, df_micro_filtrado
-            
-            # Para simplificar, vamos filtrar apenas por "Prevenção de Estresse" primeiro
-            if categoria == "Prevenção de Estresse":
-                # Filtrar apenas respondentes que responderam questões de prevenção de estresse
-                respondentes_filtrados_arq = []
-                respondentes_filtrados_micro = []
-                
-                # Buscar em arquétipos
-                for _, respondente in df_arq_filtrado.iterrows():
-                    if 'respostas' in respondente:
-                        # Verificar se tem alguma questão relacionada
-                        tem_questao_estresse = False
-                        for codigo, estrelas in respondente['respostas'].items():
-                            # Aqui vamos usar uma lógica simples
-                            if int(estrelas) > 0:  # Se respondeu
-                                tem_questao_estresse = True
-                                break
-                        
-                        if tem_questao_estresse:
-                            respondentes_filtrados_arq.append(respondente.name)
-                
-                # Buscar em microambiente
-                for _, respondente in df_micro_filtrado.iterrows():
-                    if 'respostas' in respondente:
-                        # Verificar se tem alguma questão relacionada
-                        tem_questao_estresse = False
-                        for codigo, estrelas in respondente['respostas'].items():
-                            if int(estrelas) > 0:  # Se respondeu
-                                tem_questao_estresse = True
-                                break
-                        
-                        if tem_questao_estresse:
-                            respondentes_filtrados_micro.append(respondente.name)
-                
-                # Aplicar filtros
-                if respondentes_filtrados_arq:
-                    df_arq_filtrado_cat = df_arq_filtrado.loc[respondentes_filtrados_arq]
-                else:
-                    df_arq_filtrado_cat = df_arq_filtrado.copy()
-                    
-                if respondentes_filtrados_micro:
-                    df_micro_filtrado_cat = df_micro_filtrado.loc[respondentes_filtrados_micro]
-                else:
-                    df_micro_filtrado_cat = df_micro_filtrado.copy()
-                
-                return df_arq_filtrado_cat, df_micro_filtrado_cat
-            
-            # Para outras categorias, retornar dados originais por enquanto
-            return df_arq_filtrado, df_micro_filtrado
-
-        # Variável global para categoria selecionada
-        categoria_selecionada_global = None
     
         with tab3:
             st.header("💚 Análise de Saúde Emocional + Compliance NR-1")
