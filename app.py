@@ -1687,7 +1687,22 @@ if matriz_arq is not None and matriz_micro is not None:
                         elif categoria_selecionada_global == 'Equilíbrio Vida-Trabalho':
                             if any(palavra in af_lower for palavra in ['equilíbrio', 'equilibrio', 'flexibilidade', 'horários', 'horarios', 'tempo', 'família', 'familia', 'pessoal', 'relação', 'relacao', 'vida pessoal']):
                                 questoes_filtradas.append(af)
+
+
+                    # DEBUG: Verificar o que está acontecendo
+                    st.write(f"🔍 DEBUG: categoria_selecionada_global = {categoria_selecionada_global}")
+                    st.write(f"🔍 DEBUG: Total afirmações antes do filtro = {len(afirmacoes_saude_emocional)}")
+                    st.write(f"🔍 DEBUG: Total questões filtradas = {len(questoes_filtradas)}")
                     
+                    # Mostrar algumas questões filtradas para debug
+                    if questoes_filtradas:
+                        st.write("�� DEBUG: Primeiras 3 questões filtradas:")
+                        for i, af in enumerate(questoes_filtradas[:3]):
+                            st.write(f"  {i+1}. {af['afirmacao'][:100]}...")
+                    else:
+                        st.write("🔍 DEBUG: Nenhuma questão foi filtrada!")
+
+
                     # Usar apenas questões filtradas para os gráficos
                     if questoes_filtradas:
                         afirmacoes_saude_emocional_filtradas = questoes_filtradas
