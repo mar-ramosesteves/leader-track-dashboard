@@ -1727,8 +1727,9 @@ if matriz_arq is not None and matriz_micro is not None:
                     marker_color=cores_compliance,
                     text=[f"{v:.1f}%" for v in categoria_medias.values()],
                     textposition='auto',
-                    hovertemplate='<b>%{y}</b><br>Score Médio: %{x:.1f}%<br>Questões: %{customdata}<extra></extra>',
-                    customdata=[len(categoria_valores[k]) for k in categoria_medias.keys()]
+                    hovertemplate='<b>%{y}</b><br>Score Médio: %{x:.1f}%<br>Questões: %{customdata}<br><extra>Clique para ver detalhes!</extra>',
+                    customdata=[len(categoria_valores[k]) for k in categoria_medias.keys()],
+                    customdata2=list(categoria_medias.keys())  # Para identificar categoria clicada
                 ))
                 
                 fig_compliance.update_layout(
@@ -1737,12 +1738,81 @@ if matriz_arq is not None and matriz_micro is not None:
                     yaxis_title="Categorias de Compliance",
                     xaxis=dict(range=[0, 100]),
                     height=400,
-                    showlegend=False
+                    showlegend=False,
+                    clickmode='event+select',  # Adicionar interatividade
+                    hovermode='closest'
                 )
                 
                 st.plotly_chart(fig_compliance, use_container_width=True)
                 
                 st.divider()
+
+                # ==================== DRILL-DOWN POR CATEGORIA ====================
+                st.subheader("🔍 Drill-Down por Categoria de Compliance")
+                
+                # Seleção da categoria para drill-down
+                col1, col2 = st.columns([2, 1])
+                
+                with col1:
+                    categoria_selecionada = st.selectbox(
+                        "Selecione uma categoria para ver as questões detalhadas:",
+                        list(categoria_medias.keys()),
+                        index=None,
+                        placeholder="Escolha uma categoria...",
+                        key="categoria_compliance_select"
+                    )
+                
+                with col2:
+                    st.markdown("**💡 Dica:** Você também pode clicar diretamente nas barras do gráfico acima!")
+                
+                # Adicionar seleção automática via gráfico
+                if st.session_state.get('categoria_clicada'):
+                    categoria_selecionada = st.session_state.categoria_clicada
+                    st.success(f"�� Categoria selecionada via gráfico: **{categoria_selecionada}**")
+                
+                if categoria_selecionada:
+                    st.markdown(f"### 📋 Questões da Categoria: **{categoria_selecionada}**")
+                    
+                    # Filtrar afirmações da categoria selecionada
+                    afirmacoes_categoria = []
+                    for af in afirmacoes_saude_emocional:
+                        af_lower = af['afirmacao'].lower()
+                        
+                        # Aplicar a mesma lógica de categorização
+                        if categoria_selecionada == 'Prevenção de Estresse':
+                            if any(palavra in af_lower for palavra in ['estresse', 'ansiedade', 'pressão', 'pressao', 'cobrança', 'cobranca', 'deadline', 'prazos', 'tensão', 'tensao', 'sobrecarga', 'preocupa com o tempo', 'preocupa com detalhes', 'preocupa se', 'preocupa com', 'necessidade de se aprofundar', 'aprofundar nos detalhes', 'detalhes na execução', 'detalhes de realização', 'detalhes do trabalho', 'sem necessidade de ficar de olho', 'fazer todo o possivel', 'resolver problemas particulares', 'problemas particulares urgentes', 'atuar na solução de conflitos', 'solução de conflitos em sua equipe', 'risco calculado', 'resultasse em algo negativo', 'seriam apoiados', 'leais uns com os outros', 'mais elogiados e incentivados', 'do que criticados']):
+                                afirmacoes_categoria.append(af)
+                        elif categoria_selecionada == 'Ambiente Psicológico Seguro':
+                            if any(palavra in af_lower for palavra in ['ambiente', 'seguro', 'proteção', 'protecao', 'respeito', 'cuidadoso', 'palavras']):
+                                afirmacoes_categoria.append(af)
+                        elif categoria_selecionada == 'Suporte Emocional':
+                            if any(palavra in af_lower for palavra in ['suporte', 'apoio', 'ajuda', 'assistência', 'assistencia', 'ajudar', 'resolver', 'percebe', 'oferece']):
+                                afirmacoes_categoria.append(af)
+                        elif categoria_selecionada == 'Comunicação Positiva':
+                            if any(palavra in af_lower for palavra in ['feedback', 'positivo', 'construtivo', 'encorajamento', 'comentários', 'comentarios', 'positivos', 'desenvolvimento', 'futuro']):
+                                afirmacoes_categoria.append(af)
+                        elif categoria_selecionada == 'Equilíbrio Vida-Trabalho':
+                            if any(palavra in af_lower for palavra in ['equilíbrio', 'equilibrio', 'flexibilidade', 'horários', 'horarios', 'tempo', 'família', 'familia', 'pessoal', 'relação', 'relacao', 'vida pessoal']):
+                                afirmacoes_categoria.append(af)
+                    
+                    if afirmacoes_categoria:
+                        st.success(f"✅ Encontradas {len(afirmacoes_categoria)} questões na categoria {categoria_selecionada}")
+                        
+                        # Mostrar questões encontradas
+                        for i, af in enumerate(afirmacoes_categoria, 1):
+                            with st.expander(f"�� Questão {i}: {af['afirmacao'][:100]}..."):
+                                st.markdown(f"**Tipo:** {af['tipo']}")
+                                st.markdown(f"**Dimensão:** {af['dimensao']}")
+                                if af['subdimensao'] != 'N/A':
+                                    st.markdown(f"**Subdimensão:** {af['subdimensao']}")
+                                st.markdown(f"**Afirmação completa:** {af['afirmacao']}")
+                    else:
+                        st.warning(f"⚠️ Nenhuma questão encontrada na categoria {categoria_selecionada}")
+
+
+
+
+
                 
                 # ==================== GRÁFICO 2: MICROAMBIENTE REAL VS IDEAL + GAP ====================
                 st.subheader("🏢 Microambiente: Como é vs Como deveria ser vs Gap")
