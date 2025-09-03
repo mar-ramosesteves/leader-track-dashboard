@@ -1579,7 +1579,7 @@ with tab3:
         afirmacoes_saude_emocional, df_arq_filtrado, df_micro_filtrado = analisar_afirmacoes_saude_emocional(matriz_arq, matriz_micro, df_arquetipos, df_microambiente, filtros)
         
         # Separar afirmações por tipo
-        afirmacoes_arq = [a for a in afirmacoes_saude_emocional if a['tipo'] == 'Arquétipo']
+        afirmacoes_arq = [a for a in afirmacoes_saude_emocional_filtradas if a['tipo'] == 'Arquétipo']
         
         # ✅ CALCULAR COMPLIANCE AQUI (DEPOIS DOS FILTROS!)
         compliance_nr1 = mapear_compliance_nr1(afirmacoes_saude_emocional)
