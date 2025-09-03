@@ -1739,7 +1739,7 @@ with tab3:
         with col1:
             categoria_selecionada = st.selectbox(
                 "Selecione uma categoria para ver as questões detalhadas:",
-                ["Todas"] + list(categoria_medias.keys()),
+                ["Todas", "Prevenção de Estresse", "Ambiente Psicológico Seguro", "Suporte Emocional", "Comunicação Positiva", "Equilíbrio Vida-Trabalho"]
                 index=None,
                 placeholder="Escolha uma categoria...",
                 key="categoria_compliance_select"
