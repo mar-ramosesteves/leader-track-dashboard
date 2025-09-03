@@ -1728,8 +1728,7 @@ if matriz_arq is not None and matriz_micro is not None:
                     text=[f"{v:.1f}%" for v in categoria_medias.values()],
                     textposition='auto',
                     hovertemplate='<b>%{y}</b><br>Score Médio: %{x:.1f}%<br>Questões: %{customdata}<br><extra>Clique para ver detalhes!</extra>',
-                    customdata=[len(categoria_valores[k]) for k in categoria_medias.keys()],
-                    customdata2=list(categoria_medias.keys())  # Para identificar categoria clicada
+                    customdata=[len(categoria_valores[k]) for k in categoria_medias.keys()]
                 ))
                 
                 fig_compliance.update_layout(
