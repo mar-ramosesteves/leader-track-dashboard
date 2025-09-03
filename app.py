@@ -1702,7 +1702,7 @@ if matriz_arq is not None and matriz_micro is not None:
                         arquétipo = af['dimensao']
                         estrelas_questao = []
                         
-                        for _, respondente in df_arq_filtrado_cat.iterrows():
+                        for _, respondente in df_arq_filtrado.iterrows():
                             if 'respostas' in respondente and codigo in respondente['respostas']:
                                 estrelas = int(respondente['respostas'][codigo])
                                 estrelas_questao.append(estrelas)
@@ -1732,7 +1732,7 @@ if matriz_arq is not None and matriz_micro is not None:
                         estrelas_real = []
                         estrelas_ideal = []
                         
-                        for _, respondente in df_micro_filtrado_cat.iterrows():
+                        for _, respondente in df_micro_filtrado.iterrows():
                             if 'respostas' in respondente:
                                 respostas = respondente['respostas']
                                 questao_real = f"{codigo}C"
@@ -1830,60 +1830,6 @@ if matriz_arq is not None and matriz_micro is not None:
                     categoria_selecionada = st.session_state.categoria_clicada
                     st.success(f"�� Categoria selecionada via gráfico: **{categoria_selecionada}**")
 
-
-
-
-                # ==================== FILTRO POR CATEGORIA ====================
-                # Aplicar filtro de categoria nos dados
-                if categoria_selecionada and categoria_selecionada != "Todas":
-                    st.info(f"🔍 **Filtro ativo:** Mostrando dados apenas da categoria '{categoria_selecionada}'")
-                    
-                    # Filtrar dados por categoria
-                    df_arq_filtrado_cat = df_arq_filtrado.copy()
-                    df_micro_filtrado_cat = df_micro_filtrado.copy()
-                    
-                    # Aplicar filtro baseado na categoria selecionada
-                    if categoria_selecionada == "Prevenção de Estresse":
-                        # Filtrar apenas questões relacionadas
-                        questoes_filtradas = []
-                        for af in afirmacoes_saude_emocional:
-                            af_lower = af['afirmacao'].lower()
-                            if any(palavra in af_lower for palavra in ['estresse', 'ansiedade', 'pressão', 'pressao', 'cobrança', 'cobranca', 'deadline', 'prazos', 'tensão', 'tensao', 'sobrecarga', 'preocupa com o tempo', 'preocupa com detalhes', 'preocupa se', 'preocupa com', 'necessidade de se aprofundar', 'aprofundar nos detalhes', 'detalhes na execução', 'detalhes de realização', 'detalhes do trabalho', 'sem necessidade de ficar de olho', 'fazer todo o possivel', 'resolver problemas particulares', 'problemas particulares urgentes', 'atuar na solução de conflitos', 'solução de conflitos em sua equipe', 'risco calculado', 'resultasse em algo negativo', 'seriam apoiados', 'leais uns com os outros', 'mais elogiados e incentivados', 'do que criticados']):
-                                questoes_filtradas.append(af)
-                        
-                        # Filtrar respondentes que responderam essas questões
-                        if questoes_filtradas:
-                            respondentes_filtrados_arq = set()
-                            respondentes_filtrados_micro = set()
-                            
-                            for af in questoes_filtradas:
-                                codigo = af['chave']
-                                if af['tipo'] == 'Arquétipo':
-                                    for _, respondente in df_arq_filtrado.iterrows():
-                                        if 'respostas' in respondente and codigo in respondente['respostas']:
-                                            respondentes_filtrados_arq.add(respondente.name)
-                                else:  # Microambiente
-                                    for _, respondente in df_micro_filtrado.iterrows():
-                                        if 'respostas' in respondente:
-                                            respostas = respondente['respostas']
-                                            questao_real = f"{codigo}C"
-                                            questao_ideal = f"{codigo}k"
-                                            if questao_real in respostas or questao_ideal in respostas:
-                                                respondentes_filtrados_micro.add(respondente.name)
-                            
-                            # Aplicar filtros
-                            if respondentes_filtrados_arq:
-                                df_arq_filtrado_cat = df_arq_filtrado.loc[list(respondentes_filtrados_arq)]
-                            if respondentes_filtrados_micro:
-                                df_micro_filtrado_cat = df_micro_filtrado.loc[list(respondentes_filtrados_micro)]
-                    else:
-                        # Para outras categorias, usar dados originais por enquanto
-                        df_arq_filtrado_cat = df_arq_filtrado
-                        df_micro_filtrado_cat = df_micro_filtrado
-                else:
-                    # Sem filtro ou "Todas" selecionada
-                    df_arq_filtrado_cat = df_arq_filtrado
-                    df_micro_filtrado_cat = df_micro_filtrado
                 
                 
                 if categoria_selecionada:
@@ -1934,7 +1880,7 @@ if matriz_arq is not None and matriz_micro is not None:
                                     arquétipo = af['dimensao']
                                     estrelas_questao = []
                                     
-                                    for _, respondente in df_arq_filtrado_cat.iterrows():
+                                    for _, respondente in df_arq_filtrado.iterrows():
                                         if 'respostas' in respondente and codigo in respondente['respostas']:
                                             estrelas = int(respondente['respostas'][codigo])
                                             estrelas_questao.append(estrelas)
@@ -1971,7 +1917,7 @@ if matriz_arq is not None and matriz_micro is not None:
                                     estrelas_real = []
                                     estrelas_ideal = []
                                     
-                                    for _, respondente in df_micro_filtrado_cat.iterrows():
+                                    for _, respondente in df_micro_filtrado.iterrows():
                                         if 'respostas' in respondente:
                                             respostas = respondente['respostas']
                                             questao_real = f"{codigo}C"
@@ -2052,7 +1998,7 @@ if matriz_arq is not None and matriz_micro is not None:
                         estrelas_real = []
                         estrelas_ideal = []
                         
-                        for _, respondente in df_micro_filtrado_cat.iterrows():  # ✅ SUBSTITUÍDO
+                        for _, respondente in df_micro_filtrado.iterrows():  # ✅ SUBSTITUÍDO
                             if 'respostas' in respondente:
                                 respostas = respondente['respostas']
                                 questao_real = f"{codigo}C"
