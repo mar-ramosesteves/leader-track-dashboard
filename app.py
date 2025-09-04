@@ -2025,14 +2025,31 @@ with tab3:
                         if questao_ideal in respostas:
                             estrelas_ideal.append(int(respostas[questao_ideal]))
                 
+                # Calcular médias
                 if estrelas_real and estrelas_ideal:
                     media_real = np.mean(estrelas_real)
                     media_ideal = np.mean(estrelas_ideal)
                     
-                    # Converter para percentual (estrelas 1-5 para 0-100%)
-                    percentual_real = (media_real / 5) * 100
-                    percentual_ideal = (media_ideal / 5) * 100
-                    gap = percentual_ideal - percentual_real
+                    # ✅ CORREÇÃO: Arredondar para buscar na matriz (igual à tabela)
+                    media_real_arredondada = round(media_real)
+                    media_ideal_arredondada = round(media_ideal)
+                    
+                    # ✅ CORREÇÃO: Buscar pontuações na matriz usando a chave
+                    chave = f"{codigo}_I{media_ideal_arredondada}_R{media_real_arredondada}"
+                    linha = matriz_micro[matriz_micro['CHAVE'] == chave]
+                    
+                    if not linha.empty:
+                        pontuacao_real = linha['PONTUACAO_REAL'].iloc[0]
+                        pontuacao_ideal = linha['PONTUACAO_IDEAL'].iloc[0]
+                        gap = pontuacao_ideal - pontuacao_real  # ✅ Gap correto da matriz!
+                    else:
+                        pontuacao_real = 0
+                        pontuacao_ideal = 0
+                        gap = 0
+                    
+                    # Usar as pontuações da matriz
+                    percentual_real = pontuacao_real
+                    percentual_ideal = pontuacao_ideal
                     
                     questoes_micro.append(questao)
                     medias_real.append(percentual_real)
