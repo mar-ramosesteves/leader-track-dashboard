@@ -118,7 +118,7 @@ def analisar_afirmacoes_saude_emocional(matriz_arq, matriz_micro, df_arquetipos,
         df_micro_filtrado = df_micro_filtrado[df_micro_filtrado['empresa'] == filtros['empresa']]
     if filtros['codrodada'] != "Todas":
         df_micro_filtrado = df_micro_filtrado[df_micro_filtrado['codrodada'] == filtros['codrodada']]
-    if filtros['emaillider'] != "Todos":
+    if filtros['emailLider'] != "Todos":
         df_micro_filtrado = df_micro_filtrado[df_micro_filtrado['emailLider'] == filtros['emailLider']]
     if filtros['estado'] != "Todos":
         df_micro_filtrado = df_micro_filtrado[df_micro_filtrado['estado'] == filtros['estado']]
