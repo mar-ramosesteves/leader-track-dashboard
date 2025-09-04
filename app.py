@@ -100,7 +100,7 @@ def analisar_afirmacoes_saude_emocional(matriz_arq, matriz_micro, df_arquetipos,
         df_arq_filtrado = df_arq_filtrado[df_arq_filtrado['empresa'] == filtros['empresa']]
     if filtros['codrodada'] != "Todas":
         df_arq_filtrado = df_arq_filtrado[df_arq_filtrado['codrodada'] == filtros['codrodada']]
-    if filtros['emaillider'] != "Todos":
+    if 'emailLider' in filtros and filtros['emailLider'] != "Todos":
         df_arq_filtrado = df_arq_filtrado[df_arq_filtrado['emailLider'] == filtros['emaillider']]
     if filtros['estado'] != "Todos":
         df_arq_filtrado = df_arq_filtrado[df_arq_filtrado['estado'] == filtros['estado']]
@@ -118,7 +118,7 @@ def analisar_afirmacoes_saude_emocional(matriz_arq, matriz_micro, df_arquetipos,
         df_micro_filtrado = df_micro_filtrado[df_micro_filtrado['empresa'] == filtros['empresa']]
     if filtros['codrodada'] != "Todas":
         df_micro_filtrado = df_micro_filtrado[df_micro_filtrado['codrodada'] == filtros['codrodada']]
-    if filtros['emailLider'] != "Todos":
+    if 'emailLider' in filtros and filtros['emailLider'] != "Todos":
         df_micro_filtrado = df_micro_filtrado[df_micro_filtrado['emailLider'] == filtros['emailLider']]
     if filtros['estado'] != "Todos":
         df_micro_filtrado = df_micro_filtrado[df_micro_filtrado['estado'] == filtros['estado']]
