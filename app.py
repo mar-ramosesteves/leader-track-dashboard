@@ -386,7 +386,7 @@ def calcular_microambiente_respondente(respostas, matriz, pontos_max_dimensao, p
         for sub in relacionamento[dimensao]:
             labels_subdimensoes.append(f"{dimensao}: {sub}")
     
-    # Separar respostas Real (C) e Ideal (k)
+        # Separar respostas Real (C) e Ideal (k)
     respostas_real = {}
     respostas_ideal = {}
 
