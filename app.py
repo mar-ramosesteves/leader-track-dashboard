@@ -394,14 +394,10 @@ def calcular_microambiente_respondente(respostas, matriz, pontos_max_dimensao, p
         if questao.startswith('Q'):
             if questao.endswith('C'):  # Como é (Real)
                 questao_num = questao[:-1]  # Remove o 'C'
-                # APLICAR MAPEAMENTO
-                questao_mapeada = MAPEAMENTO_QUESTOES.get(questao_num, questao_num)
-                respostas_real[questao_mapeada] = int(estrelas)
+                respostas_real[questao_num] = int(estrelas)
             elif questao.endswith('k'):  # Como deveria ser (Ideal)
                 questao_num = questao[:-1]  # Remove o 'k'
-                # APLICAR MAPEAMENTO
-                questao_mapeada = MAPEAMENTO_QUESTOES.get(questao_num, questao_num)
-                respostas_ideal[questao_mapeada] = int(estrelas)
+                respostas_ideal[questao_num] = int(estrelas)
     
     # Calcular pontos por dimensão (Real)
     pontos_por_dimensao_real = {dim: 0 for dim in dimensoes}
