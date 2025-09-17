@@ -301,6 +301,58 @@ def carregar_matrizes_microambiente():
 def calcular_microambiente_respondente(respostas, matriz, pontos_max_dimensao, pontos_max_subdimensao):
     """Calcula percentuais de microambiente para um respondente individual"""
     
+    # MAPEAMENTO CORRETO DAS QUESTÕES (igual aos gráficos)
+    MAPEAMENTO_QUESTOES = {
+        'Q01': 'Q01',  # COD Q01 = Questão 1
+        'Q02': 'Q10',  # COD Q02 = Questão 10  
+        'Q03': 'Q11',  # COD Q03 = Questão 11
+        'Q04': 'Q12',  # COD Q04 = Questão 12
+        'Q05': 'Q13',  # COD Q05 = Questão 13
+        'Q06': 'Q14',  # COD Q06 = Questão 14
+        'Q07': 'Q15',  # COD Q07 = Questão 15
+        'Q08': 'Q16',  # COD Q08 = Questão 16
+        'Q09': 'Q17',  # COD Q09 = Questão 17
+        'Q10': 'Q18',  # COD Q10 = Questão 18
+        'Q11': 'Q19',  # COD Q11 = Questão 19
+        'Q12': 'Q02',  # COD Q12 = Questão 2
+        'Q13': 'Q20',  # COD Q13 = Questão 20
+        'Q14': 'Q21',  # COD Q14 = Questão 21
+        'Q15': 'Q22',  # COD Q15 = Questão 22 (Performance) ✅
+        'Q16': 'Q23',  # COD Q16 = Questão 23
+        'Q17': 'Q24',  # COD Q17 = Questão 24
+        'Q18': 'Q25',  # COD Q18 = Questão 25
+        'Q19': 'Q26',  # COD Q19 = Questão 26
+        'Q20': 'Q27',  # COD Q20 = Questão 27
+        'Q21': 'Q28',  # COD Q21 = Questão 28
+        'Q22': 'Q29',  # COD Q22 = Questão 29
+        'Q23': 'Q03',  # COD Q23 = Questão 3
+        'Q24': 'Q30',  # COD Q24 = Questão 30
+        'Q25': 'Q31',  # COD Q25 = Questão 31
+        'Q26': 'Q32',  # COD Q26 = Questão 32
+        'Q27': 'Q33',  # COD Q27 = Questão 33
+        'Q28': 'Q34',  # COD Q28 = Questão 34
+        'Q29': 'Q35',  # COD Q29 = Questão 35
+        'Q30': 'Q36',  # COD Q30 = Questão 36
+        'Q31': 'Q37',  # COD Q31 = Questão 37
+        'Q32': 'Q38',  # COD Q32 = Questão 38
+        'Q33': 'Q39',  # COD Q33 = Questão 39
+        'Q34': 'Q04',  # COD Q34 = Questão 4
+        'Q35': 'Q40',  # COD Q35 = Questão 40
+        'Q36': 'Q41',  # COD Q36 = Questão 41
+        'Q37': 'Q42',  # COD Q37 = Questão 42
+        'Q38': 'Q43',  # COD Q38 = Questão 43
+        'Q39': 'Q44',  # COD Q39 = Questão 44
+        'Q40': 'Q45',  # COD Q40 = Questão 45
+        'Q41': 'Q46',  # COD Q41 = Questão 46
+        'Q42': 'Q47',  # COD Q42 = Questão 47
+        'Q43': 'Q48',  # COD Q43 = Questão 48
+        'Q44': 'Q05',  # COD Q44 = Questão 5
+        'Q45': 'Q06',  # COD Q45 = Questão 6
+        'Q46': 'Q07',  # COD Q46 = Questão 7
+        'Q47': 'Q08',  # COD Q47 = Questão 8
+        'Q48': 'Q09'   # COD Q48 = Questão 9
+    }
+    
     dimensoes = ['Adaptabilidade', 'Colaboração Mútua', 'Nitidez', 'Performance', 'Reconhecimento', 'Responsabilidade']
 
     # Definir subdimensões (lista original para cálculos)
@@ -342,10 +394,14 @@ def calcular_microambiente_respondente(respostas, matriz, pontos_max_dimensao, p
         if questao.startswith('Q'):
             if questao.endswith('C'):  # Como é (Real)
                 questao_num = questao[:-1]  # Remove o 'C'
-                respostas_real[questao_num] = int(estrelas)
+                # APLICAR MAPEAMENTO
+                questao_mapeada = MAPEAMENTO_QUESTOES.get(questao_num, questao_num)
+                respostas_real[questao_mapeada] = int(estrelas)
             elif questao.endswith('k'):  # Como deveria ser (Ideal)
                 questao_num = questao[:-1]  # Remove o 'k'
-                respostas_ideal[questao_num] = int(estrelas)
+                # APLICAR MAPEAMENTO
+                questao_mapeada = MAPEAMENTO_QUESTOES.get(questao_num, questao_num)
+                respostas_ideal[questao_mapeada] = int(estrelas)
     
     # Calcular pontos por dimensão (Real)
     pontos_por_dimensao_real = {dim: 0 for dim in dimensoes}
