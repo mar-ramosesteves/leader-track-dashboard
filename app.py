@@ -421,6 +421,9 @@ def calcular_microambiente_respondente(respostas, matriz, pontos_max_dimensao, p
             questao_mapeada = MAPEAMENTO_QUESTOES.get(questao, questao)
             chave = f"{questao_mapeada}_I{estrelas_ideal_arredondadas}_R{estrelas_real_arredondadas}"
             
+            # Buscar na matriz
+            linha = matriz[matriz['CHAVE'] == chave]
+            
             if not linha.empty:
                 dimensao = linha['DIMENSAO'].iloc[0]
                 subdimensao = linha['SUBDIMENSAO'].iloc[0]
