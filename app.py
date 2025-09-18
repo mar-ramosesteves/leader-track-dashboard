@@ -727,8 +727,28 @@ def calcular_medias_microambiente(df_respondentes, filtros):
                 valores.append(row['dimensoes_ideal'][dim])
         media = np.mean(valores) if valores else 0
         medias_equipe_ideal.append(media)
+
+        # Calcular médias de subdimensões da equipe (Real)
+    medias_subdimensoes_equipe_real = []
+    for sub in subdimensoes:
+        valores = []
+        for _, row in df_equipe.iterrows():
+            if 'subdimensoes_real' in row and isinstance(row['subdimensoes_real'], dict) and sub in row['subdimensoes_real']:
+                valores.append(row['subdimensoes_real'][sub])
+        media = np.mean(valores) if valores else 0
+        medias_subdimensoes_equipe_real.append(media)
     
-    return dimensoes, medias_real, medias_ideal, medias_equipe_real, medias_equipe_ideal, df_filtrado
+    # Calcular médias de subdimensões da equipe (Ideal)
+    medias_subdimensoes_equipe_ideal = []
+    for sub in subdimensoes:
+        valores = []
+        for _, row in df_equipe.iterrows():
+            if 'subdimensoes_ideal' in row and isinstance(row['subdimensoes_ideal'], dict) and sub in row['subdimensoes_ideal']:
+                valores.append(row['subdimensoes_ideal'][sub])
+        media = np.mean(valores) if valores else 0
+        medias_subdimensoes_equipe_ideal.append(media)
+    
+        return dimensoes, medias_real, medias_ideal, medias_equipe_real, medias_equipe_ideal, medias_subdimensoes_equipe_real, medias_subdimensoes_equipe_ideal, df_filtrado
 # ==================== FUNÇÕES DE GRÁFICOS ====================
 
 # GERAR GRÁFICO ARQUÉTIPOS
