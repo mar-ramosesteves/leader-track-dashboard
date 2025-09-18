@@ -354,37 +354,11 @@ def calcular_microambiente_respondente(respostas, matriz, pontos_max_dimensao, p
     }
     
     dimensoes = ['Adaptabilidade', 'Colaboração Mútua', 'Nitidez', 'Performance', 'Reconhecimento', 'Responsabilidade']
-
-    # Definir subdimensões (lista original para cálculos)
     subdimensoes = [
         'Criação', 'Simplificação de Processos', 'Credibilidade Recíproca', 'Dedicação', 'Parceria', 
         'Satisfação em Fazer Parte', 'Obrigações e Deveres', 'Propósito e Objetivo', 'Aprimoramento', 
         'Qualidade Superior', 'Celebração', 'Performance', 'Liberdade de Ação', 'Responsabilização'
     ]
-    
-    # Definir ordem das dimensões (igual ao gráfico principal)
-    ordem_dimensoes = ['Adaptabilidade', 'Colaboração Mútua', 'Nitidez', 'Performance', 'Reconhecimento', 'Responsabilidade']
-    
-    # Relacionamento dimensão → subdimensões
-    relacionamento = {
-        'Adaptabilidade': ['Criação', 'Simplificação de Processos'],
-        'Colaboração Mútua': ['Credibilidade Recíproca', 'Dedicação', 'Parceria'],
-        'Nitidez': ['Satisfação em Fazer Parte', 'Obrigações e Deveres', 'Propósito e Objetivo'],
-        'Performance': ['Aprimoramento', 'Qualidade Superior'],
-        'Reconhecimento': ['Celebração', 'Performance'],
-        'Responsabilidade': ['Liberdade de Ação', 'Responsabilização']
-    }
-    
-    # Criar lista ordenada de subdimensões
-    subdimensoes_ordenadas = []
-    for dimensao in ordem_dimensoes:
-        subdimensoes_ordenadas.extend(relacionamento[dimensao])
-    
-    # Criar labels com dimensão + subdimensão
-    labels_subdimensoes = []
-    for dimensao in ordem_dimensoes:
-        for sub in relacionamento[dimensao]:
-            labels_subdimensoes.append(f"{dimensao}: {sub}")
     
     # Separar respostas Real (C) e Ideal (k)
     respostas_real = {}
@@ -394,14 +368,10 @@ def calcular_microambiente_respondente(respostas, matriz, pontos_max_dimensao, p
         if questao.startswith('Q'):
             if questao.endswith('C'):  # Como é (Real)
                 questao_num = questao[:-1]  # Remove o 'C'
-                # APLICAR MAPEAMENTO
-                questao_mapeada = MAPEAMENTO_QUESTOES.get(questao_num, questao_num)
-                respostas_real[questao_mapeada] = int(estrelas)
+                respostas_real[questao_num] = int(estrelas)
             elif questao.endswith('k'):  # Como deveria ser (Ideal)
                 questao_num = questao[:-1]  # Remove o 'k'
-                # APLICAR MAPEAMENTO
-                questao_mapeada = MAPEAMENTO_QUESTOES.get(questao_num, questao_num)
-                respostas_ideal[questao_mapeada] = int(estrelas)
+                respostas_ideal[questao_num] = int(estrelas)
     
     # Calcular pontos por dimensão (Real)
     pontos_por_dimensao_real = {dim: 0 for dim in dimensoes}
