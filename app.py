@@ -1047,7 +1047,7 @@ if matriz_arq is not None and matriz_micro is not None:
             df_arquetipos = processar_dados_arquetipos(consolidado_arq, matriz_arq)
         
         with st.spinner("Calculando microambiente individual..."):
-            df_microambiente = processar_dados_microambiente_equipe(consolidado_micro, matriz_micro, pontos_max_dimensao, pontos_max_subdimensao)
+            df_microambiente = processar_dados_microambiente(consolidado_micro, matriz_micro, pontos_max_dimensao, pontos_max_subdimensao)
         
         # Normalizar dados para minúsculas
         df_arquetipos['empresa'] = df_arquetipos['empresa'].str.lower()
