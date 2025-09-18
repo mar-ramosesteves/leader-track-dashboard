@@ -386,7 +386,7 @@ def calcular_microambiente_respondente(respostas, matriz, pontos_max_dimensao, p
         for sub in relacionamento[dimensao]:
             labels_subdimensoes.append(f"{dimensao}: {sub}")
     
-        # Separar respostas Real (C) e Ideal (k)
+    # Separar respostas Real (C) e Ideal (k)
     respostas_real = {}
     respostas_ideal = {}
 
@@ -394,10 +394,14 @@ def calcular_microambiente_respondente(respostas, matriz, pontos_max_dimensao, p
         if questao.startswith('Q'):
             if questao.endswith('C'):  # Como é (Real)
                 questao_num = questao[:-1]  # Remove o 'C'
-                respostas_real[questao_num] = int(estrelas)
+                # APLICAR MAPEAMENTO
+                questao_mapeada = MAPEAMENTO_QUESTOES.get(questao_num, questao_num)
+                respostas_real[questao_mapeada] = int(estrelas)
             elif questao.endswith('k'):  # Como deveria ser (Ideal)
                 questao_num = questao[:-1]  # Remove o 'k'
-                respostas_ideal[questao_num] = int(estrelas)
+                # APLICAR MAPEAMENTO
+                questao_mapeada = MAPEAMENTO_QUESTOES.get(questao_num, questao_num)
+                respostas_ideal[questao_mapeada] = int(estrelas)
     
     # Calcular pontos por dimensão (Real)
     pontos_por_dimensao_real = {dim: 0 for dim in dimensoes}
@@ -417,8 +421,9 @@ def calcular_microambiente_respondente(respostas, matriz, pontos_max_dimensao, p
             estrelas_real_arredondadas = round(estrelas_real)
             estrelas_ideal_arredondadas = round(estrelas_ideal)
             
-            # Chave com combinação Real + Ideal (usando questão original)
-            chave = f"{questao}_I{estrelas_ideal_arredondadas}_R{estrelas_real_arredondadas}"
+            # Chave com combinação Real + Ideal (usando mapeamento)
+            questao_mapeada = MAPEAMENTO_QUESTOES.get(questao, questao)
+            chave = f"{questao_mapeada}_I{estrelas_ideal_arredondadas}_R{estrelas_real_arredondadas}"
             
             # Buscar na matriz
             linha = matriz[matriz['CHAVE'] == chave]
