@@ -651,9 +651,32 @@ def processar_dados_microambiente_equipe(consolidado_micro, matriz, pontos_max_d
         percentual = (pontos_total / pontos_maximos) * 100 if pontos_maximos > 0 else 0
         subdimensoes_percentuais_ideal[subdimensao] = percentual
     
-    return (dimensoes_percentuais_real, dimensoes_percentuais_ideal, 
-            subdimensoes_percentuais_real, subdimensoes_percentuais_ideal)
-
+    # Criar DataFrame com os resultados
+    respondentes_processados = []
+    
+    # Adicionar uma linha com os resultados calculados
+    respondentes_processados.append({
+        'empresa': 'N/A',
+        'codrodada': 'N/A',
+        'emailLider': 'N/A',
+        'nome': 'N/A',
+        'email': 'N/A',
+        'sexo': 'N/A',
+        'etnia': 'N/A',
+        'estado': 'N/A',
+        'cidade': 'N/A',
+        'cargo': 'N/A',
+        'area': 'N/A',
+        'departamento': 'N/A',
+        'tipo': 'Avaliação Equipe',
+        'dimensoes_real': dimensoes_percentuais_real,
+        'dimensoes_ideal': dimensoes_percentuais_ideal,
+        'subdimensoes_real': subdimensoes_percentuais_real,
+        'subdimensoes_ideal': subdimensoes_percentuais_ideal,
+        'respostas': {}
+    })
+    
+    return pd.DataFrame(respondentes_processados)
 # PROCESSAR DADOS INDIVIDUAIS (MICROAMBIENTE) - CORRIGIDA COM NOMES CORRETOS
 def processar_dados_microambiente(consolidado_micro, matriz, pontos_max_dimensao, pontos_max_subdimensao):
     """Processa todos os respondentes e calcula microambiente"""
