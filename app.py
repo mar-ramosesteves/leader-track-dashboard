@@ -515,168 +515,6 @@ def processar_dados_arquetipos(consolidado_arq, matriz):
 
 
 # PROCESSAR DADOS APENAS DA EQUIPE (MICROAMBIENTE)
-def processar_dados_microambiente_equipe(consolidado_micro, matriz, pontos_max_dimensao, pontos_max_subdimensao):
-    """Processa apenas os respondentes da equipe e calcula microambiente"""
-    
-    # MAPEAMENTO CORRETO DAS QUESTÕES (igual aos gráficos)
-    MAPEAMENTO_QUESTOES = {
-        'Q01': 'Q01',  # COD Q01 = Questão 1
-        'Q02': 'Q10',  # COD Q02 = Questão 10  
-        'Q03': 'Q11',  # COD Q03 = Questão 11
-        'Q04': 'Q12',  # COD Q04 = Questão 12
-        'Q05': 'Q13',  # COD Q05 = Questão 13
-        'Q06': 'Q14',  # COD Q06 = Questão 14
-        'Q07': 'Q15',  # COD Q07 = Questão 15
-        'Q08': 'Q16',  # COD Q08 = Questão 16
-        'Q09': 'Q17',  # COD Q09 = Questão 17
-        'Q10': 'Q18',  # COD Q10 = Questão 18
-        'Q11': 'Q19',  # COD Q11 = Questão 19
-        'Q12': 'Q02',  # COD Q12 = Questão 2
-        'Q13': 'Q20',  # COD Q13 = Questão 20
-        'Q14': 'Q21',  # COD Q14 = Questão 21
-        'Q15': 'Q22',  # COD Q15 = Questão 22 (Performance) ✅
-        'Q16': 'Q23',  # COD Q16 = Questão 23
-        'Q17': 'Q24',  # COD Q17 = Questão 24
-        'Q18': 'Q25',  # COD Q18 = Questão 25
-        'Q19': 'Q26',  # COD Q19 = Questão 26
-        'Q20': 'Q27',  # COD Q20 = Questão 27
-        'Q21': 'Q28',  # COD Q21 = Questão 28
-        'Q22': 'Q29',  # COD Q22 = Questão 29
-        'Q23': 'Q03',  # COD Q23 = Questão 3
-        'Q24': 'Q30',  # COD Q24 = Questão 30
-        'Q25': 'Q31',  # COD Q25 = Questão 31
-        'Q26': 'Q32',  # COD Q26 = Questão 32
-        'Q27': 'Q33',  # COD Q27 = Questão 33
-        'Q28': 'Q34',  # COD Q28 = Questão 34
-        'Q29': 'Q35',  # COD Q29 = Questão 35
-        'Q30': 'Q36',  # COD Q30 = Questão 36
-        'Q31': 'Q37',  # COD Q31 = Questão 37
-        'Q32': 'Q38',  # COD Q32 = Questão 38
-        'Q33': 'Q39',  # COD Q33 = Questão 39
-        'Q34': 'Q04',  # COD Q34 = Questão 4
-        'Q35': 'Q40',  # COD Q35 = Questão 40
-        'Q36': 'Q41',  # COD Q36 = Questão 41
-        'Q37': 'Q42',  # COD Q37 = Questão 42
-        'Q38': 'Q43',  # COD Q38 = Questão 43
-        'Q39': 'Q44',  # COD Q39 = Questão 44
-        'Q40': 'Q45',  # COD Q40 = Questão 45
-        'Q41': 'Q46',  # COD Q41 = Questão 46
-        'Q42': 'Q47',  # COD Q42 = Questão 47
-        'Q43': 'Q48',  # COD Q43 = Questão 48
-        'Q44': 'Q05',  # COD Q44 = Questão 5
-        'Q45': 'Q06',  # COD Q45 = Questão 6
-        'Q46': 'Q07',  # COD Q46 = Questão 7
-        'Q47': 'Q08',  # COD Q47 = Questão 8
-        'Q48': 'Q09'   # COD Q48 = Questão 9
-    }
-    
-    dimensoes = ['Adaptabilidade', 'Colaboração Mútua', 'Nitidez', 'Performance', 'Reconhecimento', 'Responsabilidade']
-    subdimensoes = [
-        'Criação', 'Simplificação de Processos', 'Credibilidade Recíproca', 'Dedicação', 'Parceria', 
-        'Satisfação em Fazer Parte', 'Obrigações e Deveres', 'Propósito e Objetivo', 'Aprimoramento', 
-        'Qualidade Superior', 'Celebração', 'Performance', 'Liberdade de Ação', 'Responsabilização'
-    ]
-    
-    # Coletar todas as avaliações da equipe
-    avaliacoes = []
-    for item in consolidado_micro:
-        if isinstance(item, dict) and 'dados_json' in item:
-            dados = item['dados_json']
-            if 'avaliacoesEquipe' in dados:
-                avaliacoes.extend(dados['avaliacoesEquipe'])
-    
-    # Calcular pontos por dimensão (Real)
-    pontos_por_dimensao_real = {dim: 0 for dim in dimensoes}
-    pontos_por_subdimensao_real = {sub: 0 for sub in subdimensoes}
-    
-    # Calcular pontos por dimensão (Ideal)
-    pontos_por_dimensao_ideal = {dim: 0 for dim in dimensoes}
-    pontos_por_subdimensao_ideal = {sub: 0 for sub in subdimensoes}
-    
-    # --- Cálculo das Subdimensões (igual ao gráfico) ---
-    for i in range(1, 49):
-        q = f"Q{i:02d}"
-        reais = [int(av.get(f"{MAPEAMENTO_QUESTOES[q]}C", 0)) for av in avaliacoes if str(av.get(f"{MAPEAMENTO_QUESTOES[q]}C", "")).isdigit()]
-        ideais = [int(av.get(f"{MAPEAMENTO_QUESTOES[q]}k", 0)) for av in avaliacoes if str(av.get(f"{MAPEAMENTO_QUESTOES[q]}k", "")).isdigit()]
-        
-        if not reais or not ideais:
-            continue
-    
-        media_real = round(sum(reais) / len(reais))
-        media_ideal = round(sum(ideais) / len(ideais))
-        chave = f"{q}_I{media_ideal}_R{media_real}"
-        linha = matriz[matriz["CHAVE"] == chave]
-    
-        if not linha.empty:
-            row = linha.iloc[0]
-            dimensao = row["DIMENSAO"]
-            subdimensao = row["SUBDIMENSAO"]
-            pontos_real = float(row["PONTUACAO_REAL"])
-            pontos_ideal = float(row["PONTUACAO_IDEAL"])
-            
-            pontos_por_dimensao_real[dimensao] += pontos_real
-            pontos_por_dimensao_ideal[dimensao] += pontos_ideal
-            pontos_por_subdimensao_real[subdimensao] += pontos_real
-            pontos_por_subdimensao_ideal[subdimensao] += pontos_ideal
-    
-    # Calcular percentuais por dimensão (Real)
-    dimensoes_percentuais_real = {}
-    for dimensao in dimensoes:
-        pontos_total = pontos_por_dimensao_real[dimensao]
-        pontos_maximos = pontos_max_dimensao[pontos_max_dimensao['DIMENSAO'] == dimensao]['PONTOS_MAXIMOS_DIMENSAO'].iloc[0]
-        percentual = (pontos_total / pontos_maximos) * 100 if pontos_maximos > 0 else 0
-        dimensoes_percentuais_real[dimensao] = percentual
-    
-    # Calcular percentuais por dimensão (Ideal)
-    dimensoes_percentuais_ideal = {}
-    for dimensao in dimensoes:
-        pontos_total = pontos_por_dimensao_ideal[dimensao]
-        pontos_maximos = pontos_max_dimensao[pontos_max_dimensao['DIMENSAO'] == dimensao]['PONTOS_MAXIMOS_DIMENSAO'].iloc[0]
-        percentual = (pontos_total / pontos_maximos) * 100 if pontos_maximos > 0 else 0
-        dimensoes_percentuais_ideal[dimensao] = percentual
-    
-    # Calcular percentuais por subdimensão (Real)
-    subdimensoes_percentuais_real = {}
-    for subdimensao in subdimensoes:
-        pontos_total = pontos_por_subdimensao_real[subdimensao]
-        pontos_maximos = pontos_max_subdimensao[pontos_max_subdimensao['SUBDIMENSAO'] == subdimensao]['PONTOS_MAXIMOS_SUBDIMENSAO'].iloc[0]
-        percentual = (pontos_total / pontos_maximos) * 100 if pontos_maximos > 0 else 0
-        subdimensoes_percentuais_real[subdimensao] = percentual
-    
-    # Calcular percentuais por subdimensão (Ideal)
-    subdimensoes_percentuais_ideal = {}
-    for subdimensao in subdimensoes:
-        pontos_total = pontos_por_subdimensao_ideal[subdimensao]
-        pontos_maximos = pontos_max_subdimensao[pontos_max_subdimensao['SUBDIMENSAO'] == subdimensao]['PONTOS_MAXIMOS_SUBDIMENSAO'].iloc[0]
-        percentual = (pontos_total / pontos_maximos) * 100 if pontos_maximos > 0 else 0
-        subdimensoes_percentuais_ideal[subdimensao] = percentual
-    
-    # Criar DataFrame com os resultados
-    respondentes_processados = []
-    
-    # Adicionar uma linha com os resultados calculados
-    respondentes_processados.append({
-        'empresa': 'N/A',
-        'codrodada': 'N/A',
-        'emailLider': 'N/A',
-        'nome': 'N/A',
-        'email': 'N/A',
-        'sexo': 'N/A',
-        'etnia': 'N/A',
-        'estado': 'N/A',
-        'cidade': 'N/A',
-        'cargo': 'N/A',
-        'area': 'N/A',
-        'departamento': 'N/A',
-        'tipo': 'Avaliação Equipe',
-        'dimensoes_real': dimensoes_percentuais_real,
-        'dimensoes_ideal': dimensoes_percentuais_ideal,
-        'subdimensoes_real': subdimensoes_percentuais_real,
-        'subdimensoes_ideal': subdimensoes_percentuais_ideal,
-        'respostas': {}
-    })
-    
-    return pd.DataFrame(respondentes_processados)
 # PROCESSAR DADOS INDIVIDUAIS (MICROAMBIENTE) - CORRIGIDA COM NOMES CORRETOS
 def processar_dados_microambiente(consolidado_micro, matriz, pontos_max_dimensao, pontos_max_subdimensao):
     """Processa todos os respondentes e calcula microambiente"""
@@ -693,19 +531,19 @@ def processar_dados_microambiente(consolidado_micro, matriz, pontos_max_dimensao
                 dimensoes_real, dimensoes_ideal, subdimensoes_real, subdimensoes_ideal = calcular_microambiente_respondente(auto, matriz, pontos_max_dimensao, pontos_max_subdimensao)
                 
                 respondentes_processados.append({
-                    'empresa': auto.get('empresa', 'N/A'),
-                    'codrodada': auto.get('codrodada', 'N/A'),
-                    'emailLider': auto.get('emailLider', 'N/A'),
-                    'nome': auto.get('nome', 'N/A'),
-                    'email': auto.get('email', 'N/A'),
-                    'sexo': auto.get('sexo', 'N/A'),
-                    'etnia': auto.get('etnia', 'N/A'),
-                    'estado': auto.get('estado', 'N/A'),
-                    'cidade': auto.get('cidade', 'N/A'),
-                    'cargo': auto.get('cargo', 'N/A'),
-                    'area': auto.get('area', 'N/A'),
-                    'departamento': auto.get('departamento', 'N/A'),
-                    'tipo': 'Autoavaliação',  # Nome padronizado
+                    'empresa': auto.get('empresa', ''),
+                    'codrodada': auto.get('codrodada', ''),
+                    'emailLider': auto.get('emailLider', ''),
+                    'nome': auto.get('nome', ''),
+                    'email': auto.get('email', ''),
+                    'sexo': auto.get('sexo', ''),
+                    'etnia': auto.get('etnia', ''),
+                    'estado': auto.get('estado', ''),
+                    'cidade': auto.get('cidade', ''),
+                    'cargo': auto.get('cargo', ''),
+                    'area': auto.get('area', ''),
+                    'departamento': auto.get('departamento', ''),
+                    'tipo': 'Autoavaliação',
                     'dimensoes_real': dimensoes_real,
                     'dimensoes_ideal': dimensoes_ideal,
                     'subdimensoes_real': subdimensoes_real,
@@ -719,19 +557,19 @@ def processar_dados_microambiente(consolidado_micro, matriz, pontos_max_dimensao
                     dimensoes_real, dimensoes_ideal, subdimensoes_real, subdimensoes_ideal = calcular_microambiente_respondente(membro, matriz, pontos_max_dimensao, pontos_max_subdimensao)
                     
                     respondentes_processados.append({
-                        'empresa': membro.get('empresa', 'N/A'),
-                        'codrodada': membro.get('codrodada', 'N/A'),
-                        'emailLider': membro.get('emailLider', 'N/A'),
-                        'nome': membro.get('nome', 'N/A'),
-                        'email': membro.get('email', 'N/A'),
-                        'sexo': membro.get('sexo', 'N/A'),
-                        'etnia': membro.get('etnia', 'N/A'),
-                        'estado': membro.get('estado', 'N/A'),
-                        'cidade': membro.get('cidade', 'N/A'),
-                        'cargo': membro.get('cargo', 'N/A'),
-                        'area': membro.get('area', 'N/A'),
-                        'departamento': membro.get('departamento', 'N/A'),
-                        'tipo': 'Avaliação Equipe',  # Nome padronizado
+                        'empresa': membro.get('empresa', ''),
+                        'codrodada': membro.get('codrodada', ''),
+                        'emailLider': membro.get('emailLider', ''),
+                        'nome': membro.get('nome', ''),
+                        'email': membro.get('email', ''),
+                        'sexo': membro.get('sexo', ''),
+                        'etnia': membro.get('etnia', ''),
+                        'estado': membro.get('estado', ''),
+                        'cidade': membro.get('cidade', ''),
+                        'cargo': membro.get('cargo', ''),
+                        'area': membro.get('area', ''),
+                        'departamento': membro.get('departamento', ''),
+                        'tipo': 'Avaliação Equipe',
                         'dimensoes_real': dimensoes_real,
                         'dimensoes_ideal': dimensoes_ideal,
                         'subdimensoes_real': subdimensoes_real,
@@ -740,7 +578,6 @@ def processar_dados_microambiente(consolidado_micro, matriz, pontos_max_dimensao
                     })
     
     return pd.DataFrame(respondentes_processados)
-
 
 # CALCULAR MÉDIAS COM FILTROS (ARQUÉTIPOS) - ATUALIZADA
 def calcular_medias_arquetipos(df_respondentes, filtros):
