@@ -1194,10 +1194,14 @@ if matriz_arq is not None and matriz_micro is not None:
     # Buscar dados
     with st.spinner("Carregando dados dos respondentes..."):
         consolidado_arq, consolidado_micro = fetch_data()
+        
     
     if consolidado_arq and consolidado_micro:
         st.success("✅ Conectado ao Supabase!")
-                
+        # DEBUG: Verificar dados brutos do Supabase
+        st.error(f"Total consolidado_micro: {len(consolidado_micro)}")
+        if consolidado_micro:
+            st.error(f"Primeiro item micro: {consolidado_micro[0].keys() if isinstance(consolidado_micro[0], dict) else 'Não é dict'}")        
         
         
         
