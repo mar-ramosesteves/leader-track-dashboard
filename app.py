@@ -1229,6 +1229,12 @@ if matriz_arq is not None and matriz_micro is not None:
         df_microambiente['etnia'] = df_microambiente['etnia'].str.lower()
         df_microambiente['departamento'] = df_microambiente['departamento'].str.lower()
         df_microambiente['cargo'] = df_microambiente['cargo'].str.lower()
+        # DEBUG: Verificar empresas reais nos dados
+        st.error("🔍 **DEBUG - Empresas encontradas nos dados:**")
+        st.error(f"Arquétipos: {df_arquetipos['empresa'].unique()}")
+        st.error(f"Microambiente: {df_microambiente['empresa'].unique()}")
+        st.error(f"Total Arquétipos: {len(df_arquetipos)}")
+        st.error(f"Total Microambiente: {len(df_microambiente)}")
         
         # Métricas
         col1, col2, col3, col4 = st.columns(4)
