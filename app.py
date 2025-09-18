@@ -1349,7 +1349,7 @@ if matriz_arq is not None and matriz_micro is not None:
             st.header("🏢 Análise de Microambiente de Equipes")
             
             # Calcular médias com filtros
-            dimensoes, medias_real, medias_ideal, medias_equipe_real, medias_equipe_ideal, df_filtrado_micro = calcular_medias_microambiente(df_microambiente, filtros)
+            dimensoes, medias_real, medias_ideal, medias_equipe_real, medias_equipe_ideal, medias_subdimensoes_equipe_real, medias_subdimensoes_equipe_ideal, df_filtrado_micro = calcular_medias_microambiente(df_microambiente, filtros)
             
             if dimensoes:
                 # Criar título dinâmico
