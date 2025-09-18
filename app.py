@@ -417,9 +417,8 @@ def calcular_microambiente_respondente(respostas, matriz, pontos_max_dimensao, p
             estrelas_real_arredondadas = round(estrelas_real)
             estrelas_ideal_arredondadas = round(estrelas_ideal)
             
-            # Chave com combinação Real + Ideal (usando mapeamento)
-            questao_mapeada = MAPEAMENTO_QUESTOES.get(questao, questao)
-            chave = f"{questao_mapeada}_I{estrelas_ideal_arredondadas}_R{estrelas_real_arredondadas}"
+            # Chave com combinação Real + Ideal (usando questão original)
+            chave = f"{questao}_I{estrelas_ideal_arredondadas}_R{estrelas_real_arredondadas}"
             
             # Buscar na matriz
             linha = matriz[matriz['CHAVE'] == chave]
