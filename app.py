@@ -298,6 +298,7 @@ def carregar_matrizes_microambiente():
 
 # CALCULAR MICROAMBIENTE PARA UM RESPONDENTE (CORRIGIDA)
 # CALCULAR MICROAMBIENTE PARA UM RESPONDENTE (CORRIGIDA COM ARREDONDAMENTO)
+# CALCULAR MICROAMBIENTE PARA UM RESPONDENTE (CORRIGIDA COM ARREDONDAMENTO)
 def calcular_microambiente_respondente(respostas, matriz, pontos_max_dimensao, pontos_max_subdimensao):
     """Calcula percentuais de microambiente para um respondente individual"""
     
@@ -360,6 +361,19 @@ def calcular_microambiente_respondente(respostas, matriz, pontos_max_dimensao, p
         'Qualidade Superior', 'Celebração', 'Performance', 'Liberdade de Ação', 'Responsabilização'
     ]
     
+    # Separar respostas Real (C) e Ideal (k)
+    respostas_real = {}
+    respostas_ideal = {}
+
+    for questao, estrelas in respostas.items():
+        if questao.startswith('Q'):
+            if questao.endswith('C'):  # Como é (Real)
+                questao_num = questao[:-1]  # Remove o 'C'
+                respostas_real[questao_num] = int(estrelas)
+            elif questao.endswith('k'):  # Como deveria ser (Ideal)
+                questao_num = questao[:-1]  # Remove o 'k'
+                respostas_ideal[questao_num] = int(estrelas)
+    
     # Calcular pontos por dimensão (Real)
     pontos_por_dimensao_real = {dim: 0 for dim in dimensoes}
     pontos_por_subdimensao_real = {sub: 0 for sub in subdimensoes}
@@ -368,31 +382,27 @@ def calcular_microambiente_respondente(respostas, matriz, pontos_max_dimensao, p
     pontos_por_dimensao_ideal = {dim: 0 for dim in dimensoes}
     pontos_por_subdimensao_ideal = {sub: 0 for sub in subdimensoes}
     
-    # --- Cálculo das Subdimensões (igual ao gráfico) ---
-    for i in range(1, 49):
-        q = f"Q{i:02d}"
-        reais = [int(respostas.get(f"{MAPEAMENTO_QUESTOES[q]}C", 0)) if str(respostas.get(f"{MAPEAMENTO_QUESTOES[q]}C", "")).isdigit() else 0]
-        ideais = [int(respostas.get(f"{MAPEAMENTO_QUESTOES[q]}k", 0)) if str(respostas.get(f"{MAPEAMENTO_QUESTOES[q]}k", "")).isdigit() else 0]
-        
-        if not reais or not ideais:
-            continue
-    
-        media_real = round(sum(reais) / len(reais))
-        media_ideal = round(sum(ideais) / len(ideais))
-        chave = f"{q}_I{media_ideal}_R{media_real}"
-        linha = matriz[matriz["CHAVE"] == chave]
-    
-        if not linha.empty:
-            row = linha.iloc[0]
-            dimensao = row["DIMENSAO"]
-            subdimensao = row["SUBDIMENSAO"]
-            pontos_real = float(row["PONTUACAO_REAL"])
-            pontos_ideal = float(row["PONTUACAO_IDEAL"])
+    # Processar respostas com combinação Real + Ideal
+    for questao in respostas_real:
+        if questao in respostas_ideal:
+            estrelas_real = respostas_real[questao]
+            estrelas_ideal = respostas_ideal[questao]
             
-            pontos_por_dimensao_real[dimensao] += pontos_real
-            pontos_por_dimensao_ideal[dimensao] += pontos_ideal
-            pontos_por_subdimensao_real[subdimensao] += pontos_real
-            pontos_por_subdimensao_ideal[subdimensao] += pontos_ideal
+            # Chave com combinação Real + Ideal (usando mapeamento)
+            questao_mapeada = MAPEAMENTO_QUESTOES.get(questao, questao)
+            chave = f"{questao_mapeada}_I{estrelas_ideal}_R{estrelas_real}"
+            linha = matriz[matriz['CHAVE'] == chave]
+            
+            if not linha.empty:
+                dimensao = linha['DIMENSAO'].iloc[0]
+                subdimensao = linha['SUBDIMENSAO'].iloc[0]
+                pontos_real = linha['PONTUACAO_REAL'].iloc[0]
+                pontos_ideal = linha['PONTUACAO_IDEAL'].iloc[0]
+                
+                pontos_por_dimensao_real[dimensao] += pontos_real
+                pontos_por_dimensao_ideal[dimensao] += pontos_ideal
+                pontos_por_subdimensao_real[subdimensao] += pontos_real
+                pontos_por_subdimensao_ideal[subdimensao] += pontos_ideal
     
     # Calcular percentuais por dimensão (Real)
     dimensoes_percentuais_real = {}
@@ -426,32 +436,10 @@ def calcular_microambiente_respondente(respostas, matriz, pontos_max_dimensao, p
         percentual = (pontos_total / pontos_maximos) * 100 if pontos_maximos > 0 else 0
         subdimensoes_percentuais_ideal[subdimensao] = percentual
     
-    # Criar DataFrame com os resultados
-    respondentes_processados = []
+    return (dimensoes_percentuais_real, dimensoes_percentuais_ideal, 
+            subdimensoes_percentuais_real, subdimensoes_percentuais_ideal)
     
-    # Adicionar uma linha com os resultados calculados
-    respondentes_processados.append({
-        'empresa': 'N/A',
-        'codrodada': 'N/A',
-        'emailLider': 'N/A',
-        'nome': 'N/A',
-        'email': 'N/A',
-        'sexo': 'N/A',
-        'etnia': 'N/A',
-        'estado': 'N/A',
-        'cidade': 'N/A',
-        'cargo': 'N/A',
-        'area': 'N/A',
-        'departamento': 'N/A',
-        'tipo': 'Avaliação Equipe',
-        'dimensoes_real': dimensoes_percentuais_real,
-        'dimensoes_ideal': dimensoes_percentuais_ideal,
-        'subdimensoes_real': subdimensoes_percentuais_real,
-        'subdimensoes_ideal': subdimensoes_percentuais_ideal,
-        'respostas': {}
-    })
-    
-    return pd.DataFrame(respondentes_processados)
+
 # ==================== FUNÇÕES COMPARTILHADAS ====================
 
 # PROCESSAR DADOS INDIVIDUAIS (ARQUÉTIPOS) - CORRIGIDA COM NOMES CORRETOS
