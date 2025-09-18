@@ -531,6 +531,45 @@ def processar_dados_arquetipos(consolidado_arq, matriz):
     return pd.DataFrame(respondentes_processados)
 
 
+# PROCESSAR DADOS APENAS DA EQUIPE (MICROAMBIENTE)
+def processar_dados_microambiente_equipe(consolidado_micro, matriz, pontos_max_dimensao, pontos_max_subdimensao):
+    """Processa apenas os respondentes da equipe e calcula microambiente"""
+    
+    respondentes_processados = []
+    
+    for item in consolidado_micro:
+        if isinstance(item, dict) and 'dados_json' in item:
+            dados = item['dados_json']
+            
+            # Processar APENAS avaliações da equipe
+            if 'avaliacoesEquipe' in dados:
+                for membro in dados['avaliacoesEquipe']:
+                    dimensoes_real, dimensoes_ideal, subdimensoes_real, subdimensoes_ideal = calcular_microambiente_respondente(membro, matriz, pontos_max_dimensao, pontos_max_subdimensao)
+                    
+                    respondentes_processados.append({
+                        'empresa': membro.get('empresa', 'N/A'),
+                        'codrodada': membro.get('codrodada', 'N/A'),
+                        'emailLider': membro.get('emailLider', 'N/A'),
+                        'nome': membro.get('nome', 'N/A'),
+                        'email': membro.get('email', 'N/A'),
+                        'sexo': membro.get('sexo', 'N/A'),
+                        'etnia': membro.get('etnia', 'N/A'),
+                        'estado': membro.get('estado', 'N/A'),
+                        'cidade': membro.get('cidade', 'N/A'),
+                        'cargo': membro.get('cargo', 'N/A'),
+                        'area': membro.get('area', 'N/A'),
+                        'departamento': membro.get('departamento', 'N/A'),
+                        'tipo': 'Avaliação Equipe',  # Nome padronizado
+                        'dimensoes_real': dimensoes_real,
+                        'dimensoes_ideal': dimensoes_ideal,
+                        'subdimensoes_real': subdimensoes_real,
+                        'subdimensoes_ideal': subdimensoes_ideal,
+                        'respostas': membro
+                    })
+    
+    return pd.DataFrame(respondentes_processados)
+
+
 # PROCESSAR DADOS INDIVIDUAIS (MICROAMBIENTE) - CORRIGIDA COM NOMES CORRETOS
 def processar_dados_microambiente(consolidado_micro, matriz, pontos_max_dimensao, pontos_max_subdimensao):
     """Processa todos os respondentes e calcula microambiente"""
@@ -1060,7 +1099,7 @@ if matriz_arq is not None and matriz_micro is not None:
             df_arquetipos = processar_dados_arquetipos(consolidado_arq, matriz_arq)
         
         with st.spinner("Calculando microambiente individual..."):
-            df_microambiente = processar_dados_microambiente(consolidado_micro, matriz_micro, pontos_max_dimensao, pontos_max_subdimensao)
+            df_microambiente = processar_dados_microambiente_equipe(consolidado_micro, matriz_micro, pontos_max_dimensao, pontos_max_subdimensao)
         
         # Normalizar dados para minúsculas
         df_arquetipos['empresa'] = df_arquetipos['empresa'].str.lower()
