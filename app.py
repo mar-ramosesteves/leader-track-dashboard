@@ -651,6 +651,19 @@ def calcular_medias_arquetipos(df_respondentes, filtros):
 def calcular_medias_microambiente(df_respondentes, filtros):
     """Aplica filtros demográficos e calcula médias do microambiente"""
     
+    # DEBUG: Verificar filtros aplicados
+    st.error(f"🔍 DEBUG - Filtros aplicados: {filtros}")
+    st.error(f"🔍 DEBUG - Total registros antes do filtro: {len(df_respondentes)}")
+    
+    df_filtrado = df_respondentes.copy()
+    
+    # Aplicar filtros
+    if filtros['empresa'] != "Todas":
+        df_filtrado = df_filtrado[df_filtrado['empresa'] == filtros['empresa']]
+        st.error(f"�� DEBUG - Após filtro empresa: {len(df_filtrado)} registros")
+    
+   
+    
     df_filtrado = df_respondentes.copy()
     
     # Aplicar filtros
