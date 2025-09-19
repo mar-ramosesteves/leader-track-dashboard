@@ -926,18 +926,11 @@ def gerar_drill_down_arquetipos(arquétipo_clicado, df_respondentes_filtrado, ma
     return questoes_detalhadas
 
 # DRILL-DOWN MICROAMBIENTE (CORRIGIDA)
-# DRILL-DOWN MICROAMBIENTE (CORRIGIDA COM ARREDONDAMENTO)
+# DRILL-DOWN MICROAMBIENTE (CORRIGIDA)
 def gerar_drill_down_microambiente(dimensao_clicada, df_respondentes_filtrado, matriz, tipo_analise):
     """Gera detalhamento das questões de microambiente"""
     
-    # DEBUG: Verificar questões de impacto
-    st.error(f"DEBUG - Dimensão clicada: {dimensao_clicada}")
-    questoes_impacto = matriz[matriz['DIMENSAO'] == dimensao_clicada]['COD'].unique().tolist()
-    st.error(f"DEBUG - Questões de impacto: {questoes_impacto}")
-    
-    
-    
-    # MAPEAMENTO CORRETO DAS QUESTÕES (INVERTIDO)
+    # MAPEAMENTO CORRETO DAS QUESTÕES
     MAPEAMENTO_QUESTOES = {
         'Q01': 'Q01', 'Q02': 'Q12', 'Q03': 'Q23', 'Q04': 'Q34', 'Q05': 'Q44',
         'Q06': 'Q45', 'Q07': 'Q46', 'Q08': 'Q47', 'Q09': 'Q48', 'Q10': 'Q02',
@@ -971,10 +964,11 @@ def gerar_drill_down_microambiente(dimensao_clicada, df_respondentes_filtrado, m
         # Buscar afirmação na matriz
         linha_questao = matriz[matriz['COD'] == questao].iloc[0]
         afirmacao = linha_questao['AFIRMACAO']
+        subdimensao = linha_questao['SUBDIMENSAO']
         
-        # Calcular médias de estrelas para Real e Ideal
-        estrelas_real = []
-        estrelas_ideal = []
+        # Calcular pontuações individuais e depois fazer a média
+        pontuacoes_real = []
+        pontuacoes_ideal = []
         
         for _, respondente in df_dados.iterrows():
             if 'respostas' in respondente:
@@ -982,62 +976,23 @@ def gerar_drill_down_microambiente(dimensao_clicada, df_respondentes_filtrado, m
                 questao_real = f"{questao}C"
                 questao_ideal = f"{questao}k"
                 
-                if questao_real in respostas:
-                    estrelas_real.append(int(respostas[questao_real]))
-                if questao_ideal in respostas:
-                    estrelas_ideal.append(int(respostas[questao_ideal]))
+                if questao_real in respostas and questao_ideal in respostas:
+                    estrelas_real = int(respostas[questao_real])
+                    estrelas_ideal = int(respostas[questao_ideal])
+                    
+                    # Buscar pontuação individual na matriz
+                    questao_mapeada = MAPEAMENTO_QUESTOES.get(questao, questao)
+                    chave = f"{questao_mapeada}_I{estrelas_ideal}_R{estrelas_real}"
+                    linha = matriz[matriz['CHAVE'] == chave]
+                    
+                    if not linha.empty:
+                        pontuacoes_real.append(linha['PONTUACAO_REAL'].iloc[0])
+                        pontuacoes_ideal.append(linha['PONTUACAO_IDEAL'].iloc[0])
         
-        if estrelas_real and estrelas_ideal:
-            # Calcular médias
-            media_real = np.mean(estrelas_real)
-            media_ideal = np.mean(estrelas_ideal)
-            
-            # ARREDONDAMENTO NATURAL para buscar na matriz
-            media_real_arredondada = round(media_real)
-            media_ideal_arredondada = round(media_ideal)
-            
-            # Buscar pontuações na matriz usando a chave combinada (com mapeamento)
-            questao_mapeada = MAPEAMENTO_QUESTOES.get(questao, questao)
-            chave = f"{questao_mapeada}_I{media_ideal_arredondada}_R{media_real_arredondada}"
-            
-            linha = matriz[matriz['CHAVE'] == chave]
-
-            # DEBUG: Verificar Q15 especificamente
-            if questao == 'Q15':
-                st.error(f"DEBUG Q15 - Estrelas Real: {estrelas_real}")
-                st.error(f"DEBUG Q15 - Estrelas Ideal: {estrelas_ideal}")
-                st.error(f"DEBUG Q15 - Média Real: {media_real}")
-                st.error(f"DEBUG Q15 - Média Ideal: {media_ideal}")
-                st.error(f"DEBUG Q15 - Chave: {chave}")
-                st.error(f"DEBUG Q15 - Linha encontrada: {not linha.empty}")
-                if not linha.empty:
-                    st.error(f"DEBUG Q15 - Pontos Real: {linha['PONTUACAO_REAL'].iloc[0]}")
-                    st.error(f"DEBUG Q15 - Pontos Ideal: {linha['PONTUACAO_IDEAL'].iloc[0]}")
-
-            # DEBUG: Verificar Q22 especificamente
-            if questao == 'Q22':
-                st.error(f"DEBUG Q22 - Estrelas Real: {estrelas_real}")
-                st.error(f"DEBUG Q22 - Estrelas Ideal: {estrelas_ideal}")
-                st.error(f"DEBUG Q22 - Média Real: {media_real}")
-                st.error(f"DEBUG Q22 - Média Ideal: {media_ideal}")
-                st.error(f"DEBUG Q22 - Chave: {chave}")
-                st.error(f"DEBUG Q22 - Linha encontrada: {not linha.empty}")
-                if not linha.empty:
-                    st.error(f"DEBUG Q22 - Pontos Real: {linha['PONTUACAO_REAL'].iloc[0]}")
-                    st.error(f"DEBUG Q22 - Pontos Ideal: {linha['PONTUACAO_IDEAL'].iloc[0]}")
-
-
-            
-            
-            if not linha.empty:
-                pontuacao_real = linha['PONTUACAO_REAL'].iloc[0]
-                pontuacao_ideal = linha['PONTUACAO_IDEAL'].iloc[0]
-            else:
-                pontuacao_real = 0
-                pontuacao_ideal = 0
-            
-            # Buscar subdimensão na matriz
-            subdimensao = linha['SUBDIMENSAO'].iloc[0] if not linha.empty else 'N/A'
+        if pontuacoes_real and pontuacoes_ideal:
+            # Calcular médias das pontuações
+            media_real = np.mean(pontuacoes_real)
+            media_ideal = np.mean(pontuacoes_ideal)
             
             questoes_detalhadas.append({
                 'questao': questao,
@@ -1046,16 +1001,17 @@ def gerar_drill_down_microambiente(dimensao_clicada, df_respondentes_filtrado, m
                 'subdimensao': subdimensao,
                 'media_real': media_real,
                 'media_ideal': media_ideal,
-                'pontuacao_real': pontuacao_real,
-                'pontuacao_ideal': pontuacao_ideal,
-                'gap': pontuacao_ideal - pontuacao_real,
-                'n_respostas': len(estrelas_real)
+                'pontuacao_real': media_real,
+                'pontuacao_ideal': media_ideal,
+                'gap': media_ideal - media_real,
+                'n_respostas': len(pontuacoes_real)
             })
     
     # Ordenar por gap (maior para menor)
     questoes_detalhadas.sort(key=lambda x: x['gap'], reverse=True)
     
     return questoes_detalhadas
+    
 # ==================== BUSCAR DADOS ====================
 
 # Buscar dados
