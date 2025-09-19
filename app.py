@@ -993,6 +993,8 @@ def gerar_drill_down_microambiente(dimensao_clicada, df_respondentes_filtrado, m
             questao_mapeada = MAPEAMENTO_QUESTOES.get(questao, questao)
             chave = f"{questao_mapeada}_I{media_ideal_arredondada}_R{media_real_arredondada}"
             
+            linha = matriz[matriz['CHAVE'] == chave]
+
             # DEBUG: Verificar Q22 especificamente
             if questao == 'Q22':
                 st.error(f"DEBUG Q22 - Estrelas Real: {estrelas_real}")
@@ -1004,9 +1006,6 @@ def gerar_drill_down_microambiente(dimensao_clicada, df_respondentes_filtrado, m
                 if not linha.empty:
                     st.error(f"DEBUG Q22 - Pontos Real: {linha['PONTUACAO_REAL'].iloc[0]}")
                     st.error(f"DEBUG Q22 - Pontos Ideal: {linha['PONTUACAO_IDEAL'].iloc[0]}")
-
-            
-            linha = matriz[matriz['CHAVE'] == chave]
 
 
             
