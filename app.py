@@ -395,7 +395,7 @@ def calcular_microambiente_respondente(respostas, matriz, pontos_max_dimensao, p
             linha = matriz[matriz['CHAVE'] == chave_transformada]
             
             # DEBUG: Verificar chaves para Performance
-            if questao == 'Q15':  # Performance
+            if questao == 'Q22':  # Performance
                 st.error(f"DEBUG - Questão: {questao}")
                 st.error(f"DEBUG - Chave Original: {chave_original}")
                 st.error(f"DEBUG - Chave Transformada: {chave_transformada}")
