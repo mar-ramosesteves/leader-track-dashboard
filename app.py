@@ -1003,6 +1003,15 @@ def gerar_drill_down_microambiente(dimensao_clicada, df_respondentes_filtrado, m
         # Verificar se a questão pertence à dimensão clicada
         linha_questao = matriz[matriz['COD'] == questao]
         if linha_questao.empty or linha_questao['DIMENSAO'].iloc[0] != dimensao_clicada:
+
+            # DEBUG: Verificar se Q22 está sendo filtrado
+            if questao == 'Q22':
+                st.error(f"DEBUG Q22 - Questão: {questao}")
+                st.error(f"DEBUG Q22 - Linha encontrada: {not linha_questao.empty}")
+                if not linha_questao.empty:
+                    st.error(f"DEBUG Q22 - Dimensão: {linha_questao['DIMENSAO'].iloc[0]}")
+                    st.error(f"DEBUG Q22 - Dimensão clicada: {dimensao_clicada}")
+                    st.error(f"DEBUG Q22 - É igual? {linha_questao['DIMENSAO'].iloc[0] == dimensao_clicada}")
             continue
             
         # Buscar afirmação na matriz
