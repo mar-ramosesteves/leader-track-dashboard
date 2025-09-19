@@ -961,8 +961,30 @@ def gerar_drill_down_arquetipos(arquétipo_clicado, df_respondentes_filtrado, ma
 
 # DRILL-DOWN MICROAMBIENTE (CORRIGIDA)
 # DRILL-DOWN MICROAMBIENTE (CORRIGIDA COM ARREDONDAMENTO)
-def gerar_drill_down_microambiente(dimensao_clicada, df_respondentes_filtrado, matriz):
+def gerar_drill_down_microambiente(dimensao_clicada, df_respondentes_filtrado, matriz, tipo_analise):
     """Gera detalhamento das questões de microambiente"""
+    
+    # MAPEAMENTO CORRETO DAS QUESTÕES
+    MAPEAMENTO_QUESTOES = {
+        'Q01': 'Q01', 'Q02': 'Q12', 'Q03': 'Q23', 'Q04': 'Q34', 'Q05': 'Q44',
+        'Q06': 'Q45', 'Q07': 'Q46', 'Q08': 'Q47', 'Q09': 'Q48', 'Q10': 'Q02',
+        'Q11': 'Q03', 'Q12': 'Q04', 'Q13': 'Q05', 'Q14': 'Q06', 'Q15': 'Q07',
+        'Q16': 'Q08', 'Q17': 'Q09', 'Q18': 'Q10', 'Q19': 'Q11', 'Q20': 'Q13',
+        'Q21': 'Q14', 'Q22': 'Q15', 'Q23': 'Q16', 'Q24': 'Q17', 'Q25': 'Q18',
+        'Q26': 'Q19', 'Q27': 'Q20', 'Q28': 'Q21', 'Q29': 'Q22', 'Q30': 'Q24',
+        'Q31': 'Q25', 'Q32': 'Q26', 'Q33': 'Q27', 'Q34': 'Q28', 'Q35': 'Q29',
+        'Q36': 'Q30', 'Q37': 'Q31', 'Q38': 'Q32', 'Q39': 'Q33', 'Q40': 'Q35',
+        'Q41': 'Q36', 'Q42': 'Q37', 'Q43': 'Q38', 'Q44': 'Q39', 'Q45': 'Q40',
+        'Q46': 'Q41', 'Q47': 'Q42', 'Q48': 'Q43'
+    }
+    
+    # Filtrar dados baseado no tipo de análise
+    if tipo_analise == "Média da Equipe":
+        df_dados = df_respondentes_filtrado[df_respondentes_filtrado['tipo'] == 'Avaliação Equipe']
+    elif tipo_analise == "Autoavaliação":
+        df_dados = df_respondentes_filtrado[df_respondentes_filtrado['tipo'] == 'Autoavaliação']
+    else:
+        df_dados = df_respondentes_filtrado
     
     # Identificar questões de impacto para a dimensão
     questoes_impacto = matriz[matriz['DIMENSAO'] == dimensao_clicada]['COD'].unique().tolist()
@@ -981,7 +1003,7 @@ def gerar_drill_down_microambiente(dimensao_clicada, df_respondentes_filtrado, m
         estrelas_real = []
         estrelas_ideal = []
         
-        for _, respondente in df_respondentes_filtrado.iterrows():
+        for _, respondente in df_dados.iterrows():
             if 'respostas' in respondente:
                 respostas = respondente['respostas']
                 questao_real = f"{questao}C"
@@ -1001,8 +1023,9 @@ def gerar_drill_down_microambiente(dimensao_clicada, df_respondentes_filtrado, m
             media_real_arredondada = round(media_real)
             media_ideal_arredondada = round(media_ideal)
             
-            # Buscar pontuações na matriz usando a chave combinada
-            chave = f"{questao}_I{media_ideal_arredondada}_R{media_real_arredondada}"
+            # Buscar pontuações na matriz usando a chave combinada (com mapeamento)
+            questao_mapeada = MAPEAMENTO_QUESTOES.get(questao, questao)
+            chave = f"{questao_mapeada}_I{media_ideal_arredondada}_R{media_real_arredondada}"
             linha = matriz[matriz['CHAVE'] == chave]
             
             if not linha.empty:
@@ -1550,7 +1573,8 @@ if matriz_arq is not None and matriz_micro is not None:
                         st.markdown(f"### 📋 Questões que Impactam: **{dimensao_selecionada}**")
                         
                         # Gerar drill-down
-                        questoes_detalhadas = gerar_drill_down_microambiente(dimensao_selecionada, df_filtrado_micro, matriz_micro)
+                        # Gerar drill-down
+                        questoes_detalhadas = gerar_drill_down_microambiente(dimensao_selecionada, df_filtrado_micro, matriz_micro, tipo_analise)
                         
                         if questoes_detalhadas:
                             # Criar gráfico das questões
