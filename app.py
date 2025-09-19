@@ -660,7 +660,7 @@ def calcular_medias_microambiente(df_respondentes, filtros):
     # Aplicar filtros
     if filtros['empresa'] != "Todas":
         df_filtrado = df_filtrado[df_filtrado['empresa'] == filtros['empresa']]
-        st.error(f"�� DEBUG - Após filtro empresa: {len(df_filtrado)} registros")
+        st.error(f" DEBUG - Após filtro empresa: {len(df_filtrado)} registros")
     if filtros['codrodada'] != "Todas":
         df_filtrado = df_filtrado[df_filtrado['codrodada'] == filtros['codrodada']]
     if filtros['emaillider'] != "Todos":
@@ -760,7 +760,8 @@ def calcular_medias_microambiente(df_respondentes, filtros):
         medias_subdimensoes_equipe_ideal.append(media)
     
     return dimensoes, medias_real, medias_ideal, medias_equipe_real, medias_equipe_ideal, medias_subdimensoes_equipe_real, medias_subdimensoes_equipe_ideal, df_filtrado
-    
+
+
 # ==================== FUNÇÕES DE GRÁFICOS ====================
 
 # GERAR GRÁFICO ARQUÉTIPOS
