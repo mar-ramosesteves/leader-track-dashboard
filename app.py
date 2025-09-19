@@ -1049,27 +1049,29 @@ if matriz_arq is not None and matriz_micro is not None:
         with st.spinner("Calculando microambiente individual..."):
             df_microambiente = processar_dados_microambiente(consolidado_micro, matriz_micro, pontos_max_dimensao, pontos_max_subdimensao)
         
-        # Normalizar dados para minúsculas
-        df_arquetipos['empresa'] = df_arquetipos['empresa'].str.lower()
-        df_microambiente['empresa'] = df_microambiente['empresa'].str.lower()
-        # Normalizar TODOS os campos para minúsculas
-        df_arquetipos['empresa'] = df_arquetipos['empresa'].str.lower()
-        df_arquetipos['codrodada'] = df_arquetipos['codrodada'].str.lower()
-        df_arquetipos['emailLider'] = df_arquetipos['emailLider'].str.lower()
-        df_arquetipos['estado'] = df_arquetipos['estado'].str.lower()
-        df_arquetipos['sexo'] = df_arquetipos['sexo'].str.lower()
-        df_arquetipos['etnia'] = df_arquetipos['etnia'].str.lower()
-        df_arquetipos['departamento'] = df_arquetipos['departamento'].str.lower()
-        df_arquetipos['cargo'] = df_arquetipos['cargo'].str.lower()
+        # Normalizar dados para minúsculas (convertendo para string primeiro)
+        df_arquetipos['empresa'] = df_arquetipos['empresa'].astype(str).str.lower()
+        df_microambiente['empresa'] = df_microambiente['empresa'].astype(str).str.lower()
         
-        df_microambiente['empresa'] = df_microambiente['empresa'].str.lower()
-        df_microambiente['codrodada'] = df_microambiente['codrodada'].str.lower()
-        df_microambiente['emailLider'] = df_microambiente['emailLider'].str.lower()
-        df_microambiente['estado'] = df_microambiente['estado'].str.lower()
-        df_microambiente['sexo'] = df_microambiente['sexo'].str.lower()
-        df_microambiente['etnia'] = df_microambiente['etnia'].str.lower()
-        df_microambiente['departamento'] = df_microambiente['departamento'].str.lower()
-        df_microambiente['cargo'] = df_microambiente['cargo'].str.lower()
+        # Normalizar TODOS os campos para minúsculas
+        df_arquetipos['empresa'] = df_arquetipos['empresa'].astype(str).str.lower()
+        df_arquetipos['codrodada'] = df_arquetipos['codrodada'].astype(str).str.lower()
+        df_arquetipos['emailLider'] = df_arquetipos['emailLider'].astype(str).str.lower()
+        df_arquetipos['estado'] = df_arquetipos['estado'].astype(str).str.lower()
+        df_arquetipos['sexo'] = df_arquetipos['sexo'].astype(str).str.lower()
+        df_arquetipos['etnia'] = df_arquetipos['etnia'].astype(str).str.lower()
+        df_arquetipos['departamento'] = df_arquetipos['departamento'].astype(str).str.lower()
+        df_arquetipos['cargo'] = df_arquetipos['cargo'].astype(str).str.lower()
+        
+        df_microambiente['empresa'] = df_microambiente['empresa'].astype(str).str.lower()
+        df_microambiente['codrodada'] = df_microambiente['codrodada'].astype(str).str.lower()
+        df_microambiente['emailLider'] = df_microambiente['emailLider'].astype(str).str.lower()
+        df_microambiente['estado'] = df_microambiente['estado'].astype(str).str.lower()
+        df_microambiente['sexo'] = df_microambiente['sexo'].astype(str).str.lower()
+        df_microambiente['etnia'] = df_microambiente['etnia'].astype(str).str.lower()
+        df_microambiente['departamento'] = df_microambiente['departamento'].astype(str).str.lower()
+        df_microambiente['cargo'] = df_microambiente['cargo'].astype(str).str.lower()
+        
         # DEBUG: Verificar empresas reais nos dados
         st.error("🔍 **DEBUG - Empresas encontradas nos dados:**")
         st.error(f"Arquétipos: {df_arquetipos['empresa'].unique()}")
