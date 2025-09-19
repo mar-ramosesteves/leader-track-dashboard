@@ -16,9 +16,7 @@ import openpyxl
 def analisar_afirmacoes_saude_emocional(matriz_arq, matriz_micro, df_arquetipos, df_microambiente, filtros):
     """Analisa afirmações existentes e identifica as relacionadas à saúde emocional com filtros aplicados"""
     
-    print("DEBUG: Iniciando análise de afirmações...")
-    print(f"DEBUG: matriz_arq tem {len(matriz_arq) if matriz_arq is not None else 'None'} linhas")
-    print(f"DEBUG: matriz_micro tem {len(matriz_micro) if matriz_micro is not None else 'None'} linhas")
+    
     
     # Palavras-chave relacionadas à saúde emocional (EXPANDIDAS para capturar mais questões)
     palavras_chave_saude_emocional = [
@@ -161,17 +159,14 @@ def analisar_afirmacoes_saude_emocional(matriz_arq, matriz_micro, df_arquetipos,
                 })
                 codigos_ja_processados.add(codigo)  # Marca como processado
                 
-    print(f"DEBUG: Encontradas {len(afirmacoes_se)} afirmações no total")
+    
     
     return afirmacoes_se, df_arq_filtrado, df_micro_filtrado
     
 # MAPEAR COMPLIANCE COM NR-1 (MANTIDO IGUAL)
 def mapear_compliance_nr1(afirmacoes_saude_emocional):
     """Mapeia afirmações de saúde emocional com requisitos da NR-1"""
-    # DEBUG: Ver o que está chegando
-    print(f"DEBUG: Recebidas {len(afirmacoes_saude_emocional)} afirmações")
-    for i, af in enumerate(afirmacoes_saude_emocional[:3]):  # Primeiras 3
-        print(f"DEBUG {i}: {af['afirmacao'][:100]}...")
+    
     
     compliance = {
         'Prevenção de Estresse': [],
@@ -394,23 +389,7 @@ def calcular_microambiente_respondente(respostas, matriz, pontos_max_dimensao, p
             chave_transformada = f"{questao_mapeada}_I{estrelas_ideal}_R{estrelas_real}"
             linha = matriz[matriz['CHAVE'] == chave_transformada]
             
-            # DEBUG: Verificar chaves para Performance
-            if questao == 'Q22':  # Performance
-                st.error(f"DEBUG - Questão: {questao}")
-                st.error(f"DEBUG - Chave Original: {chave_original}")
-                st.error(f"DEBUG - Chave Transformada: {chave_transformada}")
-                st.error(f"DEBUG - Estrelas Real: {estrelas_real}, Ideal: {estrelas_ideal}")
-                st.error(f"DEBUG - Média Real: {np.mean([estrelas_real])}")
-                st.error(f"DEBUG - Média Ideal: {np.mean([estrelas_ideal])}")
-                st.error(f"DEBUG - Arredondamento Real: {round(np.mean([estrelas_real]))}")
-                st.error(f"DEBUG - Arredondamento Ideal: {round(np.mean([estrelas_ideal]))}")
-                st.error(f"DEBUG - Linha encontrada: {not linha.empty}")
-                if not linha.empty:
-                    st.error(f"DEBUG - Dimensão: {linha['DIMENSAO'].iloc[0]}")
-                    st.error(f"DEBUG - Subdimensão: {linha['SUBDIMENSAO'].iloc[0]}")
-                    st.error(f"DEBUG - Pontos Real: {linha['PONTUACAO_REAL'].iloc[0]}")
-                    st.error(f"DEBUG - Pontos Ideal: {linha['PONTUACAO_IDEAL'].iloc[0]}")
-
+            
             
             
             if not linha.empty:
@@ -531,14 +510,9 @@ def processar_dados_microambiente(consolidado_micro, matriz, pontos_max_dimensao
     
     for item in consolidado_micro:
         if isinstance(item, dict) and 'dados_json' in item:
-            # DEBUG: Verificar estrutura dos dados
-            st.error(f"DEBUG - Item: {item.keys()}")
+            
             dados = item['dados_json']
-            st.error(f"DEBUG - dados_json keys: {dados.keys()}")
-            if 'autoavaliacao' in dados:
-                st.error(f"DEBUG - autoavaliacao existe: {bool(dados['autoavaliacao'])}")
-            if 'avaliacoesEquipe' in dados:
-                st.error(f"DEBUG - avaliacoesEquipe: {len(dados['avaliacoesEquipe'])}")
+            
             
             # Processar autoavaliação
             if 'autoavaliacao' in dados:
@@ -651,16 +625,14 @@ def calcular_medias_arquetipos(df_respondentes, filtros):
 def calcular_medias_microambiente(df_respondentes, filtros):
     """Aplica filtros demográficos e calcula médias do microambiente"""
     
-    # DEBUG: Verificar filtros aplicados
-    st.error(f"🔍 DEBUG - Filtros aplicados: {filtros}")
-    st.error(f"🔍 DEBUG - Total registros antes do filtro: {len(df_respondentes)}")
+   
     
     df_filtrado = df_respondentes.copy()
     
     # Aplicar filtros
     if filtros['empresa'] != "Todas":
         df_filtrado = df_filtrado[df_filtrado['empresa'] == filtros['empresa']]
-        st.error(f" DEBUG - Após filtro empresa: {len(df_filtrado)} registros")
+        
     if filtros['codrodada'] != "Todas":
         df_filtrado = df_filtrado[df_filtrado['codrodada'] == filtros['codrodada']]
     if filtros['emaillider'] != "Todos":
@@ -680,9 +652,7 @@ def calcular_medias_microambiente(df_respondentes, filtros):
     df_auto = df_filtrado[df_filtrado['tipo'] == 'Autoavaliação']
     df_equipe = df_filtrado[df_filtrado['tipo'] == 'Avaliação Equipe']
     
-    # DEBUG: Verificar contagem
-    st.error(f"DEBUG - Autoavaliação: {len(df_auto)} registros")
-    st.error(f"DEBUG - Equipe: {len(df_equipe)} registros")
+    
     
     dimensoes = ['Adaptabilidade', 'Colaboração Mútua', 'Nitidez', 'Performance', 'Reconhecimento', 'Responsabilidade']
     subdimensoes = [
@@ -721,9 +691,7 @@ def calcular_medias_microambiente(df_respondentes, filtros):
         media = np.mean(valores) if valores else 0
         medias_equipe_real.append(media)
         
-        # DEBUG: Verificar Performance especificamente
-        if dim == 'Performance':
-            st.error(f"DEBUG - Performance Real: {valores} = {media}")
+        
     
     # Calcular médias da equipe (Ideal) - CORRIGIDO
     medias_equipe_ideal = []
@@ -745,9 +713,7 @@ def calcular_medias_microambiente(df_respondentes, filtros):
         media = np.mean(valores) if valores else 0
         medias_subdimensoes_equipe_real.append(media)
         
-        # DEBUG: Verificar Performance especificamente
-        if sub == 'Performance':
-            st.error(f"DEBUG - Performance Subdimensão Real: {valores} = {media}")
+        
     
     # Calcular médias de subdimensões da equipe (Ideal) - CORRIGIDO
     medias_subdimensoes_equipe_ideal = []
@@ -1088,10 +1054,7 @@ if matriz_arq is not None and matriz_micro is not None:
     
     if consolidado_arq and consolidado_micro:
         st.success("✅ Conectado ao Supabase!")
-        # DEBUG: Verificar dados brutos do Supabase
-        st.error(f"Total consolidado_micro: {len(consolidado_micro)}")
-        if consolidado_micro:
-            st.error(f"Primeiro item micro: {consolidado_micro[0].keys() if isinstance(consolidado_micro[0], dict) else 'Não é dict'}")        
+                
         
         
         
@@ -1125,12 +1088,7 @@ if matriz_arq is not None and matriz_micro is not None:
         df_microambiente['departamento'] = df_microambiente['departamento'].astype(str).str.lower()
         df_microambiente['cargo'] = df_microambiente['cargo'].astype(str).str.lower()
         
-        # DEBUG: Verificar empresas reais nos dados
-        st.error("🔍 **DEBUG - Empresas encontradas nos dados:**")
-        st.error(f"Arquétipos: {df_arquetipos['empresa'].unique()}")
-        st.error(f"Microambiente: {df_microambiente['empresa'].unique()}")
-        st.error(f"Total Arquétipos: {len(df_arquetipos)}")
-        st.error(f"Total Microambiente: {len(df_microambiente)}")
+        
         
         # Métricas
         col1, col2, col3, col4 = st.columns(4)
