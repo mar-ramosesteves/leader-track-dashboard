@@ -657,6 +657,12 @@ def calcular_medias_microambiente(df_respondentes, filtros):
     df_auto = df_filtrado[df_filtrado['tipo'] == 'Autoavaliação']
     df_equipe = df_filtrado[df_filtrado['tipo'] == 'Avaliação Equipe']
     
+    # DEBUG: Verificar contagem
+    st.error(f"DEBUG - Autoavaliação: {len(df_auto)} registros")
+    st.error(f"DEBUG - Equipe: {len(df_equipe)} registros")
+
+    
+    
     dimensoes = ['Adaptabilidade', 'Colaboração Mútua', 'Nitidez', 'Performance', 'Reconhecimento', 'Responsabilidade']
 
     subdimensoes = [
