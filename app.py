@@ -647,7 +647,7 @@ def calcular_medias_arquetipos(df_respondentes, filtros):
     return arquétipos, medias_auto, medias_equipe, df_filtrado
 
 
-# CALCULAR MÉDIAS COM FILTROS (MICROAMBIENTE) - ATUALIZADA
+# CALCULAR MÉDIAS COM FILTROS (MICROAMBIENTE) - CORRIGIDA
 def calcular_medias_microambiente(df_respondentes, filtros):
     """Aplica filtros demográficos e calcula médias do microambiente"""
     
@@ -661,14 +661,6 @@ def calcular_medias_microambiente(df_respondentes, filtros):
     if filtros['empresa'] != "Todas":
         df_filtrado = df_filtrado[df_filtrado['empresa'] == filtros['empresa']]
         st.error(f"�� DEBUG - Após filtro empresa: {len(df_filtrado)} registros")
-    
-   
-    
-    df_filtrado = df_respondentes.copy()
-    
-    # Aplicar filtros
-    if filtros['empresa'] != "Todas":
-        df_filtrado = df_filtrado[df_filtrado['empresa'] == filtros['empresa']]
     if filtros['codrodada'] != "Todas":
         df_filtrado = df_filtrado[df_filtrado['codrodada'] == filtros['codrodada']]
     if filtros['emaillider'] != "Todos":
@@ -684,8 +676,6 @@ def calcular_medias_microambiente(df_respondentes, filtros):
     if filtros['cargo'] != "Todos":
         df_filtrado = df_filtrado[df_filtrado['cargo'] == filtros['cargo']]
     
-    
-    
     # Separar autoavaliação e equipe
     df_auto = df_filtrado[df_filtrado['tipo'] == 'Autoavaliação']
     df_equipe = df_filtrado[df_filtrado['tipo'] == 'Avaliação Equipe']
@@ -693,11 +683,8 @@ def calcular_medias_microambiente(df_respondentes, filtros):
     # DEBUG: Verificar contagem
     st.error(f"DEBUG - Autoavaliação: {len(df_auto)} registros")
     st.error(f"DEBUG - Equipe: {len(df_equipe)} registros")
-
-    
     
     dimensoes = ['Adaptabilidade', 'Colaboração Mútua', 'Nitidez', 'Performance', 'Reconhecimento', 'Responsabilidade']
-
     subdimensoes = [
         'Criação', 'Simplificação de Processos', 'Credibilidade Recíproca', 'Dedicação', 'Parceria', 
         'Satisfação em Fazer Parte', 'Obrigações e Deveres', 'Propósito e Objetivo', 'Aprimoramento', 
@@ -724,7 +711,7 @@ def calcular_medias_microambiente(df_respondentes, filtros):
         media = np.mean(valores) if valores else 0
         medias_ideal.append(media)
     
-    # Calcular médias da equipe (Real)
+    # Calcular médias da equipe (Real) - CORRIGIDO
     medias_equipe_real = []
     for dim in dimensoes:
         valores = []
@@ -738,7 +725,7 @@ def calcular_medias_microambiente(df_respondentes, filtros):
         if dim == 'Performance':
             st.error(f"DEBUG - Performance Real: {valores} = {media}")
     
-    # Calcular médias da equipe (Ideal)
+    # Calcular médias da equipe (Ideal) - CORRIGIDO
     medias_equipe_ideal = []
     for dim in dimensoes:
         valores = []
@@ -747,8 +734,8 @@ def calcular_medias_microambiente(df_respondentes, filtros):
                 valores.append(row['dimensoes_ideal'][dim])
         media = np.mean(valores) if valores else 0
         medias_equipe_ideal.append(media)
-
-        # Calcular médias de subdimensões da equipe (Real)
+    
+    # Calcular médias de subdimensões da equipe (Real) - CORRIGIDO
     medias_subdimensoes_equipe_real = []
     for sub in subdimensoes:
         valores = []
@@ -757,8 +744,12 @@ def calcular_medias_microambiente(df_respondentes, filtros):
                 valores.append(row['subdimensoes_real'][sub])
         media = np.mean(valores) if valores else 0
         medias_subdimensoes_equipe_real.append(media)
+        
+        # DEBUG: Verificar Performance especificamente
+        if sub == 'Performance':
+            st.error(f"DEBUG - Performance Subdimensão Real: {valores} = {media}")
     
-    # Calcular médias de subdimensões da equipe (Ideal)
+    # Calcular médias de subdimensões da equipe (Ideal) - CORRIGIDO
     medias_subdimensoes_equipe_ideal = []
     for sub in subdimensoes:
         valores = []
@@ -768,7 +759,8 @@ def calcular_medias_microambiente(df_respondentes, filtros):
         media = np.mean(valores) if valores else 0
         medias_subdimensoes_equipe_ideal.append(media)
     
-        return dimensoes, medias_real, medias_ideal, medias_equipe_real, medias_equipe_ideal, medias_subdimensoes_equipe_real, medias_subdimensoes_equipe_ideal, df_filtrado
+    return dimensoes, medias_real, medias_ideal, medias_equipe_real, medias_equipe_ideal, medias_subdimensoes_equipe_real, medias_subdimensoes_equipe_ideal, df_filtrado
+    
 # ==================== FUNÇÕES DE GRÁFICOS ====================
 
 # GERAR GRÁFICO ARQUÉTIPOS
