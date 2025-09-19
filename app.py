@@ -400,13 +400,16 @@ def calcular_microambiente_respondente(respostas, matriz, pontos_max_dimensao, p
                 st.error(f"DEBUG - Chave Original: {chave_original}")
                 st.error(f"DEBUG - Chave Transformada: {chave_transformada}")
                 st.error(f"DEBUG - Estrelas Real: {estrelas_real}, Ideal: {estrelas_ideal}")
+                st.error(f"DEBUG - Média Real: {np.mean([estrelas_real])}")
+                st.error(f"DEBUG - Média Ideal: {np.mean([estrelas_ideal])}")
+                st.error(f"DEBUG - Arredondamento Real: {round(np.mean([estrelas_real]))}")
+                st.error(f"DEBUG - Arredondamento Ideal: {round(np.mean([estrelas_ideal]))}")
                 st.error(f"DEBUG - Linha encontrada: {not linha.empty}")
                 if not linha.empty:
                     st.error(f"DEBUG - Dimensão: {linha['DIMENSAO'].iloc[0]}")
                     st.error(f"DEBUG - Subdimensão: {linha['SUBDIMENSAO'].iloc[0]}")
                     st.error(f"DEBUG - Pontos Real: {linha['PONTUACAO_REAL'].iloc[0]}")
                     st.error(f"DEBUG - Pontos Ideal: {linha['PONTUACAO_IDEAL'].iloc[0]}")
-
 
             
             
