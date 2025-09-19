@@ -390,8 +390,25 @@ def calcular_microambiente_respondente(respostas, matriz, pontos_max_dimensao, p
             
             # Chave com combinação Real + Ideal (usando mapeamento)
             questao_mapeada = MAPEAMENTO_QUESTOES.get(questao, questao)
-            chave = f"{questao_mapeada}_I{estrelas_ideal}_R{estrelas_real}"
-            linha = matriz[matriz['CHAVE'] == chave]
+            chave_original = f"{questao}_I{estrelas_ideal}_R{estrelas_real}"
+            chave_transformada = f"{questao_mapeada}_I{estrelas_ideal}_R{estrelas_real}"
+            linha = matriz[matriz['CHAVE'] == chave_transformada]
+            
+            # DEBUG: Verificar chaves para Performance
+            if questao == 'Q15':  # Performance
+                st.error(f"DEBUG - Questão: {questao}")
+                st.error(f"DEBUG - Chave Original: {chave_original}")
+                st.error(f"DEBUG - Chave Transformada: {chave_transformada}")
+                st.error(f"DEBUG - Estrelas Real: {estrelas_real}, Ideal: {estrelas_ideal}")
+                st.error(f"DEBUG - Linha encontrada: {not linha.empty}")
+                if not linha.empty:
+                    st.error(f"DEBUG - Dimensão: {linha['DIMENSAO'].iloc[0]}")
+                    st.error(f"DEBUG - Subdimensão: {linha['SUBDIMENSAO'].iloc[0]}")
+                    st.error(f"DEBUG - Pontos Real: {linha['PONTUACAO_REAL'].iloc[0]}")
+                    st.error(f"DEBUG - Pontos Ideal: {linha['PONTUACAO_IDEAL'].iloc[0]}")
+
+
+            
             
             if not linha.empty:
                 dimensao = linha['DIMENSAO'].iloc[0]
@@ -700,6 +717,10 @@ def calcular_medias_microambiente(df_respondentes, filtros):
                 valores.append(row['dimensoes_real'][dim])
         media = np.mean(valores) if valores else 0
         medias_equipe_real.append(media)
+        
+        # DEBUG: Verificar Performance especificamente
+        if dim == 'Performance':
+            st.error(f"DEBUG - Performance Real: {valores} = {media}")
     
     # Calcular médias da equipe (Ideal)
     medias_equipe_ideal = []
