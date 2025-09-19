@@ -511,7 +511,14 @@ def processar_dados_microambiente(consolidado_micro, matriz, pontos_max_dimensao
     
     for item in consolidado_micro:
         if isinstance(item, dict) and 'dados_json' in item:
+            # DEBUG: Verificar estrutura dos dados
+            st.error(f"DEBUG - Item: {item.keys()}")
             dados = item['dados_json']
+            st.error(f"DEBUG - dados_json keys: {dados.keys()}")
+            if 'autoavaliacao' in dados:
+                st.error(f"DEBUG - autoavaliacao existe: {bool(dados['autoavaliacao'])}")
+            if 'avaliacoesEquipe' in dados:
+                st.error(f"DEBUG - avaliacoesEquipe: {len(dados['avaliacoesEquipe'])}")
             
             # Processar autoavaliação
             if 'autoavaliacao' in dados:
@@ -554,8 +561,6 @@ def processar_dados_microambiente(consolidado_micro, matriz, pontos_max_dimensao
                         'etnia': membro.get('etnia', ''),
                         'estado': membro.get('estado', ''),
                         'cidade': membro.get('cidade', ''),
-                        'cargo': membro.get('cargo', ''),
-                        'area': membro.get('area', ''),
                         'departamento': membro.get('departamento', ''),
                         'tipo': 'Avaliação Equipe',
                         'dimensoes_real': dimensoes_real,
@@ -566,6 +571,7 @@ def processar_dados_microambiente(consolidado_micro, matriz, pontos_max_dimensao
                     })
     
     return pd.DataFrame(respondentes_processados)
+
 
 # CALCULAR MÉDIAS COM FILTROS (ARQUÉTIPOS) - ATUALIZADA
 def calcular_medias_arquetipos(df_respondentes, filtros):
