@@ -992,7 +992,24 @@ def gerar_drill_down_microambiente(dimensao_clicada, df_respondentes_filtrado, m
             # Buscar pontuações na matriz usando a chave combinada (com mapeamento)
             questao_mapeada = MAPEAMENTO_QUESTOES.get(questao, questao)
             chave = f"{questao_mapeada}_I{media_ideal_arredondada}_R{media_real_arredondada}"
+            
+            # DEBUG: Verificar Q22 especificamente
+            if questao == 'Q22':
+                st.error(f"DEBUG Q22 - Estrelas Real: {estrelas_real}")
+                st.error(f"DEBUG Q22 - Estrelas Ideal: {estrelas_ideal}")
+                st.error(f"DEBUG Q22 - Média Real: {media_real}")
+                st.error(f"DEBUG Q22 - Média Ideal: {media_ideal}")
+                st.error(f"DEBUG Q22 - Chave: {chave}")
+                st.error(f"DEBUG Q22 - Linha encontrada: {not linha.empty}")
+                if not linha.empty:
+                    st.error(f"DEBUG Q22 - Pontos Real: {linha['PONTUACAO_REAL'].iloc[0]}")
+                    st.error(f"DEBUG Q22 - Pontos Ideal: {linha['PONTUACAO_IDEAL'].iloc[0]}")
+
+            
             linha = matriz[matriz['CHAVE'] == chave]
+
+
+            
             
             if not linha.empty:
                 pontuacao_real = linha['PONTUACAO_REAL'].iloc[0]
