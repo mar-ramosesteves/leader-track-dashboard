@@ -930,6 +930,13 @@ def gerar_drill_down_arquetipos(arquétipo_clicado, df_respondentes_filtrado, ma
 def gerar_drill_down_microambiente(dimensao_clicada, df_respondentes_filtrado, matriz, tipo_analise):
     """Gera detalhamento das questões de microambiente"""
     
+    # DEBUG: Verificar questões de impacto
+    st.error(f"DEBUG - Dimensão clicada: {dimensao_clicada}")
+    questoes_impacto = matriz[matriz['DIMENSAO'] == dimensao_clicada]['COD'].unique().tolist()
+    st.error(f"DEBUG - Questões de impacto: {questoes_impacto}")
+    
+    
+    
     # MAPEAMENTO CORRETO DAS QUESTÕES
     MAPEAMENTO_QUESTOES = {
         'Q01': 'Q01', 'Q02': 'Q12', 'Q03': 'Q23', 'Q04': 'Q34', 'Q05': 'Q44',
