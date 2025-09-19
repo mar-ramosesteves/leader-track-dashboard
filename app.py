@@ -1002,6 +1002,18 @@ def gerar_drill_down_microambiente(dimensao_clicada, df_respondentes_filtrado, m
             
             linha = matriz[matriz['CHAVE'] == chave]
 
+            # DEBUG: Verificar Q15 especificamente
+            if questao == 'Q15':
+                st.error(f"DEBUG Q15 - Estrelas Real: {estrelas_real}")
+                st.error(f"DEBUG Q15 - Estrelas Ideal: {estrelas_ideal}")
+                st.error(f"DEBUG Q15 - Média Real: {media_real}")
+                st.error(f"DEBUG Q15 - Média Ideal: {media_ideal}")
+                st.error(f"DEBUG Q15 - Chave: {chave}")
+                st.error(f"DEBUG Q15 - Linha encontrada: {not linha.empty}")
+                if not linha.empty:
+                    st.error(f"DEBUG Q15 - Pontos Real: {linha['PONTUACAO_REAL'].iloc[0]}")
+                    st.error(f"DEBUG Q15 - Pontos Ideal: {linha['PONTUACAO_IDEAL'].iloc[0]}")
+
             # DEBUG: Verificar Q22 especificamente
             if questao == 'Q22':
                 st.error(f"DEBUG Q22 - Estrelas Real: {estrelas_real}")
