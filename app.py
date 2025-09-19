@@ -991,18 +991,25 @@ def gerar_drill_down_microambiente(dimensao_clicada, df_respondentes_filtrado, m
         df_dados = df_respondentes_filtrado
     
     # Identificar questões de impacto para a dimensão
-    questoes_impacto = matriz[matriz['DIMENSAO'] == dimensao_clicada]['COD'].unique().tolist()
-    
+    # Processar todas as questões
+    questoes_impacto = [f"Q{i:02d}" for i in range(1, 49)]
+        
     if not questoes_impacto:
         return None
-    
+        
     questoes_detalhadas = []
-    
+        
     for questao in questoes_impacto:
+        # Verificar se a questão pertence à dimensão clicada
+        linha_questao = matriz[matriz['COD'] == questao]
+        if linha_questao.empty or linha_questao['DIMENSAO'].iloc[0] != dimensao_clicada:
+            continue
+            
         # Buscar afirmação na matriz
-        linha_questao = matriz[matriz['COD'] == questao].iloc[0]
-        afirmacao = linha_questao['AFIRMACAO']
-        subdimensao = linha_questao['SUBDIMENSAO']
+        afirmacao = linha_questao['AFIRMACAO'].iloc[0]
+        subdimensao = linha_questao['SUBDIMENSAO'].iloc[0]
+            
+        
         
         # Calcular pontuações individuais e depois fazer a média (igual ao gráfico principal)
         pontuacoes_real = []
