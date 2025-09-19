@@ -1032,14 +1032,14 @@ def gerar_drill_down_microambiente(dimensao_clicada, df_respondentes_filtrado, m
             media_real = np.mean(pontuacoes_real)
             media_ideal = np.mean(pontuacoes_ideal)
 
-            # DEBUG: Verificar Q22 especificamente
-            if questao == 'Q22':
-                st.error(f"DEBUG Q22 - Questão processada: {questao}")
-                st.error(f"DEBUG Q22 - Pontuações Real: {pontuacoes_real}")
-                st.error(f"DEBUG Q22 - Pontuações Ideal: {pontuacoes_ideal}")
-                st.error(f"DEBUG Q22 - Média Real: {media_real}")
-                st.error(f"DEBUG Q22 - Média Ideal: {media_ideal}")
-                st.error(f"DEBUG Q22 - Gap: {media_ideal - media_real}")
+            # DEBUG: Verificar chaves para Q15 e Q22
+            if questao == 'Q15' or questao == 'Q22':
+                st.error(f"DEBUG {questao} - Questão processada: {questao}")
+                st.error(f"DEBUG {questao} - Pontuações Real: {pontuacoes_real}")
+                st.error(f"DEBUG {questao} - Pontuações Ideal: {pontuacoes_ideal}")
+                st.error(f"DEBUG {questao} - Média Real: {media_real}")
+                st.error(f"DEBUG {questao} - Média Ideal: {media_ideal}")
+                st.error(f"DEBUG {questao} - Gap: {media_ideal - media_real}")
 
             
             
