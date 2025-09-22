@@ -2016,11 +2016,28 @@ with tab3:
                             estrelas_real = []
                             estrelas_ideal = []
                             
+                            # MAPEAMENTO CORRETO DAS QUESTÕES (igual aos gráficos)
+                            MAPEAMENTO_QUESTOES = {
+                                'Q01': 'Q01','Q02': 'Q12','Q03': 'Q23','Q04': 'Q34','Q05': 'Q44','Q06': 'Q45',
+                                'Q07': 'Q46','Q08': 'Q47','Q09': 'Q48','Q10': 'Q02','Q11': 'Q03','Q12': 'Q04',
+                                'Q13': 'Q05','Q14': 'Q06','Q15': 'Q07','Q16': 'Q08','Q17': 'Q09','Q18': 'Q10',
+                                'Q19': 'Q11','Q20': 'Q13','Q21': 'Q14','Q22': 'Q15','Q23': 'Q16','Q24': 'Q17',
+                                'Q25': 'Q18','Q26': 'Q19','Q27': 'Q20','Q28': 'Q21','Q29': 'Q22','Q30': 'Q24',
+                                'Q31': 'Q25','Q32': 'Q26','Q33': 'Q27','Q34': 'Q28','Q35': 'Q29','Q36': 'Q30',
+                                'Q37': 'Q31','Q38': 'Q32','Q39': 'Q33','Q40': 'Q35','Q41': 'Q36','Q42': 'Q37',
+                                'Q43': 'Q38','Q44': 'Q39','Q45': 'Q40','Q46': 'Q41','Q47': 'Q42','Q48': 'Q43'
+                            }
+                            
                             for _, respondente in df_micro_filtrado.iterrows():
                                 if 'respostas' in respondente:
                                     respostas = respondente['respostas']
-                                    questao_real = f"{codigo}C"
-                                    questao_ideal = f"{codigo}k"
+                                    
+                                    # ✅ CORREÇÃO: Mapear código da matriz para código do JSON
+                                    codigo_json = MAPEAMENTO_QUESTOES.get(codigo, codigo)
+                                    
+                                    # ✅ CORREÇÃO: Usar código do JSON para buscar respostas
+                                    questao_real = f"{codigo_json}C"
+                                    questao_ideal = f"{codigo_json}k"
                                     
                                     if questao_real in respostas:
                                         estrelas_real.append(int(respostas[questao_real]))
