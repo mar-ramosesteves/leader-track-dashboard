@@ -1664,6 +1664,58 @@ if matriz_arq is not None and matriz_micro is not None:
         # ==================== TAB SAÚDE EMOCIONAL ====================
 
 # ==================== TAB SAÚDE EMOCIONAL ====================
+# ==== HELPERS PARA REAL/IDEAL/GAP por questão (usando a MATRIZ, valor bruto 0–100) ====
+
+# Mapa do FORM -> MATRIZ e inverso (mesmo usado no microambiente)
+_MAP_FORM_TO_MATRIZ = {
+    'Q01':'Q01','Q02':'Q12','Q03':'Q23','Q04':'Q34','Q05':'Q44','Q06':'Q45',
+    'Q07':'Q46','Q08':'Q47','Q09':'Q48','Q10':'Q02','Q11':'Q03','Q12':'Q04',
+    'Q13':'Q05','Q14':'Q06','Q15':'Q07','Q16':'Q08','Q17':'Q09','Q18':'Q10',
+    'Q19':'Q11','Q20':'Q13','Q21':'Q14','Q22':'Q15','Q23':'Q16','Q24':'Q17',
+    'Q25':'Q18','Q26':'Q19','Q27':'Q20','Q28':'Q21','Q29':'Q22','Q30':'Q24',
+    'Q31':'Q25','Q32':'Q26','Q33':'Q27','Q34':'Q28','Q35':'Q29','Q36':'Q30',
+    'Q37':'Q31','Q38':'Q32','Q39':'Q33','Q40':'Q35','Q41':'Q36','Q42':'Q37',
+    'Q43':'Q38','Q44':'Q39','Q45':'Q40','Q46':'Q41','Q47':'Q42','Q48':'Q43'
+}
+_MAP_MATRIZ_TO_FORM = {v: k for k, v in _MAP_FORM_TO_MATRIZ.items()}
+
+def calcular_real_ideal_gap_por_questao(df_micro_filtrado, matriz_micro, codigo_matriz):
+    """
+    Calcula Real, Ideal e Gap (Ideal-Real) para UMA questão usando a MATRIZ:
+    - média das PONTUAÇÕES (% 0–100) por respondente
+    - codigo_matriz: ex. 'Q45' (código canônico da MATRIZ)
+    Retorna (real_pct, ideal_pct, gap_pct) ou (None, None, None) se não houver dados.
+    """
+    # código usado no JSON (FORM)
+    codigo_form = _MAP_MATRIZ_TO_FORM.get(codigo_matriz, codigo_matriz)
+
+    vals_real, vals_ideal = [], []
+    for _, resp in df_micro_filtrado.iterrows():
+        respostas = resp.get('respostas', {})
+        if not isinstance(respostas, dict):
+            continue
+        qR = f"{codigo_form}C"
+        qI = f"{codigo_form}k"
+        if qR in respostas and qI in respostas:
+            try:
+                r = int(respostas[qR])
+                i = int(respostas[qI])
+            except:
+                continue
+            # usa código da MATRIZ na chave
+            chave = f"{codigo_matriz}_I{i}_R{r}"
+            linha = matriz_micro[matriz_micro['CHAVE'] == chave]
+            if not linha.empty:
+                vals_real.append(float(linha['PONTUACAO_REAL'].iloc[0]))
+                vals_ideal.append(float(linha['PONTUACAO_IDEAL'].iloc[0]))
+
+    if not vals_real or not vals_ideal:
+        return None, None, None
+
+    real_pct  = float(np.mean(vals_real))
+    ideal_pct = float(np.mean(vals_ideal))
+    gap       = ideal_pct - real_pct
+    return real_pct, ideal_pct, gap
 
 with tab3:
     st.header("💚 Análise de Saúde Emocional + Compliance NR-1")
