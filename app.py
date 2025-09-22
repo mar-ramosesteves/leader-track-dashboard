@@ -2204,23 +2204,30 @@ with tab3:
         afirmacoes_micro = [a for a in afirmacoes_saude_emocional_filtradas if a['tipo'] == 'Microambiente']
         
         if afirmacoes_micro:
-            # Calcular médias Real vs Ideal para cada questão
+            
+            
+            
+            
+            # >>> NOVO (com quebra de linha nas afirmações)
             questoes_micro = []
             medias_real = []
             medias_ideal = []
             gaps = []
             
-            # >>> NOVO: calcular pelas PONTUAÇÕES da MATRIZ por respondente (valor bruto 0–100)
-            questoes_micro = []
-            medias_real = []
-            medias_ideal = []
-            gaps = []
-            
-            # >>> NOVO: calcular pelas PONTUAÇÕES da MATRIZ por respondente (valor bruto 0–100)
-            questoes_micro = []
-            medias_real = []
-            medias_ideal = []
-            gaps = []
+            def _wrap_affirmacao(txt, max_chars=58, max_lines=3):
+                palavras = str(txt).split()
+                linhas, atual = [], ""
+                for p in palavras:
+                    if len(atual) + len(p) + 1 <= max_chars:
+                        atual = (atual + " " + p).strip()
+                    else:
+                        linhas.append(atual)
+                        atual = p
+                        if len(linhas) == max_lines - 1:  # última linha; corta aqui
+                            break
+                if atual:
+                    linhas.append(atual)
+                return "<br>".join(linhas)
             
             for af in afirmacoes_micro:
                 codigo_matriz = af['chave']  # ex.: 'Q45'
@@ -2229,8 +2236,9 @@ with tab3:
                 )
                 if real_pct is None:
                     continue
-                # use o seu rótulo atual (se quiser quebrar linhas, pode aplicar a mesma lógica antes do append)
-                questoes_micro.append(af['afirmacao'])
+            
+                label_quebrado = _wrap_affirmacao(af['afirmacao'], max_chars=58, max_lines=3)
+                questoes_micro.append(label_quebrado)
                 medias_real.append(real_pct)
                 medias_ideal.append(ideal_pct)
                 gaps.append(gap)
