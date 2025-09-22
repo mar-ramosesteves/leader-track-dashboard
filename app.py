@@ -926,162 +926,124 @@ def gerar_drill_down_arquetipos(arquétipo_clicado, df_respondentes_filtrado, ma
     return questoes_detalhadas
 
 # DRILL-DOWN MICROAMBIENTE (CORRIGIDA)
-# DRILL-DOWN MICROAMBIENTE (CORRIGIDA)
+# DRILL-DOWN MICROAMBIENTE (CORRIGIDA E ALINHADA AO GRÁFICO PRINCIPAL, SEM MUDAR AS CHAMADAS)
 def gerar_drill_down_microambiente(dimensao_clicada, df_respondentes_filtrado, matriz, tipo_analise):
-    """Gera detalhamento das questões de microambiente"""
-    
+    """Gera detalhamento das questões de microambiente em %, batendo com o gráfico principal."""
+
     # MAPEAMENTO CORRETO DAS QUESTÕES (igual aos gráficos)
     MAPEAMENTO_QUESTOES = {
-        'Q01': 'Q01',  # COD Q01 = Questão 1
-        'Q02': 'Q12',  # COD Q02 = Questão 12  
-        'Q03': 'Q23',  # COD Q03 = Questão 23
-        'Q04': 'Q34',  # COD Q04 = Questão 34
-        'Q05': 'Q44',  # COD Q05 = Questão 44
-        'Q06': 'Q45',  # COD Q06 = Questão 45
-        'Q07': 'Q46',  # COD Q07 = Questão 46
-        'Q08': 'Q47',  # COD Q08 = Questão 47
-        'Q09': 'Q48',  # COD Q09 = Questão 48
-        'Q10': 'Q02',  # COD Q10 = Questão 2
-        'Q11': 'Q03',  # COD Q11 = Questão 3
-        'Q12': 'Q04',  # COD Q12 = Questão 4
-        'Q13': 'Q05',  # COD Q13 = Questão 5
-        'Q14': 'Q06',  # COD Q14 = Questão 6
-        'Q15': 'Q07',  # COD Q15 = Questão 7
-        'Q16': 'Q08',  # COD Q16 = Questão 8
-        'Q17': 'Q09',  # COD Q17 = Questão 9
-        'Q18': 'Q10',  # COD Q18 = Questão 10
-        'Q19': 'Q11',  # COD Q19 = Questão 11
-        'Q20': 'Q13',  # COD Q20 = Questão 13
-        'Q21': 'Q14',  # COD Q21 = Questão 14
-        'Q22': 'Q15',  # COD Q22 = Questão 15 (Performance) ✅
-        'Q23': 'Q16',  # COD Q23 = Questão 16
-        'Q24': 'Q17',  # COD Q24 = Questão 17
-        'Q25': 'Q18',  # COD Q25 = Questão 18
-        'Q26': 'Q19',  # COD Q26 = Questão 19
-        'Q27': 'Q20',  # COD Q27 = Questão 20
-        'Q28': 'Q21',  # COD Q28 = Questão 21
-        'Q29': 'Q22',  # COD Q29 = Questão 22
-        'Q30': 'Q24',  # COD Q30 = Questão 24
-        'Q31': 'Q25',  # COD Q31 = Questão 25
-        'Q32': 'Q26',  # COD Q32 = Questão 26
-        'Q33': 'Q27',  # COD Q33 = Questão 27
-        'Q34': 'Q28',  # COD Q34 = Questão 28
-        'Q35': 'Q29',  # COD Q35 = Questão 29
-        'Q36': 'Q30',  # COD Q36 = Questão 30
-        'Q37': 'Q31',  # COD Q37 = Questão 31
-        'Q38': 'Q32',  # COD Q38 = Questão 32
-        'Q39': 'Q33',  # COD Q39 = Questão 33
-        'Q40': 'Q35',  # COD Q40 = Questão 35
-        'Q41': 'Q36',  # COD Q41 = Questão 36
-        'Q42': 'Q37',  # COD Q42 = Questão 37
-        'Q43': 'Q38',  # COD Q43 = Questão 38
-        'Q44': 'Q39',  # COD Q44 = Questão 39
-        'Q45': 'Q40',  # COD Q45 = Questão 40
-        'Q46': 'Q41',  # COD Q46 = Questão 41
-        'Q47': 'Q42',  # COD Q47 = Questão 42
-        'Q48': 'Q43'   # COD Q48 = Questão 43
+        'Q01': 'Q01','Q02': 'Q12','Q03': 'Q23','Q04': 'Q34','Q05': 'Q44','Q06': 'Q45',
+        'Q07': 'Q46','Q08': 'Q47','Q09': 'Q48','Q10': 'Q02','Q11': 'Q03','Q12': 'Q04',
+        'Q13': 'Q05','Q14': 'Q06','Q15': 'Q07','Q16': 'Q08','Q17': 'Q09','Q18': 'Q10',
+        'Q19': 'Q11','Q20': 'Q13','Q21': 'Q14','Q22': 'Q15','Q23': 'Q16','Q24': 'Q17',
+        'Q25': 'Q18','Q26': 'Q19','Q27': 'Q20','Q28': 'Q21','Q29': 'Q22','Q30': 'Q24',
+        'Q31': 'Q25','Q32': 'Q26','Q33': 'Q27','Q34': 'Q28','Q35': 'Q29','Q36': 'Q30',
+        'Q37': 'Q31','Q38': 'Q32','Q39': 'Q33','Q40': 'Q35','Q41': 'Q36','Q42': 'Q37',
+        'Q43': 'Q38','Q44': 'Q39','Q45': 'Q40','Q46': 'Q41','Q47': 'Q42','Q48': 'Q43'
     }
-    
-    # Filtrar dados baseado no tipo de análise
+
+    # 0) Seleção do conjunto (igual você já fazia)
     if tipo_analise == "Média da Equipe":
         df_dados = df_respondentes_filtrado[df_respondentes_filtrado['tipo'] == 'Avaliação Equipe']
     elif tipo_analise == "Autoavaliação":
         df_dados = df_respondentes_filtrado[df_respondentes_filtrado['tipo'] == 'Autoavaliação']
     else:
         df_dados = df_respondentes_filtrado
-    
-    # Identificar questões de impacto para a dimensão
-    # Processar todas as questões
+
+    # 0.1) Carrega pontos máximos da subdimensão (usa sua função cacheada)
+    try:
+        _, _, pontos_max_subdimensao = carregar_matrizes_microambiente()
+    except Exception:
+        pontos_max_subdimensao = None
+
+    # 1) Questões potenciais (Q01..Q48)
     questoes_impacto = [f"Q{i:02d}" for i in range(1, 49)]
-        
     if not questoes_impacto:
         return None
-        
+
     questoes_detalhadas = []
-        
+
+    # 2) Para cada questão do formulário, usar o CÓDIGO CANÔNICO para consultar a MATRIZ
     for questao in questoes_impacto:
-        # Verificar se a questão pertence à dimensão clicada
-        linha_questao = matriz[matriz['COD'] == questao]
-        
-        # DEBUG: Verificar se Q22 está sendo filtrado
-        if questao == 'Q22':
-            st.error(f"DEBUG Q22 - Questão: {questao}")
-            st.error(f"DEBUG Q22 - Linha encontrada: {not linha_questao.empty}")
-            if not linha_questao.empty:
-                st.error(f"DEBUG Q22 - Dimensão: {linha_questao['DIMENSAO'].iloc[0]}")
-                st.error(f"DEBUG Q22 - Dimensão clicada: {dimensao_clicada}")
-                st.error(f"DEBUG Q22 - É igual? {linha_questao['DIMENSAO'].iloc[0] == dimensao_clicada}")                        
+        questao_mapeada = MAPEAMENTO_QUESTOES.get(questao, questao)  # EX.: Q22 -> Q15
 
+        # >>> CORREÇÃO 1: filtrar a matriz pelo CÓDIGO CANÔNICO (não pelo número do formulário)
+        linha_questao = matriz[matriz['COD'] == questao_mapeada]
 
-
-
-        
         if linha_questao.empty or linha_questao['DIMENSAO'].iloc[0] != dimensao_clicada:
-
             continue
-            
-        # Buscar afirmação na matriz
-        afirmacao = linha_questao['AFIRMACAO'].iloc[0]
+
+        afirmacao   = linha_questao['AFIRMACAO'].iloc[0]
         subdimensao = linha_questao['SUBDIMENSAO'].iloc[0]
-            
-        
-        
-        # Calcular pontuações individuais e depois fazer a média (igual ao gráfico principal)
-        pontuacoes_real = []
+
+        # 3) Coletar as pontuações por respondente com a CHAVE canônica {Qxx}_I{ideal}_R{real}
+        pontuacoes_real  = []
         pontuacoes_ideal = []
-        
+
         for _, respondente in df_dados.iterrows():
-            if 'respostas' in respondente:
-                respostas = respondente['respostas']
-                questao_real = f"{questao}C"
-                questao_ideal = f"{questao}k"
-                
-                if questao_real in respostas and questao_ideal in respostas:
-                    estrelas_real = int(respostas[questao_real])
-                    estrelas_ideal = int(respostas[questao_ideal])
-                    
-                    # Chave com combinação Real + Ideal (usando mapeamento igual ao gráfico principal)
-                    questao_mapeada = MAPEAMENTO_QUESTOES.get(questao, questao)
-                    chave = f"{questao_mapeada}_I{estrelas_ideal}_R{estrelas_real}"
-                    linha = matriz[matriz['CHAVE'] == chave]
-                    
-                    if not linha.empty:
-                        pontuacoes_real.append(linha['PONTUACAO_REAL'].iloc[0])
-                        pontuacoes_ideal.append(linha['PONTUACAO_IDEAL'].iloc[0])
-        
-        if pontuacoes_real and pontuacoes_ideal:
-            # Calcular médias das pontuações
-            media_real = np.mean(pontuacoes_real)
-            media_ideal = np.mean(pontuacoes_ideal)
+            respostas = respondente.get('respostas', {})
+            if not isinstance(respostas, dict):
+                continue
 
-            # DEBUG: Verificar chaves para Q15 e Q22
-            if questao == 'Q15' or questao == 'Q22':
-                st.error(f"DEBUG {questao} - Questão processada: {questao}")
-                st.error(f"DEBUG {questao} - Pontuações Real: {pontuacoes_real}")
-                st.error(f"DEBUG {questao} - Pontuações Ideal: {pontuacoes_ideal}")
-                st.error(f"DEBUG {questao} - Média Real: {media_real}")
-                st.error(f"DEBUG {questao} - Média Ideal: {media_ideal}")
-                st.error(f"DEBUG {questao} - Gap: {media_ideal - media_real}")
+            q_real  = f"{questao}C"  # campos do formulário (Q??C / Q??k)
+            q_ideal = f"{questao}k"
 
-            
-            
-            questoes_detalhadas.append({
-                'questao': questao,
-                'afirmacao': afirmacao,
-                'dimensao': dimensao_clicada,
-                'subdimensao': subdimensao,
-                'media_real': media_real,
-                'media_ideal': media_ideal,
-                'pontuacao_real': media_real,
-                'pontuacao_ideal': media_ideal,
-                'gap': media_ideal - media_real,
-                'n_respostas': len(pontuacoes_real)
-            })
-    
+            if q_real in respostas and q_ideal in respostas:
+                estrelas_real  = int(respostas[q_real])
+                estrelas_ideal = int(respostas[q_ideal])
+
+                chave = f"{questao_mapeada}_I{estrelas_ideal}_R{estrelas_real}"  # usa MAPEADA (canônica)
+                linha = matriz[matriz['CHAVE'] == chave]
+                if not linha.empty:
+                    pontuacoes_real.append(linha['PONTUACAO_REAL'].iloc[0])
+                    pontuacoes_ideal.append(linha['PONTUACAO_IDEAL'].iloc[0])
+
+        if not pontuacoes_real or not pontuacoes_ideal:
+            continue
+
+        media_real_pts  = float(np.mean(pontuacoes_real))
+        media_ideal_pts = float(np.mean(pontuacoes_ideal))
+
+        # 4) >>> CORREÇÃO 2: converter para % usando PONTOS MÁXIMOS DA SUBDIMENSÃO (mesma escala do principal)
+        if pontos_max_subdimensao is not None and not pontos_max_subdimensao.empty:
+            try:
+                pontos_max_sub = float(
+                    pontos_max_subdimensao.loc[
+                        pontos_max_subdimensao['SUBDIMENSAO'] == subdimensao, 'PONTOS_MAXIMOS_SUBDIMENSAO'
+                    ].iloc[0]
+                )
+            except Exception:
+                pontos_max_sub = None
+        else:
+            pontos_max_sub = None
+
+        if pontos_max_sub and pontos_max_sub > 0:
+            media_real  = (media_real_pts  / pontos_max_sub) * 100.0
+            media_ideal = (media_ideal_pts / pontos_max_sub) * 100.0
+        else:
+            # fallback: se não achar pontos máximos, mantém em pontos (não quebra o app)
+            media_real  = media_real_pts
+            media_ideal = media_ideal_pts
+
+        questoes_detalhadas.append({
+            'questao': questao,                     # número visto pelo usuário (Q22,...)
+            'questao_mapeada': questao_mapeada,     # código canônico usado nas chaves (Q15,...)
+            'afirmacao': afirmacao,
+            'dimensao': dimensao_clicada,
+            'subdimensao': subdimensao,
+            'media_real': media_real,               # AGORA EM %
+            'media_ideal': media_ideal,             # AGORA EM %
+            'pontuacao_real': media_real,           # mantém campos que o front já usa
+            'pontuacao_ideal': media_ideal,
+            'gap': media_ideal - media_real,
+            'n_respostas': len(pontuacoes_real)
+        })
+
     # Ordenar por gap (maior para menor)
     questoes_detalhadas.sort(key=lambda x: x['gap'], reverse=True)
+    return questoes_detalhadas
+
     
-    return questoes_detalhadas    
 # ==================== BUSCAR DADOS ====================
 
 # Buscar dados
