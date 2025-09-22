@@ -8,6 +8,10 @@ from datetime import datetime
 import numpy as np
 import openpyxl
 
+# === Configuração global ===
+NORMALIZAR_POR_SUBDIMENSAO = False  # deixa sempre False para mostrar valores brutos por questão
+
+
 # ==================== FUNÇÕES SAÚDE EMOCIONAL ====================
 
 # ==================== FUNÇÕES SAÚDE EMOCIONAL ====================
