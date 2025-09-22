@@ -2120,6 +2120,8 @@ with tab3:
             
             for af in afirmacoes_micro:
                 codigo = af['chave']
+
+                
                 # Quebrar afirmação longa em múltiplas linhas
                 afirmacao = af['afirmacao']
                 if len(afirmacao) > 60:
@@ -2190,10 +2192,60 @@ with tab3:
                     percentual_real = pontuacao_real
                     percentual_ideal = pontuacao_ideal
                 
-                    questoes_micro.append(questao)   # mantém seu texto com quebras
-                    medias_real.append(percentual_real)
-                    medias_ideal.append(percentual_ideal)
-                    gaps.append(gap)
+                    # Mapeamento formulário->canônico e reverso canônico->form
+                    MAPEAMENTO_QUESTOES = {
+                        'Q01': 'Q01','Q02': 'Q12','Q03': 'Q23','Q04': 'Q34','Q05': 'Q44','Q06': 'Q45',
+                        'Q07': 'Q46','Q08': 'Q47','Q09': 'Q48','Q10': 'Q02','Q11': 'Q03','Q12': 'Q04',
+                        'Q13': 'Q05','Q14': 'Q06','Q15': 'Q07','Q16': 'Q08','Q17': 'Q09','Q18': 'Q10',
+                        'Q19': 'Q11','Q20': 'Q13','Q21': 'Q14','Q22': 'Q15','Q23': 'Q16','Q24': 'Q17',
+                        'Q25': 'Q18','Q26': 'Q19','Q27': 'Q20','Q28': 'Q21','Q29': 'Q22','Q30': 'Q24',
+                        'Q31': 'Q25','Q32': 'Q26','Q33': 'Q27','Q34': 'Q28','Q35': 'Q29','Q36': 'Q30',
+                        'Q37': 'Q31','Q38': 'Q32','Q39': 'Q33','Q40': 'Q35','Q41': 'Q36','Q42': 'Q37',
+                        'Q43': 'Q38','Q44': 'Q39','Q45': 'Q40','Q46': 'Q41','Q47': 'Q42','Q48': 'Q43'
+                    }
+                    REVERSO_FORM = {can: form for form, can in MAPEAMENTO_QUESTOES.items()}
+                    
+                    codigo_canonico = af['chave']                               # ex.: Q45 (MATRIZ)
+                    codigo_form_json = REVERSO_FORM.get(codigo_canonico, codigo_canonico)  # ex.: Q45 -> Q06
+                    
+                    # Ler respostas do JSON usando o CÓDIGO DO FORMULÁRIO (Q06C / Q06k)
+                    estrelas_real = []
+                    estrelas_ideal = []
+                    for _, respondente in df_micro_filtrado.iterrows():
+                        respostas = respondente.get('respostas', {})
+                        if not isinstance(respostas, dict):
+                            continue
+                        q_real  = f"{codigo_form_json}C"
+                        q_ideal = f"{codigo_form_json}k"
+                        if q_real in respostas:
+                            estrelas_real.append(int(respostas[q_real]))
+                        if q_ideal in respostas:
+                            estrelas_ideal.append(int(respostas[q_ideal]))
+                    
+                    # Calcular médias e buscar PONTOS na MATRIZ com o CÓDIGO CANÔNICO (Q45)
+                    if estrelas_real and estrelas_ideal:
+                        media_real = round(np.mean(estrelas_real))
+                        media_ideal = round(np.mean(estrelas_ideal))
+                    
+                        chave = f"{codigo_canonico}_I{media_ideal}_R{media_real}"   # ex.: Q45_I4_R3
+                        linha = matriz_micro[matriz_micro['CHAVE'] == chave]
+                    
+                        if not linha.empty:
+                            pontuacao_real = float(linha['PONTUACAO_REAL'].iloc[0])
+                            pontuacao_ideal = float(linha['PONTUACAO_IDEAL'].iloc[0])
+                            gap = pontuacao_ideal - pontuacao_real
+                        else:
+                            pontuacao_real = pontuacao_ideal = gap = 0.0
+                    
+                        # Usar PONTOS (%) da MATRIZ no gráfico (mesma escala do dashboard principal)
+                        percentual_real = pontuacao_real
+                        percentual_ideal = pontuacao_ideal
+                    
+                        questoes_micro.append(questao)          # mantém seu texto com quebras
+                        medias_real.append(percentual_real)
+                        medias_ideal.append(percentual_ideal)
+                        gaps.append(gap)
+
             
             if questoes_micro:
                 # Gráfico de barras agrupadas com 3 barras
@@ -2475,53 +2527,78 @@ with tab3:
             reais_micro = []
             ideais_micro = []
             gaps_micro = []
+
+
+            # carrega pontos máximos da subdimensão (para converter em % como no microambiente)
+            _, _, pontos_max_subdimensao = carregar_matrizes_microambiente()
+            
+            # mapeamento formulário->canônico e reverso canônico->form (para ler JSON corretamente)
+            MAPEAMENTO_QUESTOES = {
+                'Q01': 'Q01','Q02': 'Q12','Q03': 'Q23','Q04': 'Q34','Q05': 'Q44','Q06': 'Q45',
+                'Q07': 'Q46','Q08': 'Q47','Q09': 'Q48','Q10': 'Q02','Q11': 'Q03','Q12': 'Q04',
+                'Q13': 'Q05','Q14': 'Q06','Q15': 'Q07','Q16': 'Q08','Q17': 'Q09','Q18': 'Q10',
+                'Q19': 'Q11','Q20': 'Q13','Q21': 'Q14','Q22': 'Q15','Q23': 'Q16','Q24': 'Q17',
+                'Q25': 'Q18','Q26': 'Q19','Q27': 'Q20','Q28': 'Q21','Q29': 'Q22','Q30': 'Q24',
+                'Q31': 'Q25','Q32': 'Q26','Q33': 'Q27','Q34': 'Q28','Q35': 'Q29','Q36': 'Q30',
+                'Q37': 'Q31','Q38': 'Q32','Q39': 'Q33','Q40': 'Q35','Q41': 'Q36','Q42': 'Q37',
+                'Q43': 'Q38','Q44': 'Q39','Q45': 'Q40','Q46': 'Q41','Q47': 'Q42','Q48': 'Q43'
+            }
+            REVERSO_FORM = {can: form for form, can in MAPEAMENTO_QUESTOES.items()}
+
             
             for _, row in df_micro_detalhado.iterrows():
-                codigo = row['chave']
-                
-                # ✅ CORREÇÃO: Usar a mesma lógica da função
-                estrelas_real = []
-                estrelas_ideal = []
-                
+                codigo_canonico = row['chave']           # ex.: Q45 (matriz)
+                subdim = row['subdimensao']              # subdimensão dessa afirmação
+                codigo_form_json = REVERSO_FORM.get(codigo_canonico, codigo_canonico)  # ex.: Q45 -> Q06
+            
+                # soma dos pontos (por respondente), igual ao microambiente corrigido
+                tot_real = 0.0
+                tot_ideal = 0.0
+                cont = 0
+            
                 for _, respondente in df_micro_filtrado.iterrows():
-                    if 'respostas' in respondente:
-                        respostas = respondente['respostas']
-                        questao_real = f"{codigo}C"
-                        questao_ideal = f"{codigo}k"
-                        
-                        if questao_real in respostas:
-                            estrelas_real.append(int(respostas[questao_real]))
-                        if questao_ideal in respostas:
-                            estrelas_ideal.append(int(respostas[questao_ideal]))
-                
-                if estrelas_real and estrelas_ideal:
-                    media_real = np.mean(estrelas_real)
-                    media_ideal = np.mean(estrelas_ideal)
-                    
-                    # ✅ CORREÇÃO: Arredondar para buscar na matriz
-                    media_real_arredondada = round(media_real)
-                    media_ideal_arredondada = round(media_ideal)
-                    
-                    # ✅ CORREÇÃO: Buscar pontuações na matriz
-                    chave = f"{codigo}_I{media_ideal_arredondada}_R{media_real_arredondada}"
-                    linha = matriz_micro[matriz_micro['CHAVE'] == chave]
-                    
-                    if not linha.empty:
-                        pontuacao_real = linha['PONTUACAO_REAL'].iloc[0]
-                        pontuacao_ideal = linha['PONTUACAO_IDEAL'].iloc[0]
-                        gap = pontuacao_ideal - pontuacao_real  # ✅ Gap correto!
-                    else:
-                        pontuacao_real = 0
-                        pontuacao_ideal = 0
-                        gap = 0
-                    
-                    reais_micro.append(f"{pontuacao_real:.1f}%")
-                    ideais_micro.append(f"{pontuacao_ideal:.1f}%")
+                    respostas = respondente.get('respostas', {})
+                    if not isinstance(respostas, dict):
+                        continue
+            
+                    q_real  = f"{codigo_form_json}C"   # ler no JSON pelo código do formulário
+                    q_ideal = f"{codigo_form_json}k"
+                    if q_real in respostas and q_ideal in respostas:
+                        r = int(respostas[q_real])
+                        i = int(respostas[q_ideal])
+            
+                        # CHAVE NA MATRIZ usa o CÓDIGO CANÔNICO
+                        chave = f"{codigo_canonico}_I{i}_R{r}"
+                        linha = matriz_micro[matriz_micro['CHAVE'] == chave]
+                        if not linha.empty:
+                            tot_real  += float(linha['PONTUACAO_REAL'].iloc[0])
+                            tot_ideal += float(linha['PONTUACAO_IDEAL'].iloc[0])
+                            cont += 1
+            
+                # pontos máximos da subdimensão para converter em %
+                try:
+                    pontos_max_sub = float(
+                        pontos_max_subdimensao.loc[
+                            pontos_max_subdimensao['SUBDIMENSAO'] == subdim, 'PONTOS_MAXIMOS_SUBDIMENSAO'
+                        ].iloc[0]
+                    )
+                except Exception:
+                    pontos_max_sub = None
+            
+                if cont > 0 and pontos_max_sub and pontos_max_sub > 0:
+                    real_pct  = (tot_real  / pontos_max_sub) * 100.0
+                    ideal_pct = (tot_ideal / pontos_max_sub) * 100.0
+                    gap = ideal_pct - real_pct
+            
+                    reais_micro.append(f"{real_pct:.1f}%")
+                    ideais_micro.append(f"{ideal_pct:.1f}%")
                     gaps_micro.append(f"{gap:.1f}")
                 else:
                     reais_micro.append("N/A")
                     ideais_micro.append("N/A")
                     gaps_micro.append("N/A")
+
+
             
             df_micro_detalhado['Real'] = reais_micro
             df_micro_detalhado['Ideal'] = ideais_micro
