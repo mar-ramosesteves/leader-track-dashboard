@@ -114,6 +114,10 @@ def analisar_afirmacoes_saude_emocional(matriz_arq, matriz_micro, df_arquetipos,
         df_arq_filtrado = df_arq_filtrado[df_arq_filtrado['departamento'] == filtros['departamento']]
     if filtros['cargo'] != "Todos":
         df_arq_filtrado = df_arq_filtrado[df_arq_filtrado['cargo'] == filtros['cargo']]
+    if 'holding' in filtros and filtros['holding'] != "Todas":
+        if 'holding' in df_arq_filtrado.columns:
+            holding_filtro = str(filtros['holding']).upper().strip()
+            df_arq_filtrado = df_arq_filtrado[df_arq_filtrado['holding'].astype(str).str.upper().str.strip() == holding_filtro]
     
     # Filtrar microambiente
     if filtros['empresa'] != "Todas":
@@ -132,6 +136,10 @@ def analisar_afirmacoes_saude_emocional(matriz_arq, matriz_micro, df_arquetipos,
         df_micro_filtrado = df_micro_filtrado[df_micro_filtrado['departamento'] == filtros['departamento']]
     if filtros['cargo'] != "Todos":
         df_micro_filtrado = df_micro_filtrado[df_micro_filtrado['cargo'] == filtros['cargo']]
+    if 'holding' in filtros and filtros['holding'] != "Todas":
+        if 'holding' in df_micro_filtrado.columns:
+            holding_filtro = str(filtros['holding']).upper().strip()
+            df_micro_filtrado = df_micro_filtrado[df_micro_filtrado['holding'].astype(str).str.upper().str.strip() == holding_filtro]
     
     # Analisar matriz de arquétipos
     for _, row in matriz_arq.iterrows():
@@ -700,8 +708,12 @@ def calcular_medias_arquetipos(df_respondentes, filtros):
     if filtros['departamento'] != "Todos":
         df_filtrado = df_filtrado[df_filtrado['departamento'] == filtros['departamento']]
     if filtros['cargo'] != "Todos":
-        df_filtrado = df_filtrado[df_filtrado['cargo'] == filtros['cargo']]    
-   
+        df_filtrado = df_filtrado[df_filtrado['cargo'] == filtros['cargo']]
+    if 'holding' in filtros and filtros['holding'] != "Todas":
+        if 'holding' in df_filtrado.columns:
+            # Normalizar para comparação (ambos em maiúsculas)
+            holding_filtro = str(filtros['holding']).upper().strip()
+            df_filtrado = df_filtrado[df_filtrado['holding'].astype(str).str.upper().str.strip() == holding_filtro]
     
     # Separar autoavaliação e equipe
     df_auto = df_filtrado[df_filtrado['tipo'] == 'Autoavaliação']
@@ -758,6 +770,11 @@ def calcular_medias_microambiente(df_respondentes, filtros):
         df_filtrado = df_filtrado[df_filtrado['departamento'] == filtros['departamento']]
     if filtros['cargo'] != "Todos":
         df_filtrado = df_filtrado[df_filtrado['cargo'] == filtros['cargo']]
+    if 'holding' in filtros and filtros['holding'] != "Todas":
+        if 'holding' in df_filtrado.columns:
+            # Normalizar para comparação (ambos em maiúsculas)
+            holding_filtro = str(filtros['holding']).upper().strip()
+            df_filtrado = df_filtrado[df_filtrado['holding'].astype(str).str.upper().str.strip() == holding_filtro]
     
     # Separar autoavaliação e equipe
     df_auto = df_filtrado[df_filtrado['tipo'] == 'Autoavaliação']
@@ -966,7 +983,7 @@ def gerar_grafico_microambiente_linha(medias_real, medias_ideal, dimensoes, titu
     ))
     
     fig.update_layout(
-        title=f"�� {titulo}",
+        title=f"   {titulo}",
         xaxis_title="Dimensões",
         yaxis_title="Pontuação (%)",
         yaxis=dict(range=[0, 100]),
@@ -1086,6 +1103,40 @@ def gerar_drill_down_microambiente(dimensao_clicada, df_respondentes_filtrado, m
     
 # ==================== BUSCAR DADOS ====================
 
+# Função auxiliar para adicionar holding aos DataFrames
+def adicionar_holding_ao_dataframe(df, email_to_holding):
+    """Adiciona a coluna 'holding' ao DataFrame baseado no email ou empresa"""
+    holdings = []
+    for _, row in df.iterrows():
+        email = str(row.get('email', '')).lower()
+        empresa = str(row.get('empresa', '')).lower()
+        
+        # Tenta buscar por email primeiro
+        holding = email_to_holding.get(email, None)
+        if holding:
+            holding = str(holding).upper().strip()
+        
+        # Se não encontrou por email, tenta por empresa
+        if not holding:
+            holding = email_to_holding.get(empresa, None)
+            if holding:
+                holding = str(holding).upper().strip()
+        
+        # Se ainda não encontrou, calcula baseado na empresa
+        if not holding:
+            if empresa in ['astro34', 'spectral_v', 'spectral_a', 'spectral_sales', 'fastco', 'futurex'] or \
+               'astro34' in empresa or 'spectral' in empresa or 'fastco' in empresa or 'futurex' in empresa:
+                holding = 'PROSPERA'
+            else:
+                holding = empresa.upper() if empresa else 'N/A'
+        
+        # Garantir que holding está em maiúsculas
+        holding = str(holding).upper().strip() if holding else 'N/A'
+        holdings.append(holding)
+    
+    df['holding'] = holdings
+    return df
+
 # Buscar dados
 @st.cache_data(ttl=300)
 def fetch_data():
@@ -1118,15 +1169,38 @@ if matriz_arq is not None and matriz_micro is not None:
     if consolidado_arq and consolidado_micro:
         st.success("✅ Conectado ao Supabase!")
                 
-        
-        
+        # Buscar dados de holding da tabela employees
+        with st.spinner("Carregando dados de holding..."):
+            try:
+                supabase = init_supabase()
+                employees_data = supabase.table('employees').select('email, holding, empresa').execute()
+                # Criar um dicionário para mapear email -> holding
+                email_to_holding = {}
+                for emp in employees_data.data:
+                    email = emp.get('email', '').lower() if emp.get('email') else ''
+                    holding = str(emp.get('holding', 'N/A')).upper().strip()
+                    empresa = emp.get('empresa', '')
+                    if email:
+                        email_to_holding[email] = holding
+                    # Também mapear por empresa (caso não tenha email)
+                    if empresa:
+                        empresa_lower = empresa.lower()
+                        if empresa_lower not in email_to_holding:
+                            email_to_holding[empresa_lower] = holding
+            except Exception as e:
+                st.warning(f"⚠️ Aviso: Não foi possível carregar dados de holding: {str(e)}")
+                email_to_holding = {}
         
         # Processar dados individuais
         with st.spinner("Calculando arquétipos individuais..."):
             df_arquetipos = processar_dados_arquetipos(consolidado_arq, matriz_arq)
+            # Adicionar holding aos dados de arquétipos
+            df_arquetipos = adicionar_holding_ao_dataframe(df_arquetipos, email_to_holding)
         
         with st.spinner("Calculando microambiente individual..."):
             df_microambiente = processar_dados_microambiente(consolidado_micro, matriz_micro, pontos_max_dimensao, pontos_max_subdimensao)
+            # Adicionar holding aos dados de microambiente
+            df_microambiente = adicionar_holding_ao_dataframe(df_microambiente, email_to_holding)
         
         # Normalizar dados para minúsculas (convertendo para string primeiro)
         df_arquetipos['empresa'] = df_arquetipos['empresa'].astype(str).str.lower()
@@ -1151,19 +1225,23 @@ if matriz_arq is not None and matriz_micro is not None:
         df_microambiente['departamento'] = df_microambiente['departamento'].astype(str).str.lower()
         df_microambiente['cargo'] = df_microambiente['cargo'].astype(str).str.lower()
         
-        
+        # Normalizar holding para maiúsculas (se existir)
+        if 'holding' in df_arquetipos.columns:
+            df_arquetipos['holding'] = df_arquetipos['holding'].astype(str).str.upper()
+        if 'holding' in df_microambiente.columns:
+            df_microambiente['holding'] = df_microambiente['holding'].astype(str).str.upper()
         
         # Métricas
         col1, col2, col3, col4 = st.columns(4)
         with col1:
-            st.metric("�� Total Arquétipos", len(df_arquetipos))
+            st.metric("   Total Arquétipos", len(df_arquetipos))
         with col2:
             st.metric("🏢 Total Microambiente", len(df_microambiente))
         with col3:
             auto_count = len(df_arquetipos[df_arquetipos['tipo'] == 'Autoavaliação'])
             st.metric("👤 Autoavaliações", auto_count)
         with col4:
-            st.metric("�� Última Atualização", datetime.now().strftime("%H:%M"))
+            st.metric("   Última Atualização", datetime.now().strftime("%H:%M"))
         
                 # FILTROS
         st.sidebar.header("🎛️ Filtros Globais")
@@ -1176,14 +1254,14 @@ if matriz_arq is not None and matriz_micro is not None:
         empresas_micro = set(df_microambiente['empresa'].unique())
         todas_empresas = sorted(list(empresas_arq.union(empresas_micro)))
         empresas = ["Todas"] + todas_empresas
-        empresa_selecionada = st.sidebar.selectbox("�� Empresa", empresas)
+        empresa_selecionada = st.sidebar.selectbox("   Empresa", empresas)
         
         # Combinar codrodadas de ambos os datasets
         codrodadas_arq = set(df_arquetipos['codrodada'].unique())
         codrodadas_micro = set(df_microambiente['codrodada'].unique())
         todas_codrodadas = sorted(list(codrodadas_arq.union(codrodadas_micro)))
         codrodadas = ["Todas"] + todas_codrodadas
-        codrodada_selecionada = st.sidebar.selectbox("�� Código da Rodada", codrodadas)
+        codrodada_selecionada = st.sidebar.selectbox("   Código da Rodada", codrodadas)
         
         # Combinar emails de líderes de ambos os datasets
         emailliders_arq = set(df_arquetipos['emailLider'].unique())
@@ -1211,7 +1289,7 @@ if matriz_arq is not None and matriz_micro is not None:
         etnias_micro = set(df_microambiente['etnia'].unique())
         todas_etnias = sorted(list(etnias_arq.union(etnias_micro)))
         etnias = ["Todas"] + todas_etnias
-        etnia_selecionada = st.sidebar.selectbox("�� Etnia", etnias)
+        etnia_selecionada = st.sidebar.selectbox("   Etnia", etnias)
         
         # Combinar departamentos de ambos os datasets
         departamentos_arq = set(df_arquetipos['departamento'].unique())
@@ -1227,19 +1305,41 @@ if matriz_arq is not None and matriz_micro is not None:
         cargos = ["Todos"] + todos_cargos
         cargo_selecionado = st.sidebar.selectbox("💼 Cargo", cargos)
         
+        # Combinar holdings de ambos os datasets
+        holdings_arq = set()
+        holdings_micro = set()
         
+        if 'holding' in df_arquetipos.columns:
+            holdings_arq = set(df_arquetipos['holding'].dropna().unique())
         
+        if 'holding' in df_microambiente.columns:
+            holdings_micro = set(df_microambiente['holding'].dropna().unique())
         
-        # Dicionário de filtros
+        todas_holdings = sorted(list(holdings_arq.union(holdings_micro)))
+        
+        # Remover valores vazios ou 'N/A' se não quiser mostrá-los
+        todas_holdings = [h for h in todas_holdings if h and str(h).strip() and str(h).upper() != 'N/A']
+        
+        holdings = ["Todas"] + todas_holdings
+        
+        # Criar o filtro de holding
+        if len(holdings) > 1:  # Se houver mais de "Todas"
+            holding_selecionada = st.sidebar.selectbox("🏢 Holding", holdings)
+        else:
+            holding_selecionada = "Todas"
+            st.sidebar.info("ℹ️ Nenhuma holding encontrada nos dados")
+        
+        # Dicionário de filtros (normalizar para minúsculas)
         filtros = {
-            'empresa': empresa_selecionada,
-            'codrodada': codrodada_selecionada,
-            'emaillider': emaillider_selecionado,
-            'estado': estado_selecionado,
-            'sexo': genero_selecionado,
-            'etnia': etnia_selecionada,
-            'departamento': departamento_selecionado,
-            'cargo': cargo_selecionado,
+            'empresa': empresa_selecionada.lower() if empresa_selecionada != "Todas" else empresa_selecionada,
+            'codrodada': codrodada_selecionada.lower() if codrodada_selecionada != "Todas" else codrodada_selecionada,
+            'emaillider': emaillider_selecionado.lower() if emaillider_selecionado != "Todos" else emaillider_selecionado,
+            'estado': estado_selecionado.lower() if estado_selecionado != "Todos" else estado_selecionado,
+            'sexo': genero_selecionado.lower() if genero_selecionado != "Todos" else genero_selecionado,
+            'etnia': etnia_selecionada.lower() if etnia_selecionada != "Todas" else etnia_selecionada,
+            'departamento': departamento_selecionado.lower() if departamento_selecionado != "Todos" else departamento_selecionado,
+            'cargo': cargo_selecionado.lower() if cargo_selecionado != "Todos" else cargo_selecionado,
+            'holding': holding_selecionada.upper() if holding_selecionada != "Todas" else holding_selecionada,
         }
         
         # TABS PRINCIPAIS
@@ -1632,7 +1732,7 @@ if matriz_arq is not None and matriz_micro is not None:
                             ))
                             
                             fig_questoes.update_layout(
-                                title=f"�� Gap das Questões - {dimensao_selecionada}",
+                                title=f"   Gap das Questões - {dimensao_selecionada}",
                                 xaxis_title="Questões",
                                 yaxis_title="Gap (Ideal - Real)",
                                 height=400
@@ -2605,4 +2705,3 @@ with tab3:
         st.warning("⚠️ Nenhuma afirmação relacionada à saúde emocional foi identificada.")
         st.info(" Dica: Verifique se as palavras-chave estão presentes nas afirmações existentes.")
 
-            
