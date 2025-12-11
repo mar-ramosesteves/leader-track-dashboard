@@ -1173,20 +1173,41 @@ if matriz_arq is not None and matriz_micro is not None:
         with st.spinner("Carregando dados de holding..."):
             try:
                 supabase = init_supabase()
-                employees_data = supabase.table('employees').select('email, holding, empresa').execute()
-                # Criar um dicionário para mapear email -> holding
+                # Tentar diferentes combinações de colunas
+                employees_data = None
+                try:
+                    # Tentativa 1: com email
+                    employees_data = supabase.table('employees').select('email, holding, empresa').execute()
+                except:
+                    try:
+                        # Tentativa 2: sem email, apenas holding e empresa
+                        employees_data = supabase.table('employees').select('holding, empresa').execute()
+                    except:
+                        try:
+                            # Tentativa 3: apenas holding
+                            employees_data = supabase.table('employees').select('holding').execute()
+                        except:
+                            # Tentativa 4: buscar todas as colunas e ver o que tem
+                            employees_data = supabase.table('employees').select('*').execute()
+                
+                # Criar um dicionário para mapear email/empresa -> holding
                 email_to_holding = {}
-                for emp in employees_data.data:
-                    email = emp.get('email', '').lower() if emp.get('email') else ''
-                    holding = str(emp.get('holding', 'N/A')).upper().strip()
-                    empresa = emp.get('empresa', '')
-                    if email:
-                        email_to_holding[email] = holding
-                    # Também mapear por empresa (caso não tenha email)
-                    if empresa:
-                        empresa_lower = empresa.lower()
-                        if empresa_lower not in email_to_holding:
-                            email_to_holding[empresa_lower] = holding
+                if employees_data and employees_data.data:
+                    for emp in employees_data.data:
+                        # Tentar obter email (pode não existir)
+                        email = emp.get('email', '').lower() if emp.get('email') else ''
+                        holding = str(emp.get('holding', 'N/A')).upper().strip()
+                        empresa = emp.get('empresa', '')
+                        
+                        # Mapear por email se existir
+                        if email:
+                            email_to_holding[email] = holding
+                        
+                        # Mapear por empresa (sempre que existir)
+                        if empresa:
+                            empresa_lower = empresa.lower()
+                            if empresa_lower not in email_to_holding:
+                                email_to_holding[empresa_lower] = holding
             except Exception as e:
                 st.warning(f"⚠️ Aviso: Não foi possível carregar dados de holding: {str(e)}")
                 email_to_holding = {}
