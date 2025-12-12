@@ -1910,35 +1910,25 @@ with tab3:
     # Dicionário fixo com todas as reclassificações (código -> dimensão)
     # Este dicionário é definitivo e será usado sempre, garantindo que 100% das afirmações sejam classificadas
     RECLASSIFICACOES_DEFINITIVAS = {
-        # Reclassificações de afirmações existentes
-        'Q03': 'Suporte Emocional', 'Q04': 'Suporte Emocional', 'Q09': 'Suporte Emocional',
-        'Q10': 'Prevenção de Estresse', 'Q14': 'Prevenção de Estresse', 'Q17': 'Prevenção de Estresse',
-        'Q41': 'Suporte Emocional', 'Q21': 'Comunicação Positiva', 'Q26': 'Ambiente Psicológico Seguro',
-        'Q33': 'Comunicação Positiva', 'Q42': 'Comunicação Positiva', 'Q44': 'Ambiente Psicológico Seguro',
-        'Q05': 'Comunicação Positiva', 'Q15': 'Suporte Emocional', 'Q23': 'Comunicação Positiva',
-        'Q34': 'Comunicação Positiva', 'Q35': 'Comunicação Positiva', 'Q40': 'Suporte Emocional',
-        'Q43': 'Suporte Emocional', 'Q46': 'Comunicação Positiva', 'Q02': 'Comunicação Positiva',
-        'Q18': 'Suporte Emocional', 'Q25': 'Suporte Emocional', 'Q27': 'Comunicação Positiva',
+        # TODAS as 97 reclassificações baseadas no CSV completo (código -> dimensão)
+        # Usando a última ocorrência de cada código no CSV (dimensão final)
+        'Q01': 'Comunicação Positiva', 'Q02': 'Comunicação Positiva', 'Q03': 'Comunicação Positiva',
+        'Q04': 'Comunicação Positiva', 'Q05': 'Comunicação Positiva', 'Q06': 'Ambiente Psicológico Seguro',
+        'Q07': 'Ambiente Psicológico Seguro', 'Q08': 'Comunicação Positiva', 'Q09': 'Comunicação Positiva',
+        'Q10': 'Comunicação Positiva', 'Q11': 'Comunicação Positiva', 'Q12': 'Comunicação Positiva',
+        'Q13': 'Comunicação Positiva', 'Q14': 'Comunicação Positiva', 'Q15': 'Comunicação Positiva',
+        'Q16': 'Comunicação Positiva', 'Q17': 'Comunicação Positiva', 'Q18': 'Suporte Emocional',
+        'Q19': 'Suporte Emocional', 'Q20': 'Comunicação Positiva', 'Q21': 'Comunicação Positiva',
+        'Q22': 'Comunicação Positiva', 'Q23': 'Ambiente Psicológico Seguro', 'Q24': 'Comunicação Positiva',
+        'Q25': 'Suporte Emocional', 'Q26': 'Ambiente Psicológico Seguro', 'Q27': 'Comunicação Positiva',
         'Q28': 'Comunicação Positiva', 'Q29': 'Comunicação Positiva', 'Q30': 'Comunicação Positiva',
-        'Q31': 'Suporte Emocional', 'Q32': 'Ambiente Psicológico Seguro', 'Q36': 'Suporte Emocional',
-        'Q20': 'Comunicação Positiva', 'Q19': 'Suporte Emocional', 'Q13': 'Suporte Emocional',
-        'Q47': 'Suporte Emocional', 'Q08': 'Ambiente Psicológico Seguro', 'Q06': 'Ambiente Psicológico Seguro',
-        # Novas afirmações de arquétipos
-        'Q01': 'Suporte Emocional', 'Q07': 'Comunicação Positiva', 'Q08': 'Comunicação Positiva',
-        'Q11': 'Comunicação Positiva', 'Q12': 'Comunicação Positiva', 'Q16': 'Suporte Emocional',
-        'Q22': 'Comunicação Positiva', 'Q24': 'Prevenção de Estresse', 'Q37': 'Comunicação Positiva',
-        'Q38': 'Comunicação Positiva', 'Q39': 'Comunicação Positiva', 'Q48': 'Comunicação Positiva',
-        'Q49': 'Suporte Emocional',
-        # Novas afirmações de microambiente
-        'M01': 'Comunicação Positiva', 'M04': 'Comunicação Positiva', 'M05': 'Comunicação Positiva',
-        'M07': 'Ambiente Psicológico Seguro', 'M09': 'Comunicação Positiva', 'M10': 'Comunicação Positiva',
-        'M11': 'Comunicação Positiva', 'M12': 'Comunicação Positiva', 'M13': 'Comunicação Positiva',
-        'M14': 'Comunicação Positiva', 'M15': 'Comunicação Positiva', 'M16': 'Comunicação Positiva',
-        'M17': 'Comunicação Positiva', 'M22': 'Comunicação Positiva', 'M23': 'Ambiente Psicológico Seguro',
-        'M24': 'Comunicação Positiva', 'M34': 'Comunicação Positiva', 'M35': 'Comunicação Positiva',
-        'M37': 'Comunicação Positiva', 'M38': 'Comunicação Positiva', 'M39': 'Ambiente Psicológico Seguro',
-        'M42': 'Comunicação Positiva', 'M43': 'Comunicação Positiva', 'M44': 'Ambiente Psicológico Seguro',
-        'M46': 'Comunicação Positiva', 'M47': 'Ambiente Psicológico Seguro', 'M48': 'Ambiente Psicológico Seguro'
+        'Q31': 'Suporte Emocional', 'Q32': 'Ambiente Psicológico Seguro', 'Q33': 'Comunicação Positiva',
+        'Q34': 'Comunicação Positiva', 'Q35': 'Comunicação Positiva', 'Q36': 'Suporte Emocional',
+        'Q37': 'Comunicação Positiva', 'Q38': 'Comunicação Positiva', 'Q39': 'Ambiente Psicológico Seguro',
+        'Q40': 'Ambiente Psicológico Seguro', 'Q41': 'Ambiente Psicológico Seguro', 'Q42': 'Comunicação Positiva',
+        'Q43': 'Comunicação Positiva', 'Q44': 'Ambiente Psicológico Seguro', 'Q45': 'Comunicação Positiva',
+        'Q46': 'Comunicação Positiva', 'Q47': 'Ambiente Psicológico Seguro', 'Q48': 'Ambiente Psicológico Seguro',
+        'Q49': 'Suporte Emocional'
     }
     
     # Analisar afirmações de saúde emocional
