@@ -2230,10 +2230,14 @@ with tab3:
         st.subheader("📝 Afirmações que NÃO estão em Saúde Emocional")
         st.markdown("**🔍 Lista completa de afirmações que não foram classificadas como saúde emocional, com códigos únicos para movimentação.**")
         
-        # Obter códigos das afirmações de saúde emocional
-        codigos_se = set()
+        # Obter códigos das afirmações de saúde emocional (com tipo para evitar conflitos)
+        codigos_se_arq = set()
+        codigos_se_micro = set()
         for af in afirmacoes_saude_emocional:
-            codigos_se.add(af['chave'])
+            if af['tipo'] == 'Arquétipo':
+                codigos_se_arq.add(str(af['chave']).strip())
+            else:
+                codigos_se_micro.add(str(af['chave']).strip())
         
         # Obter TODAS as afirmações únicas de arquétipos (usando drop_duplicates)
         todas_afirmacoes_arq = matriz_arq[['COD_AFIRMACAO', 'AFIRMACAO', 'ARQUETIPO']].drop_duplicates(subset=['COD_AFIRMACAO'])
@@ -2243,8 +2247,8 @@ with tab3:
         codigos_arq_unicos = set()
         
         for _, row in todas_afirmacoes_arq.iterrows():
-            codigo = row['COD_AFIRMACAO']
-            if codigo not in codigos_se and codigo not in codigos_arq_unicos:
+            codigo = str(row['COD_AFIRMACAO']).strip()
+            if codigo not in codigos_se_arq and codigo not in codigos_arq_unicos:
                 codigos_arq_unicos.add(codigo)
                 afirmacoes_nao_se_arq.append({
                     'codigo_original': codigo,
@@ -2260,8 +2264,8 @@ with tab3:
         codigos_micro_unicos = set()
         
         for _, row in todas_afirmacoes_micro.iterrows():
-            codigo = row['COD']
-            if codigo not in codigos_se and codigo not in codigos_micro_unicos:
+            codigo = str(row['COD']).strip()
+            if codigo not in codigos_se_micro and codigo not in codigos_micro_unicos:
                 codigos_micro_unicos.add(codigo)
                 afirmacoes_nao_se_micro.append({
                     'codigo_original': codigo,
@@ -2274,37 +2278,62 @@ with tab3:
         total_arq_unicos = len(todas_afirmacoes_arq)
         total_micro_unicos = len(todas_afirmacoes_micro)
         total_geral_esperado = total_arq_unicos + total_micro_unicos
-        total_se = len(codigos_se)
+        total_se = len(codigos_se_arq) + len(codigos_se_micro)
         total_nao_se = len(afirmacoes_nao_se_arq) + len(afirmacoes_nao_se_micro)
         
-        # Verificar se há códigos que estão em ambas as listas (não deveria acontecer)
-        codigos_nao_se = set()
-        for af in afirmacoes_nao_se_arq:
-            codigos_nao_se.add(af['codigo_original'])
-        for af in afirmacoes_nao_se_micro:
-            codigos_nao_se.add(af['codigo_original'])
-        
         # Verificar códigos que estão faltando
-        todos_codigos_arq = set(todas_afirmacoes_arq['COD_AFIRMACAO'].unique())
-        todos_codigos_micro = set(todas_afirmacoes_micro['COD'].unique())
-        todos_codigos_esperados = todos_codigos_arq.union(todos_codigos_micro)
-        todos_codigos_encontrados = codigos_se.union(codigos_nao_se)
-        codigos_faltantes = todos_codigos_esperados - todos_codigos_encontrados
+        todos_codigos_arq_esperados = set(str(cod).strip() for cod in todas_afirmacoes_arq['COD_AFIRMACAO'].unique())
+        todos_codigos_micro_esperados = set(str(cod).strip() for cod in todas_afirmacoes_micro['COD'].unique())
         
-        st.markdown(f"**📊 Verificação de Contagem:**")
+        # Códigos encontrados (SE + Não-SE)
+        codigos_encontrados_arq = codigos_se_arq.union(set(af['codigo_original'] for af in afirmacoes_nao_se_arq))
+        codigos_encontrados_micro = codigos_se_micro.union(set(af['codigo_original'] for af in afirmacoes_nao_se_micro))
+        
+        # Códigos faltantes
+        codigos_faltantes_arq = todos_codigos_arq_esperados - codigos_encontrados_arq
+        codigos_faltantes_micro = todos_codigos_micro_esperados - codigos_encontrados_micro
+        
+        st.markdown(f"**📊 Verificação de Contagem Detalhada:**")
         st.markdown(f"- Total de afirmações únicas (Arquétipos): {total_arq_unicos}")
         st.markdown(f"- Total de afirmações únicas (Microambiente): {total_micro_unicos}")
         st.markdown(f"- **Total esperado: {total_geral_esperado} afirmações**")
         st.markdown(f"- Total em Saúde Emocional: {total_se}")
         st.markdown(f"- Total NÃO em Saúde Emocional: {total_nao_se}")
         st.markdown(f"- **Soma (SE + Não-SE): {total_se + total_nao_se}**")
+        st.markdown(f"- **Diferença: {total_geral_esperado - (total_se + total_nao_se)} afirmações faltando**")
         
         if codigos_faltantes:
-            st.error(f"❌ **Erro:** {len(codigos_faltantes)} códigos não foram encontrados: {sorted(list(codigos_faltantes))[:10]}{'...' if len(codigos_faltantes) > 10 else ''}")
+            st.error(f"❌ **Erro:** {len(codigos_faltantes)} códigos não foram encontrados!")
+            if codigos_faltantes_arq:
+                st.error(f"   - Arquétipos faltantes ({len(codigos_faltantes_arq)}): {sorted(codigos_faltantes_arq)[:20]}{'...' if len(codigos_faltantes_arq) > 20 else ''}")
+            if codigos_faltantes_micro:
+                st.error(f"   - Microambiente faltantes ({len(codigos_faltantes_micro)}): {sorted(codigos_faltantes_micro)[:20]}{'...' if len(codigos_faltantes_micro) > 20 else ''}")
+            
+            # Mostrar detalhes das afirmações faltantes
+            with st.expander("🔍 Ver afirmações faltantes em detalhes"):
+                if codigos_faltantes_arq:
+                    st.markdown("**Arquétipos faltantes:**")
+                    df_faltantes_arq = todas_afirmacoes_arq[todas_afirmacoes_arq['COD_AFIRMACAO'].isin(codigos_faltantes_arq)]
+                    st.dataframe(df_faltantes_arq[['COD_AFIRMACAO', 'AFIRMACAO', 'ARQUETIPO']], use_container_width=True, hide_index=True)
+                
+                if codigos_faltantes_micro:
+                    st.markdown("**Microambiente faltantes:**")
+                    df_faltantes_micro = todas_afirmacoes_micro[todas_afirmacoes_micro['COD'].isin(codigos_faltantes_micro)]
+                    st.dataframe(df_faltantes_micro[['COD', 'AFIRMACAO', 'DIMENSAO', 'SUBDIMENSAO']], use_container_width=True, hide_index=True)
         
         if total_se + total_nao_se != total_geral_esperado:
             st.warning(f"⚠️ **Atenção:** Há uma diferença de {total_geral_esperado - (total_se + total_nao_se)} afirmações. Verificando...")
-            st.info(f"💡 Códigos esperados: {len(todos_codigos_esperados)}, Códigos encontrados: {len(todos_codigos_encontrados)}")
+            st.info(f"💡 Arquétipos: esperados {len(todos_codigos_arq_esperados)}, encontrados {len(codigos_encontrados_arq)}")
+            st.info(f"💡 Microambiente: esperados {len(todos_codigos_micro_esperados)}, encontrados {len(codigos_encontrados_micro)}")
+            
+            # Mostrar distribuição
+            st.markdown("**📈 Distribuição Detalhada:**")
+            st.markdown(f"- Arquétipos em SE: {len(codigos_se_arq)}")
+            st.markdown(f"- Arquétipos NÃO em SE: {len(afirmacoes_nao_se_arq)}")
+            st.markdown(f"- **Total Arquétipos: {len(codigos_se_arq) + len(afirmacoes_nao_se_arq)} / {total_arq_unicos}**")
+            st.markdown(f"- Microambiente em SE: {len(codigos_se_micro)}")
+            st.markdown(f"- Microambiente NÃO em SE: {len(afirmacoes_nao_se_micro)}")
+            st.markdown(f"- **Total Microambiente: {len(codigos_se_micro) + len(afirmacoes_nao_se_micro)} / {total_micro_unicos}**")
         
         # Criar códigos únicos (a01, a02, ... para arquétipos, m01, m02, ... para microambiente)
         afirmacoes_com_codigo = []
