@@ -1270,6 +1270,30 @@ if matriz_arq is not None and matriz_micro is not None:
         # Filtros principais
         st.sidebar.subheader(" Filtros Principais")
         
+        # Combinar holdings de ambos os datasets
+        holdings_arq = set()
+        holdings_micro = set()
+        
+        if 'holding' in df_arquetipos.columns:
+            holdings_arq = set(df_arquetipos['holding'].dropna().unique())
+        
+        if 'holding' in df_microambiente.columns:
+            holdings_micro = set(df_microambiente['holding'].dropna().unique())
+        
+        todas_holdings = sorted(list(holdings_arq.union(holdings_micro)))
+        
+        # Remover valores vazios ou 'N/A' se não quiser mostrá-los
+        todas_holdings = [h for h in todas_holdings if h and str(h).strip() and str(h).upper() != 'N/A']
+        
+        holdings = ["Todas"] + todas_holdings
+        
+        # Criar o filtro de holding
+        if len(holdings) > 1:  # Se houver mais de "Todas"
+            holding_selecionada = st.sidebar.selectbox("🏢 Holding", holdings)
+        else:
+            holding_selecionada = "Todas"
+            st.sidebar.info("ℹ️ Nenhuma holding encontrada nos dados")
+        
         # Combinar empresas de ambos os datasets (tudo minúsculas)
         empresas_arq = set(df_arquetipos['empresa'].unique())
         empresas_micro = set(df_microambiente['empresa'].unique())
@@ -1325,30 +1349,6 @@ if matriz_arq is not None and matriz_micro is not None:
         todos_cargos = sorted(list(cargos_arq.union(cargos_micro)))
         cargos = ["Todos"] + todos_cargos
         cargo_selecionado = st.sidebar.selectbox("💼 Cargo", cargos)
-        
-        # Combinar holdings de ambos os datasets
-        holdings_arq = set()
-        holdings_micro = set()
-        
-        if 'holding' in df_arquetipos.columns:
-            holdings_arq = set(df_arquetipos['holding'].dropna().unique())
-        
-        if 'holding' in df_microambiente.columns:
-            holdings_micro = set(df_microambiente['holding'].dropna().unique())
-        
-        todas_holdings = sorted(list(holdings_arq.union(holdings_micro)))
-        
-        # Remover valores vazios ou 'N/A' se não quiser mostrá-los
-        todas_holdings = [h for h in todas_holdings if h and str(h).strip() and str(h).upper() != 'N/A']
-        
-        holdings = ["Todas"] + todas_holdings
-        
-        # Criar o filtro de holding
-        if len(holdings) > 1:  # Se houver mais de "Todas"
-            holding_selecionada = st.sidebar.selectbox("🏢 Holding", holdings)
-        else:
-            holding_selecionada = "Todas"
-            st.sidebar.info("ℹ️ Nenhuma holding encontrada nos dados")
         
         # Dicionário de filtros (normalizar para minúsculas)
         filtros = {
