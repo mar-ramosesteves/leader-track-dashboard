@@ -20,10 +20,17 @@ NORMALIZAR_POR_SUBDIMENSAO = False  # deixa sempre False para mostrar valores br
 def analisar_afirmacoes_saude_emocional(matriz_arq, matriz_micro, df_arquetipos, df_microambiente, filtros):
     """Analisa afirmações existentes e identifica as relacionadas à saúde emocional com filtros aplicados"""
     
-    # Carregar classificações do CSV
+    # Carregar classificações do CSV (com debug)
     classificacoes = carregar_classificacoes_saude_emocional()
     
-    # Palavras-chave relacionadas à saúde emocional (usadas como fallback)
+    # DEBUG: Mostrar quantas classificações foram carregadas
+    if classificacoes:
+        chaves_compostas = [k for k in classificacoes.keys() if k.startswith('arq_') or k.startswith('micro_')]
+        st.info(f"🔍 **DEBUG:** {len(chaves_compostas)} chaves compostas carregadas do CSV")
+    else:
+        st.warning("⚠️ **ATENÇÃO:** Nenhuma classificação foi carregada do CSV!")
+    
+    # Palavras-chave relacionadas à saúde emocional (mantidas para referência, mas não usadas)
     palavras_chave_saude_emocional = [
         # Empatia e Compreensão
         'empatia', 'compreensão', 'compreensao', 'entendimento', 'percebe', 'oferece',
@@ -205,8 +212,30 @@ def analisar_afirmacoes_saude_emocional(matriz_arq, matriz_micro, df_arquetipos,
                 'dimensao_saude_emocional': dimensao
             })
             codigos_ja_processados.add(codigo_key)
-                
     
+    # DEBUG: Mostrar resumo final
+    st.info(f"📊 **DEBUG - Resumo de afirmações encontradas:**")
+    st.write(f"  - Total de afirmações SE: {len(afirmacoes_se)}")
+    arq_count = len([a for a in afirmacoes_se if a['tipo'] == 'Arquétipo'])
+    micro_count = len([a for a in afirmacoes_se if a['tipo'] == 'Microambiente'])
+    st.write(f"  - Arquétipos: {arq_count}")
+    st.write(f"  - Microambiente: {micro_count}")
+    
+    # Contar por dimensão
+    dimensoes_count = {}
+    for af in afirmacoes_se:
+        dim = af.get('dimensao_saude_emocional', 'Não classificada')
+        if dim not in dimensoes_count:
+            dimensoes_count[dim] = {'arq': 0, 'micro': 0}
+        if af['tipo'] == 'Arquétipo':
+            dimensoes_count[dim]['arq'] += 1
+        else:
+            dimensoes_count[dim]['micro'] += 1
+    
+    st.write(f"📋 **Distribuição por dimensão:**")
+    for dim, contagem in sorted(dimensoes_count.items()):
+        total = contagem['arq'] + contagem['micro']
+        st.write(f"  - {dim}: {total} total ({contagem['arq']} arquétipos + {contagem['micro']} microambiente)")
     
     return afirmacoes_se, df_arq_filtrado, df_micro_filtrado
     
@@ -259,8 +288,25 @@ def init_supabase():
 @st.cache_data(ttl=3600)
 def carregar_classificacoes_saude_emocional():
     """Carrega as classificações das 97 afirmações de saúde emocional do CSV"""
+    import os
+    
+    # Verificar se o arquivo existe
+    arquivo_csv = 'classificacoes_saude_emocional_97_afirmacoes.csv'
+    caminho_completo = os.path.abspath(arquivo_csv)
+    
     try:
-        df_classificacoes = pd.read_csv('classificacoes_saude_emocional_97_afirmacoes.csv', encoding='utf-8-sig')
+        # Verificar se arquivo existe
+        if not os.path.exists(arquivo_csv):
+            st.error(f"❌ **ARQUIVO NÃO ENCONTRADO!**")
+            st.error(f"📁 Procurando em: `{caminho_completo}`")
+            st.error(f"💡 Certifique-se de que o arquivo `{arquivo_csv}` está no mesmo diretório que `app.py`")
+            return {}
+        
+        df_classificacoes = pd.read_csv(arquivo_csv, encoding='utf-8-sig')
+        
+        # DEBUG: Mostrar informações do CSV
+        st.success(f"✅ **CSV CARREGADO COM SUCESSO!**")
+        st.info(f"📊 Total de linhas no CSV: {len(df_classificacoes)}")
         
         # Criar dicionário com chaves compostas (tipo_codigo) e simples (codigo) como fallback
         classificacoes = {}
@@ -277,12 +323,35 @@ def carregar_classificacoes_saude_emocional():
             if codigo_original not in classificacoes:
                 classificacoes[codigo_original] = dimensao
         
+        # DEBUG: Mostrar distribuição por dimensão
+        dimensoes_contagem = {}
+        for key, dim in classificacoes.items():
+            if key.startswith('arq_') or key.startswith('micro_'):
+                if dim not in dimensoes_contagem:
+                    dimensoes_contagem[dim] = {'arq': 0, 'micro': 0}
+                if key.startswith('arq_'):
+                    dimensoes_contagem[dim]['arq'] += 1
+                elif key.startswith('micro_'):
+                    dimensoes_contagem[dim]['micro'] += 1
+        
+        st.info(f"📋 **Distribuição por dimensão:**")
+        for dim, contagem in sorted(dimensoes_contagem.items()):
+            total = contagem['arq'] + contagem['micro']
+            st.write(f"  - {dim}: {total} total ({contagem['arq']} arquétipos + {contagem['micro']} microambiente)")
+        
+        st.info(f"🔑 **Total de chaves no dicionário:** {len(classificacoes)}")
+        
         return classificacoes
     except FileNotFoundError:
-        st.warning("⚠️ Arquivo 'classificacoes_saude_emocional_97_afirmacoes.csv' não encontrado. Usando classificação por palavras-chave.")
+        st.error(f"❌ **ARQUIVO NÃO ENCONTRADO!**")
+        st.error(f"📁 Procurando em: `{caminho_completo}`")
+        st.error(f"💡 Certifique-se de que o arquivo `{arquivo_csv}` está no mesmo diretório que `app.py`")
         return {}
     except Exception as e:
-        st.error(f"❌ Erro ao carregar classificações: {str(e)}")
+        st.error(f"❌ **ERRO ao carregar classificações:** {str(e)}")
+        st.error(f"📁 Tentando carregar de: `{caminho_completo}`")
+        import traceback
+        st.code(traceback.format_exc())
         return {}
 
 # ==================== FUNÇÕES ARQUÉTIPOS ====================
