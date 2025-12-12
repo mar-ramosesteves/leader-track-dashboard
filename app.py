@@ -2096,6 +2096,126 @@ with tab3:
         
         st.plotly_chart(fig_compliance, use_container_width=True)
         st.divider()
+        
+        # ==================== MAPEAMENTO COMPLETO: AFIRMAÇÕES POR DIMENSÃO ====================
+        st.subheader("📋 Mapeamento Completo: Afirmações por Dimensão de Saúde Emocional")
+        st.markdown("**🔍 Use esta seção para revisar e ajustar a classificação das afirmações nas dimensões.**")
+        
+        # Criar dicionário organizado por dimensão
+        mapeamento_por_dimensao = {
+            'Prevenção de Estresse': {'arquetipos': [], 'microambiente': []},
+            'Ambiente Psicológico Seguro': {'arquetipos': [], 'microambiente': []},
+            'Suporte Emocional': {'arquetipos': [], 'microambiente': []},
+            'Comunicação Positiva': {'arquetipos': [], 'microambiente': []},
+            'Equilíbrio Vida-Trabalho': {'arquetipos': [], 'microambiente': []}
+        }
+        
+        # Palavras-chave para cada dimensão (mesma lógica usada no código)
+        palavras_chave_dimensoes = {
+            'Prevenção de Estresse': ['estresse', 'ansiedade', 'pressão', 'pressao', 'cobrança', 'cobranca', 'deadline', 'prazos', 'tensão', 'tensao', 'sobrecarga', 'preocupa com o tempo', 'preocupa com detalhes', 'preocupa se', 'preocupa com', 'necessidade de se aprofundar', 'aprofundar nos detalhes', 'detalhes na execução', 'detalhes de realização', 'detalhes do trabalho', 'sem necessidade de ficar de olho', 'fazer todo o possivel', 'resolver problemas particulares', 'problemas particulares urgentes', 'atuar na solução de conflitos', 'solução de conflitos em sua equipe', 'risco calculado', 'resultasse em algo negativo', 'seriam apoiados', 'leais uns com os outros', 'mais elogiados e incentivados', 'do que criticados'],
+            'Ambiente Psicológico Seguro': ['ambiente', 'seguro', 'proteção', 'protecao', 'respeito', 'cuidadoso', 'palavras'],
+            'Suporte Emocional': ['suporte', 'apoio', 'ajuda', 'assistência', 'assistencia', 'ajudar', 'resolver', 'percebe', 'oferece'],
+            'Comunicação Positiva': ['feedback', 'positivo', 'construtivo', 'encorajamento', 'comentários', 'comentarios', 'positivos', 'desenvolvimento', 'futuro'],
+            'Equilíbrio Vida-Trabalho': ['equilíbrio', 'equilibrio', 'flexibilidade', 'horários', 'horarios', 'tempo', 'família', 'familia', 'pessoal', 'relação', 'relacao', 'vida pessoal']
+        }
+        
+        # Classificar todas as afirmações de saúde emocional
+        for af in afirmacoes_saude_emocional:
+            af_lower = af['afirmacao'].lower()
+            categoria_atribuida = None
+            
+            # Identificar categoria usando a mesma lógica
+            for dimensao, palavras in palavras_chave_dimensoes.items():
+                if any(palavra in af_lower for palavra in palavras):
+                    categoria_atribuida = dimensao
+                    break
+            
+            # Se não encontrou, coloca em Suporte Emocional (padrão)
+            if not categoria_atribuida:
+                categoria_atribuida = 'Suporte Emocional'
+            
+            # Adicionar à dimensão correspondente
+            if af['tipo'] == 'Arquétipo':
+                mapeamento_por_dimensao[categoria_atribuida]['arquetipos'].append({
+                    'codigo': af['chave'],
+                    'afirmacao': af['afirmacao'],
+                    'dimensao': af['dimensao']
+                })
+            else:  # Microambiente
+                mapeamento_por_dimensao[categoria_atribuida]['microambiente'].append({
+                    'codigo': af['chave'],
+                    'afirmacao': af['afirmacao'],
+                    'dimensao': af['dimensao'],
+                    'subdimensao': af['subdimensao']
+                })
+        
+        # Criar DataFrame completo para exportação
+        dados_exportacao = []
+        
+        # Exibir mapeamento organizado
+        for dimensao, dados in mapeamento_por_dimensao.items():
+            total_arq = len(dados['arquetipos'])
+            total_micro = len(dados['microambiente'])
+            total_geral = total_arq + total_micro
+            
+            if total_geral > 0:
+                with st.expander(f"📁 **{dimensao}** ({total_geral} afirmações: {total_arq} arquétipos + {total_micro} microambiente)", expanded=False):
+                    # Mostrar palavras-chave que identificam esta dimensão
+                    palavras_dimensao = palavras_chave_dimensoes.get(dimensao, [])
+                    st.markdown(f"**🔑 Palavras-chave:** {', '.join(palavras_dimensao[:10])}{'...' if len(palavras_dimensao) > 10 else ''}")
+                    st.markdown("---")
+                    
+                    # Mostrar afirmações de arquétipos
+                    if dados['arquetipos']:
+                        st.markdown(f"### 🧠 Arquétipos ({total_arq} afirmações)")
+                        df_arq = pd.DataFrame(dados['arquetipos'])
+                        df_arq.columns = ['Código', 'Afirmação', 'Arquétipo']
+                        st.dataframe(df_arq, use_container_width=True, hide_index=True)
+                        
+                        # Adicionar para exportação
+                        for _, row in df_arq.iterrows():
+                            dados_exportacao.append({
+                                'Dimensão Saúde Emocional': dimensao,
+                                'Tipo': 'Arquétipo',
+                                'Código': row['Código'],
+                                'Afirmação': row['Afirmação'],
+                                'Arquétipo/Dimensão': row['Arquétipo'],
+                                'Subdimensão': 'N/A'
+                            })
+                    
+                    # Mostrar afirmações de microambiente
+                    if dados['microambiente']:
+                        st.markdown(f"### 🏢 Microambiente ({total_micro} afirmações)")
+                        df_micro = pd.DataFrame(dados['microambiente'])
+                        df_micro.columns = ['Código', 'Afirmação', 'Dimensão', 'Subdimensão']
+                        st.dataframe(df_micro, use_container_width=True, hide_index=True)
+                        
+                        # Adicionar para exportação
+                        for _, row in df_micro.iterrows():
+                            dados_exportacao.append({
+                                'Dimensão Saúde Emocional': dimensao,
+                                'Tipo': 'Microambiente',
+                                'Código': row['Código'],
+                                'Afirmação': row['Afirmação'],
+                                'Arquétipo/Dimensão': row['Dimensão'],
+                                'Subdimensão': row['Subdimensão']
+                            })
+        
+        # Botão de download do mapeamento completo
+        if dados_exportacao:
+            df_export = pd.DataFrame(dados_exportacao)
+            csv_mapeamento = df_export.to_csv(index=False, encoding='utf-8-sig')
+            st.download_button(
+                label="📥 Download CSV - Mapeamento Completo por Dimensão",
+                data=csv_mapeamento,
+                file_name="mapeamento_saude_emocional_por_dimensao.csv",
+                mime="text/csv",
+                key="download_mapeamento"
+            )
+        
+        st.info("💡 **Dica:** Use esta tabela para revisar se as afirmações estão classificadas corretamente. Se precisar ajustar, você pode modificar as palavras-chave no código (variável `palavras_chave_dimensoes`).")
+        st.divider()
+        
         # ==================== DRILL-DOWN POR CATEGORIA ====================
         st.subheader("🔍 Drill-Down por Categoria de Compliance")
         
