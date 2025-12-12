@@ -141,10 +141,15 @@ def analisar_afirmacoes_saude_emocional(matriz_arq, matriz_micro, df_arquetipos,
             holding_filtro = str(filtros['holding']).upper().strip()
             df_micro_filtrado = df_micro_filtrado[df_micro_filtrado['holding'].astype(str).str.upper().str.strip() == holding_filtro]
     
+    # Obter afirmações únicas de arquétipos (evitar duplicatas por código)
+    matriz_arq_unicos = matriz_arq[['COD_AFIRMACAO', 'AFIRMACAO', 'ARQUETIPO']].drop_duplicates(subset=['COD_AFIRMACAO'])
+    
     # Analisar matriz de arquétipos
-    for _, row in matriz_arq.iterrows():
+    for _, row in matriz_arq_unicos.iterrows():
         codigo = row['COD_AFIRMACAO']
-        if codigo not in codigos_ja_processados:  # Evita repetições
+        # Usar prefixo 'arq_' para evitar conflito com códigos de microambiente
+        codigo_key = f"arq_{codigo}"
+        if codigo_key not in codigos_ja_processados:  # Evita repetições
             afirmacao = str(row['AFIRMACAO']).lower()
             if any(palavra in afirmacao for palavra in palavras_chave_saude_emocional):
                 afirmacoes_se.append({
@@ -154,12 +159,17 @@ def analisar_afirmacoes_saude_emocional(matriz_arq, matriz_micro, df_arquetipos,
                     'subdimensao': 'N/A',
                     'chave': codigo
                 })
-                codigos_ja_processados.add(codigo)  # Marca como processado
+                codigos_ja_processados.add(codigo_key)  # Marca como processado
+    
+    # Obter afirmações únicas de microambiente (evitar duplicatas por código)
+    matriz_micro_unicos = matriz_micro[['COD', 'AFIRMACAO', 'DIMENSAO', 'SUBDIMENSAO']].drop_duplicates(subset=['COD'])
     
     # Analisar matriz de microambiente
-    for _, row in matriz_micro.iterrows():
+    for _, row in matriz_micro_unicos.iterrows():
         codigo = row['COD']
-        if codigo not in codigos_ja_processados:  # Evita repetições
+        # Usar prefixo 'micro_' para evitar conflito com códigos de arquétipos
+        codigo_key = f"micro_{codigo}"
+        if codigo_key not in codigos_ja_processados:  # Evita repetições
             afirmacao = str(row['AFIRMACAO']).lower()
             if any(palavra in afirmacao for palavra in palavras_chave_saude_emocional):
                 afirmacoes_se.append({
@@ -169,7 +179,7 @@ def analisar_afirmacoes_saude_emocional(matriz_arq, matriz_micro, df_arquetipos,
                     'subdimensao': row['SUBDIMENSAO'],
                     'chave': codigo
                 })
-                codigos_ja_processados.add(codigo)  # Marca como processado
+                codigos_ja_processados.add(codigo_key)  # Marca como processado
                 
     
     
@@ -2225,11 +2235,14 @@ with tab3:
         for af in afirmacoes_saude_emocional:
             codigos_se.add(af['chave'])
         
+        # Obter TODAS as afirmações únicas de arquétipos (usando drop_duplicates)
+        todas_afirmacoes_arq = matriz_arq[['COD_AFIRMACAO', 'AFIRMACAO', 'ARQUETIPO']].drop_duplicates(subset=['COD_AFIRMACAO'])
+        
         # Listar todas as afirmações de arquétipos que NÃO estão em SE
         afirmacoes_nao_se_arq = []
         codigos_arq_unicos = set()
         
-        for _, row in matriz_arq.iterrows():
+        for _, row in todas_afirmacoes_arq.iterrows():
             codigo = row['COD_AFIRMACAO']
             if codigo not in codigos_se and codigo not in codigos_arq_unicos:
                 codigos_arq_unicos.add(codigo)
@@ -2239,11 +2252,14 @@ with tab3:
                     'arquetipo': row['ARQUETIPO']
                 })
         
+        # Obter TODAS as afirmações únicas de microambiente (usando drop_duplicates)
+        todas_afirmacoes_micro = matriz_micro[['COD', 'AFIRMACAO', 'DIMENSAO', 'SUBDIMENSAO']].drop_duplicates(subset=['COD'])
+        
         # Listar todas as afirmações de microambiente que NÃO estão em SE
         afirmacoes_nao_se_micro = []
         codigos_micro_unicos = set()
         
-        for _, row in matriz_micro.iterrows():
+        for _, row in todas_afirmacoes_micro.iterrows():
             codigo = row['COD']
             if codigo not in codigos_se and codigo not in codigos_micro_unicos:
                 codigos_micro_unicos.add(codigo)
@@ -2253,6 +2269,42 @@ with tab3:
                     'dimensao': row['DIMENSAO'],
                     'subdimensao': row['SUBDIMENSAO']
                 })
+        
+        # DEBUG: Mostrar totais para verificação
+        total_arq_unicos = len(todas_afirmacoes_arq)
+        total_micro_unicos = len(todas_afirmacoes_micro)
+        total_geral_esperado = total_arq_unicos + total_micro_unicos
+        total_se = len(codigos_se)
+        total_nao_se = len(afirmacoes_nao_se_arq) + len(afirmacoes_nao_se_micro)
+        
+        # Verificar se há códigos que estão em ambas as listas (não deveria acontecer)
+        codigos_nao_se = set()
+        for af in afirmacoes_nao_se_arq:
+            codigos_nao_se.add(af['codigo_original'])
+        for af in afirmacoes_nao_se_micro:
+            codigos_nao_se.add(af['codigo_original'])
+        
+        # Verificar códigos que estão faltando
+        todos_codigos_arq = set(todas_afirmacoes_arq['COD_AFIRMACAO'].unique())
+        todos_codigos_micro = set(todas_afirmacoes_micro['COD'].unique())
+        todos_codigos_esperados = todos_codigos_arq.union(todos_codigos_micro)
+        todos_codigos_encontrados = codigos_se.union(codigos_nao_se)
+        codigos_faltantes = todos_codigos_esperados - todos_codigos_encontrados
+        
+        st.markdown(f"**📊 Verificação de Contagem:**")
+        st.markdown(f"- Total de afirmações únicas (Arquétipos): {total_arq_unicos}")
+        st.markdown(f"- Total de afirmações únicas (Microambiente): {total_micro_unicos}")
+        st.markdown(f"- **Total esperado: {total_geral_esperado} afirmações**")
+        st.markdown(f"- Total em Saúde Emocional: {total_se}")
+        st.markdown(f"- Total NÃO em Saúde Emocional: {total_nao_se}")
+        st.markdown(f"- **Soma (SE + Não-SE): {total_se + total_nao_se}**")
+        
+        if codigos_faltantes:
+            st.error(f"❌ **Erro:** {len(codigos_faltantes)} códigos não foram encontrados: {sorted(list(codigos_faltantes))[:10]}{'...' if len(codigos_faltantes) > 10 else ''}")
+        
+        if total_se + total_nao_se != total_geral_esperado:
+            st.warning(f"⚠️ **Atenção:** Há uma diferença de {total_geral_esperado - (total_se + total_nao_se)} afirmações. Verificando...")
+            st.info(f"💡 Códigos esperados: {len(todos_codigos_esperados)}, Códigos encontrados: {len(todos_codigos_encontrados)}")
         
         # Criar códigos únicos (a01, a02, ... para arquétipos, m01, m02, ... para microambiente)
         afirmacoes_com_codigo = []
