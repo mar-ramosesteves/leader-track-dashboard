@@ -160,15 +160,9 @@ def analisar_afirmacoes_saude_emocional(matriz_arq, matriz_micro, df_arquetipos,
             dimensao = classificacoes[codigo_key]
         elif codigo in classificacoes:
             dimensao = classificacoes[codigo]
-        else:
-            # FALLBACK: Verificar palavras-chave
-            afirmacao = str(row['AFIRMACAO']).lower()
-            for palavra in palavras_chave_saude_emocional:
-                if palavra in afirmacao:
-                    dimensao = 'Suporte Emocional'  # Padrão se encontrar palavra-chave
-                    break
+        # NÃO usar palavras-chave - apenas CSV
         
-        # Se encontrou classificação (do CSV ou palavras-chave), adicionar
+        # Se encontrou classificação no CSV, adicionar
         if dimensao:
             afirmacoes_se.append({
                 'tipo': 'Arquétipo',
@@ -198,15 +192,9 @@ def analisar_afirmacoes_saude_emocional(matriz_arq, matriz_micro, df_arquetipos,
             dimensao = classificacoes[codigo_key]
         elif codigo in classificacoes:
             dimensao = classificacoes[codigo]
-        else:
-            # FALLBACK: Verificar palavras-chave
-            afirmacao = str(row['AFIRMACAO']).lower()
-            for palavra in palavras_chave_saude_emocional:
-                if palavra in afirmacao:
-                    dimensao = 'Suporte Emocional'  # Padrão se encontrar palavra-chave
-                    break
+        # NÃO usar palavras-chave - apenas CSV
         
-        # Se encontrou classificação (do CSV ou palavras-chave), adicionar
+        # Se encontrou classificação no CSV, adicionar
         if dimensao:
             afirmacoes_se.append({
                 'tipo': 'Microambiente',
@@ -2486,13 +2474,9 @@ with tab3:
                 elif codigo_af in reclassificacoes:
                     categoria_atribuida = reclassificacoes[codigo_af].get('para', None)
             
-            # Se ainda não encontrou, usar palavras-chave como fallback
+            # Se ainda não encontrou, usar dimensao_saude_emocional que já vem da função
             if not categoria_atribuida:
-                af_lower = af['afirmacao'].lower()
-                for dimensao, palavras in palavras_chave_dimensoes.items():
-                    if any(palavra in af_lower for palavra in palavras):
-                        categoria_atribuida = dimensao
-                        break
+                categoria_atribuida = af.get('dimensao_saude_emocional', None)
             
             # Se ainda não encontrou, usar Suporte Emocional como padrão
             if not categoria_atribuida:
