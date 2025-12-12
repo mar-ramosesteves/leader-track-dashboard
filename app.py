@@ -2346,65 +2346,65 @@ with tab3:
                 st.error(f"❌ Erro ao processar arquivo: {str(e)}")
                 st.info("💡 Verifique se o arquivo está no formato CSV correto e com encoding UTF-8")
         
-        # SEMPRE expandir afirmacoes_saude_emocional para incluir TODAS as 97 afirmações
-        # (usando reclassificações definitivas)
-        reclassificacoes_finais = RECLASSIFICACOES_DEFINITIVAS.copy()
-        if reclassificacoes:
-            # Se houver CSV importado, ele sobrescreve as reclassificações definitivas
-            for k, v in reclassificacoes.items():
-                reclassificacoes_finais[k] = v['para']
+        # Carregar classificações do CSV para garantir que todas as afirmações tenham dimensao_saude_emocional
+        classificacoes_csv = carregar_classificacoes_saude_emocional()
         
-        # Expandir para incluir TODAS as afirmações (sempre)
+        # Expandir para incluir TODAS as 97 afirmações (sempre)
         # Obter todas as afirmações únicas de arquétipos
         todas_afirmacoes_arq_unicas = matriz_arq[['COD_AFIRMACAO', 'AFIRMACAO', 'ARQUETIPO']].drop_duplicates(subset=['COD_AFIRMACAO'])
         todas_afirmacoes_micro_unicas = matriz_micro[['COD', 'AFIRMACAO', 'DIMENSAO', 'SUBDIMENSAO']].drop_duplicates(subset=['COD'])
         
-        # Criar set de códigos já em afirmacoes_saude_emocional
+        # Criar set de códigos já em afirmacoes_saude_emocional (usando chave composta)
         codigos_ja_em_se = set()
         for af in afirmacoes_saude_emocional:
-            codigos_ja_em_se.add(str(af['chave']).strip())
+            codigo = str(af['chave']).strip()
+            tipo = af.get('tipo', '').strip()
+            if 'Arquétipo' in tipo or 'Arquetipo' in tipo:
+                codigos_ja_em_se.add(f"arq_{codigo}")
+            elif 'Microambiente' in tipo or 'Micro' in tipo:
+                codigos_ja_em_se.add(f"micro_{codigo}")
+            else:
+                codigos_ja_em_se.add(codigo)
         
         # Adicionar todas as afirmações de arquétipos que ainda não estão
         for _, row in todas_afirmacoes_arq_unicas.iterrows():
             codigo = str(row['COD_AFIRMACAO']).strip()
-            # Normalizar código para comparação (Q01, Q1, 01, etc.)
-            codigos_variacoes = [codigo, codigo.upper(), codigo.lower()]
-            if codigo.startswith('Q'):
-                codigos_variacoes.extend([codigo[1:], codigo[1:].zfill(2)])
+            codigo_key = f"arq_{codigo}"
             
-            # Verificar se já está na lista (em qualquer variação)
-            ja_existe = any(cod_var in codigos_ja_em_se for cod_var in codigos_variacoes)
-            
-            if not ja_existe:
+            # Verificar se já está na lista
+            if codigo_key not in codigos_ja_em_se:
+                # Buscar dimensão no CSV
+                dimensao_se = classificacoes_csv.get(codigo_key, classificacoes_csv.get(codigo, 'Suporte Emocional'))
+                
                 afirmacoes_saude_emocional.append({
                     'tipo': 'Arquétipo',
                     'afirmacao': row['AFIRMACAO'],
                     'dimensao': row['ARQUETIPO'],
                     'subdimensao': 'N/A',
-                    'chave': codigo
+                    'chave': codigo,
+                    'dimensao_saude_emocional': dimensao_se
                 })
-                codigos_ja_em_se.add(codigo)
+                codigos_ja_em_se.add(codigo_key)
         
         # Adicionar todas as afirmações de microambiente que ainda não estão
         for _, row in todas_afirmacoes_micro_unicas.iterrows():
             codigo = str(row['COD']).strip()
-            # Normalizar código para comparação
-            codigos_variacoes = [codigo, codigo.upper(), codigo.lower()]
-            if codigo.startswith('Q') or codigo.startswith('M'):
-                codigos_variacoes.extend([codigo[1:], codigo[1:].zfill(2)])
+            codigo_key = f"micro_{codigo}"
             
-            # Verificar se já está na lista (em qualquer variação)
-            ja_existe = any(cod_var in codigos_ja_em_se for cod_var in codigos_variacoes)
-            
-            if not ja_existe:
+            # Verificar se já está na lista
+            if codigo_key not in codigos_ja_em_se:
+                # Buscar dimensão no CSV
+                dimensao_se = classificacoes_csv.get(codigo_key, classificacoes_csv.get(codigo, 'Suporte Emocional'))
+                
                 afirmacoes_saude_emocional.append({
                     'tipo': 'Microambiente',
                     'afirmacao': row['AFIRMACAO'],
                     'dimensao': row['DIMENSAO'],
                     'subdimensao': row['SUBDIMENSAO'],
-                    'chave': codigo
+                    'chave': codigo,
+                    'dimensao_saude_emocional': dimensao_se
                 })
-                codigos_ja_em_se.add(codigo)
+                codigos_ja_em_se.add(codigo_key)
         
         st.info(f"✅ **100% das afirmações incluídas!** Total: {len(afirmacoes_saude_emocional)} afirmações (todas as 97)")
         
@@ -2445,80 +2445,58 @@ with tab3:
             'Equilibrio Vida-Trabalho': 'Equilíbrio Vida-Trabalho'
         }
         
+        # Carregar classificações do CSV
+        classificacoes = carregar_classificacoes_saude_emocional()
+        
         # Set para rastrear códigos já processados (evitar duplicatas)
         codigos_processados = set()
         
         # Classificar todas as afirmações de saúde emocional
         for af in afirmacoes_saude_emocional:
             codigo_af = str(af['chave']).strip()
+            tipo_af = af.get('tipo', '').strip()
+            
+            # Criar chave composta para evitar duplicatas
+            if 'Arquétipo' in tipo_af or 'Arquetipo' in tipo_af:
+                codigo_key = f"arq_{codigo_af}"
+            elif 'Microambiente' in tipo_af or 'Micro' in tipo_af:
+                codigo_key = f"micro_{codigo_af}"
+            else:
+                codigo_key = codigo_af
             
             # Verificar se já foi processado (evitar duplicatas)
-            if codigo_af in codigos_processados:
+            if codigo_key in codigos_processados:
                 continue
-            codigos_processados.add(codigo_af)
+            codigos_processados.add(codigo_key)
             
-            af_lower = af['afirmacao'].lower()
-            categoria_atribuida = None
+            # PRIMEIRO: Usar dimensao_saude_emocional que já vem da função analisar_afirmacoes_saude_emocional
+            categoria_atribuida = af.get('dimensao_saude_emocional', None)
             
-            # PRIMEIRO: Verificar se há reclassificação manual (do CSV importado)
-            # Tentar diferentes variações do código
-            codigos_para_tentar = [codigo_af, codigo_af.upper(), codigo_af.lower()]
-            # Se o código começar com Q, tentar também sem o Q
-            if codigo_af.startswith('Q'):
-                codigos_para_tentar.append(codigo_af[1:])
-                codigos_para_tentar.append(codigo_af[1:].zfill(2))  # Q01 -> 01 -> 01, Q1 -> 1 -> 01
-            
-            categoria_atribuida = None
-            # Primeiro tentar buscar usando chave composta (tipo_codigo) para diferenciar arquétipo de microambiente
-            tipo_af = af.get('tipo', '').strip()
-            if tipo_af:
-                # Criar prefixo baseado no tipo
-                if 'Arquétipo' in tipo_af or 'Arquetipo' in tipo_af:
-                    prefixo = 'arq_'
-                elif 'Microambiente' in tipo_af or 'Micro' in tipo_af:
-                    prefixo = 'micro_'
-                else:
-                    prefixo = ''
-                
-                # Tentar buscar com chave composta primeiro
-                for cod_tentativa in codigos_para_tentar:
-                    chave_composta = f"{prefixo}{cod_tentativa}"
-                    if chave_composta in reclassificacoes_finais:
-                        categoria_atribuida = reclassificacoes_finais[chave_composta]
-                        break
-                    # Depois verificar CSV importado (se houver)
-                    if reclassificacoes and chave_composta in reclassificacoes:
-                        categoria_atribuida = reclassificacoes[chave_composta]['para']
-                        break
-            
-            # Se não encontrou com chave composta, tentar apenas com código (fallback)
+            # Se não tiver, buscar no CSV usando chave composta
             if not categoria_atribuida:
-                for cod_tentativa in codigos_para_tentar:
-                    # Primeiro verificar reclassificações definitivas
-                    if cod_tentativa in reclassificacoes_finais:
-                        categoria_atribuida = reclassificacoes_finais[cod_tentativa]
-                        break
-                    # Depois verificar CSV importado (se houver)
-                    if reclassificacoes and cod_tentativa in reclassificacoes:
-                        categoria_atribuida = reclassificacoes[cod_tentativa]['para']
-                        break
+                if codigo_key in classificacoes:
+                    categoria_atribuida = classificacoes[codigo_key]
+                elif codigo_af in classificacoes:
+                    categoria_atribuida = classificacoes[codigo_af]
             
+            # Se ainda não encontrou, verificar CSV importado (se houver)
+            if not categoria_atribuida and reclassificacoes:
+                if codigo_key in reclassificacoes:
+                    categoria_atribuida = reclassificacoes[codigo_key].get('para', None)
+                elif codigo_af in reclassificacoes:
+                    categoria_atribuida = reclassificacoes[codigo_af].get('para', None)
+            
+            # Se ainda não encontrou, usar palavras-chave como fallback
             if not categoria_atribuida:
-                # Se não houver reclassificação, usar lógica de palavras-chave
+                af_lower = af['afirmacao'].lower()
                 for dimensao, palavras in palavras_chave_dimensoes.items():
                     if any(palavra in af_lower for palavra in palavras):
                         categoria_atribuida = dimensao
                         break
-                
-                # Se não encontrou e há reclassificações, verificar se há alguma reclassificação para esta afirmação
-                # usando o código original da matriz
-                if not categoria_atribuida and (reclassificacoes or novas_afirmacoes):
-                    # Tentar encontrar por código original na matriz
-                    # Se não encontrar, coloca em Suporte Emocional (padrão)
-                    categoria_atribuida = 'Suporte Emocional'
-                elif not categoria_atribuida:
-                    # Se não encontrou e não há reclassificações, coloca em Suporte Emocional (padrão)
-                    categoria_atribuida = 'Suporte Emocional'
+            
+            # Se ainda não encontrou, usar Suporte Emocional como padrão
+            if not categoria_atribuida:
+                categoria_atribuida = 'Suporte Emocional'
             
             # Normalizar nome da dimensão
             categoria_atribuida = dimensoes_normalizadas.get(categoria_atribuida, categoria_atribuida)
