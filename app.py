@@ -20,9 +20,10 @@ NORMALIZAR_POR_SUBDIMENSAO = False  # deixa sempre False para mostrar valores br
 def analisar_afirmacoes_saude_emocional(matriz_arq, matriz_micro, df_arquetipos, df_microambiente, filtros):
     """Analisa afirmações existentes e identifica as relacionadas à saúde emocional com filtros aplicados"""
     
+    # Carregar classificações do CSV
+    classificacoes = carregar_classificacoes_saude_emocional()
     
-    
-    # Palavras-chave relacionadas à saúde emocional (EXPANDIDAS para capturar mais questões)
+    # Palavras-chave relacionadas à saúde emocional (usadas como fallback)
     palavras_chave_saude_emocional = [
         # Empatia e Compreensão
         'empatia', 'compreensão', 'compreensao', 'entendimento', 'percebe', 'oferece',
@@ -146,51 +147,87 @@ def analisar_afirmacoes_saude_emocional(matriz_arq, matriz_micro, df_arquetipos,
     
     # Analisar matriz de arquétipos
     for _, row in matriz_arq_unicos.iterrows():
-        codigo = row['COD_AFIRMACAO']
-        # Usar prefixo 'arq_' para evitar conflito com códigos de microambiente
+        codigo = str(row['COD_AFIRMACAO']).strip()
         codigo_key = f"arq_{codigo}"
-        if codigo_key not in codigos_ja_processados:  # Evita repetições
+        
+        # Verificar se já foi processado
+        if codigo_key in codigos_ja_processados:
+            continue
+        
+        # PRIMEIRO: Verificar se está no CSV (chave composta)
+        dimensao = None
+        if codigo_key in classificacoes:
+            dimensao = classificacoes[codigo_key]
+        elif codigo in classificacoes:
+            dimensao = classificacoes[codigo]
+        else:
+            # FALLBACK: Verificar palavras-chave
             afirmacao = str(row['AFIRMACAO']).lower()
-            if any(palavra in afirmacao for palavra in palavras_chave_saude_emocional):
-                afirmacoes_se.append({
-                    'tipo': 'Arquétipo',
-                    'afirmacao': row['AFIRMACAO'],
-                    'dimensao': row['ARQUETIPO'],
-                    'subdimensao': 'N/A',
-                    'chave': codigo
-                })
-                codigos_ja_processados.add(codigo_key)  # Marca como processado
+            for palavra in palavras_chave_saude_emocional:
+                if palavra in afirmacao:
+                    dimensao = 'Suporte Emocional'  # Padrão se encontrar palavra-chave
+                    break
+        
+        # Se encontrou classificação (do CSV ou palavras-chave), adicionar
+        if dimensao:
+            afirmacoes_se.append({
+                'tipo': 'Arquétipo',
+                'afirmacao': row['AFIRMACAO'],
+                'dimensao': row['ARQUETIPO'],
+                'subdimensao': 'N/A',
+                'chave': codigo,
+                'dimensao_saude_emocional': dimensao
+            })
+            codigos_ja_processados.add(codigo_key)
     
     # Obter afirmações únicas de microambiente (evitar duplicatas por código)
     matriz_micro_unicos = matriz_micro[['COD', 'AFIRMACAO', 'DIMENSAO', 'SUBDIMENSAO']].drop_duplicates(subset=['COD'])
     
     # Analisar matriz de microambiente
     for _, row in matriz_micro_unicos.iterrows():
-        codigo = row['COD']
-        # Usar prefixo 'micro_' para evitar conflito com códigos de arquétipos
+        codigo = str(row['COD']).strip()
         codigo_key = f"micro_{codigo}"
-        if codigo_key not in codigos_ja_processados:  # Evita repetições
+        
+        # Verificar se já foi processado
+        if codigo_key in codigos_ja_processados:
+            continue
+        
+        # PRIMEIRO: Verificar se está no CSV (chave composta)
+        dimensao = None
+        if codigo_key in classificacoes:
+            dimensao = classificacoes[codigo_key]
+        elif codigo in classificacoes:
+            dimensao = classificacoes[codigo]
+        else:
+            # FALLBACK: Verificar palavras-chave
             afirmacao = str(row['AFIRMACAO']).lower()
-            if any(palavra in afirmacao for palavra in palavras_chave_saude_emocional):
-                afirmacoes_se.append({
-                    'tipo': 'Microambiente',
-                    'afirmacao': row['AFIRMACAO'],
-                    'dimensao': row['DIMENSAO'],
-                    'subdimensao': row['SUBDIMENSAO'],
-                    'chave': codigo
-                })
-                codigos_ja_processados.add(codigo_key)  # Marca como processado
+            for palavra in palavras_chave_saude_emocional:
+                if palavra in afirmacao:
+                    dimensao = 'Suporte Emocional'  # Padrão se encontrar palavra-chave
+                    break
+        
+        # Se encontrou classificação (do CSV ou palavras-chave), adicionar
+        if dimensao:
+            afirmacoes_se.append({
+                'tipo': 'Microambiente',
+                'afirmacao': row['AFIRMACAO'],
+                'dimensao': row['DIMENSAO'],
+                'subdimensao': row['SUBDIMENSAO'],
+                'chave': codigo,
+                'dimensao_saude_emocional': dimensao
+            })
+            codigos_ja_processados.add(codigo_key)
                 
     
     
     return afirmacoes_se, df_arq_filtrado, df_micro_filtrado
     
-# MAPEAR COMPLIANCE COM NR-1 (MANTIDO IGUAL)
+# MAPEAR COMPLIANCE COM NR-1
 def mapear_compliance_nr1(afirmacoes_saude_emocional):
-    """Mapeia afirmações de saúde emocional com requisitos da NR-1"""
+    """Mapeia as afirmações identificadas com os requisitos da NR-1 + adendo saúde mental"""
     
-    
-    compliance = {
+    # Requisitos da NR-1 + adendo saúde mental (baseado na legislação atual)
+    requisitos_nr1 = {
         'Prevenção de Estresse': [],
         'Ambiente Psicológico Seguro': [],
         'Suporte Emocional': [],
@@ -198,35 +235,18 @@ def mapear_compliance_nr1(afirmacoes_saude_emocional):
         'Equilíbrio Vida-Trabalho': []
     }
     
-    # afirmacoes_saude_emocional já é uma lista
+    # Mapear afirmações usando a dimensão de saúde emocional do CSV
     for afirmacao in afirmacoes_saude_emocional:
-        af = afirmacao['afirmacao'].lower()
+        dimensao_se = afirmacao.get('dimensao_saude_emocional', 'Suporte Emocional')
         
-        # Prevenção de Estresse (EXPANDIDO)
-        if any(palavra in af for palavra in ['estresse', 'ansiedade', 'pressão', 'pressao', 'cobrança', 'cobranca', 'deadline', 'prazos', 'tensão', 'tensao', 'sobrecarga', 'preocupa com o tempo', 'preocupa com detalhes', 'preocupa se', 'necessidade de se aprofundar', 'aprofundar nos detalhes', 'detalhes na execução', 'detalhes de realização', 'detalhes do trabalho', 'sem necessidade de ficar de olho', 'fazer todo o possivel', 'resolver problemas particulares', 'problemas particulares urgentes', 'atuar na solução de conflitos', 'solução de conflitos em sua equipe', 'risco calculado', 'resultasse em algo negativo', 'seriam apoiados', 'leais uns com os outros', 'mais elogiados e incentivados', 'do que criticados']):
-            compliance['Prevenção de Estresse'].append(afirmacao)
-        
-        # Ambiente Psicológico Seguro
-        elif any(palavra in af for palavra in ['ambiente', 'seguro', 'proteção', 'protecao', 'respeito', 'cuidadoso', 'palavras']):
-            compliance['Ambiente Psicológico Seguro'].append(afirmacao)
-        
-        # Suporte Emocional
-        elif any(palavra in af for palavra in ['suporte', 'apoio', 'ajuda', 'assistência', 'assistencia', 'ajudar', 'resolver', 'percebe', 'oferece']):
-            compliance['Suporte Emocional'].append(afirmacao)
-        
-        # Comunicação Positiva
-        elif any(palavra in af for palavra in ['feedback', 'positivo', 'construtivo', 'encorajamento', 'comentários', 'comentarios', 'positivos', 'desenvolvimento', 'futuro']):
-            compliance['Comunicação Positiva'].append(afirmacao)
-        
-        # Equilíbrio Vida-Trabalho (EXPANDIDO)
-        elif any(palavra in af for palavra in ['equilíbrio', 'equilibrio', 'flexibilidade', 'horários', 'horarios', 'tempo', 'família', 'familia', 'pessoal', 'relação', 'relacao', 'vida pessoal']):
-            compliance['Equilíbrio Vida-Trabalho'].append(afirmacao)
-        
-        # Se não couber em nenhuma categoria, coloca em Suporte Emocional (mais genérico)
+        # Adicionar à categoria correspondente
+        if dimensao_se in requisitos_nr1:
+            requisitos_nr1[dimensao_se].append(afirmacao)
         else:
-            compliance['Suporte Emocional'].append(afirmacao)
+            # Fallback para Suporte Emocional se não encontrar
+            requisitos_nr1['Suporte Emocional'].append(afirmacao)
     
-    return compliance
+    return requisitos_nr1
 
 # Limpar cache para forçar atualização
 st.cache_data.clear()
@@ -246,6 +266,36 @@ SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJ
 @st.cache_resource
 def init_supabase():
     return create_client(SUPABASE_URL, SUPABASE_KEY)
+
+# ==================== CARREGAR CLASSIFICAÇÕES DE SAÚDE EMOCIONAL ====================
+@st.cache_data(ttl=3600)
+def carregar_classificacoes_saude_emocional():
+    """Carrega as classificações das 97 afirmações de saúde emocional do CSV"""
+    try:
+        df_classificacoes = pd.read_csv('classificacoes_saude_emocional_97_afirmacoes.csv', encoding='utf-8-sig')
+        
+        # Criar dicionário com chaves compostas (tipo_codigo) e simples (codigo) como fallback
+        classificacoes = {}
+        
+        for _, row in df_classificacoes.iterrows():
+            tipo_codigo = str(row['TIPO_CODIGO']).strip()
+            codigo_original = str(row['CODIGO_ORIGINAL']).strip()
+            dimensao = str(row['DIMENSAO_SAUDE_EMOCIONAL']).strip()
+            
+            # Armazenar com chave composta (prioridade)
+            classificacoes[tipo_codigo] = dimensao
+            
+            # Armazenar também com chave simples como fallback
+            if codigo_original not in classificacoes:
+                classificacoes[codigo_original] = dimensao
+        
+        return classificacoes
+    except FileNotFoundError:
+        st.warning("⚠️ Arquivo 'classificacoes_saude_emocional_97_afirmacoes.csv' não encontrado. Usando classificação por palavras-chave.")
+        return {}
+    except Exception as e:
+        st.error(f"❌ Erro ao carregar classificações: {str(e)}")
+        return {}
 
 # ==================== FUNÇÕES ARQUÉTIPOS ====================
 
