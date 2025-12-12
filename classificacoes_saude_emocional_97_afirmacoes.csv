@@ -1,0 +1,81 @@
+TIPO_CODIGO,CODIGO_ORIGINAL,TIPO,DIMENSAO_SAUDE_EMOCIONAL
+arq_Q01,Q01,Arquétipo,Suporte Emocional
+arq_Q02,Q02,Arquétipo,Comunicação Positiva
+arq_Q03,Q03,Arquétipo,Suporte Emocional
+arq_Q04,Q04,Arquétipo,Suporte Emocional
+arq_Q05,Q05,Arquétipo,Comunicação Positiva
+arq_Q07,Q07,Arquétipo,Comunicação Positiva
+arq_Q08,Q08,Arquétipo,Comunicação Positiva
+arq_Q09,Q09,Arquétipo,Suporte Emocional
+arq_Q10,Q10,Arquétipo,Prevenção de Estresse
+arq_Q11,Q11,Arquétipo,Comunicação Positiva
+arq_Q12,Q12,Arquétipo,Comunicação Positiva
+arq_Q13,Q13,Arquétipo,Suporte Emocional
+arq_Q14,Q14,Arquétipo,Prevenção de Estresse
+arq_Q15,Q15,Arquétipo,Suporte Emocional
+arq_Q16,Q16,Arquétipo,Suporte Emocional
+arq_Q17,Q17,Arquétipo,Prevenção de Estresse
+arq_Q18,Q18,Arquétipo,Suporte Emocional
+arq_Q19,Q19,Arquétipo,Suporte Emocional
+arq_Q20,Q20,Arquétipo,Comunicação Positiva
+arq_Q21,Q21,Arquétipo,Comunicação Positiva
+arq_Q22,Q22,Arquétipo,Comunicação Positiva
+arq_Q23,Q23,Arquétipo,Comunicação Positiva
+arq_Q24,Q24,Arquétipo,Prevenção de Estresse
+arq_Q25,Q25,Arquétipo,Suporte Emocional
+arq_Q27,Q27,Arquétipo,Comunicação Positiva
+arq_Q28,Q28,Arquétipo,Comunicação Positiva
+arq_Q29,Q29,Arquétipo,Comunicação Positiva
+arq_Q30,Q30,Arquétipo,Comunicação Positiva
+arq_Q31,Q31,Arquétipo,Suporte Emocional
+arq_Q32,Q32,Arquétipo,Ambiente Psicológico Seguro
+arq_Q33,Q33,Arquétipo,Comunicação Positiva
+arq_Q34,Q34,Arquétipo,Comunicação Positiva
+arq_Q35,Q35,Arquétipo,Comunicação Positiva
+arq_Q36,Q36,Arquétipo,Suporte Emocional
+arq_Q37,Q37,Arquétipo,Comunicação Positiva
+arq_Q38,Q38,Arquétipo,Comunicação Positiva
+arq_Q39,Q39,Arquétipo,Comunicação Positiva
+arq_Q40,Q40,Arquétipo,Suporte Emocional
+arq_Q41,Q41,Arquétipo,Suporte Emocional
+arq_Q42,Q42,Arquétipo,Comunicação Positiva
+arq_Q43,Q43,Arquétipo,Suporte Emocional
+arq_Q44,Q44,Arquétipo,Ambiente Psicológico Seguro
+arq_Q45,Q45,Arquétipo,Comunicação Positiva
+arq_Q46,Q46,Arquétipo,Comunicação Positiva
+arq_Q47,Q47,Arquétipo,Comunicação Positiva
+arq_Q48,Q48,Arquétipo,Comunicação Positiva
+arq_Q49,Q49,Arquétipo,Suporte Emocional
+micro_Q01,Q01,Microambiente,Comunicação Positiva
+micro_Q04,Q04,Microambiente,Comunicação Positiva
+micro_Q05,Q05,Microambiente,Comunicação Positiva
+micro_Q06,Q06,Microambiente,Ambiente Psicológico Seguro
+micro_Q07,Q07,Microambiente,Ambiente Psicológico Seguro
+micro_Q08,Q08,Microambiente,Ambiente Psicológico Seguro
+micro_Q09,Q09,Microambiente,Comunicação Positiva
+micro_Q10,Q10,Microambiente,Comunicação Positiva
+micro_Q11,Q11,Microambiente,Comunicação Positiva
+micro_Q12,Q12,Microambiente,Comunicação Positiva
+micro_Q13,Q13,Microambiente,Comunicação Positiva
+micro_Q14,Q14,Microambiente,Comunicação Positiva
+micro_Q15,Q15,Microambiente,Comunicação Positiva
+micro_Q16,Q16,Microambiente,Comunicação Positiva
+micro_Q17,Q17,Microambiente,Comunicação Positiva
+micro_Q22,Q22,Microambiente,Comunicação Positiva
+micro_Q23,Q23,Microambiente,Ambiente Psicológico Seguro
+micro_Q24,Q24,Microambiente,Comunicação Positiva
+micro_Q26,Q26,Microambiente,Ambiente Psicológico Seguro
+micro_Q34,Q34,Microambiente,Comunicação Positiva
+micro_Q35,Q35,Microambiente,Comunicação Positiva
+micro_Q37,Q37,Microambiente,Comunicação Positiva
+micro_Q38,Q38,Microambiente,Comunicação Positiva
+micro_Q39,Q39,Microambiente,Ambiente Psicológico Seguro
+micro_Q40,Q40,Microambiente,Ambiente Psicológico Seguro
+micro_Q41,Q41,Microambiente,Ambiente Psicológico Seguro
+micro_Q42,Q42,Microambiente,Comunicação Positiva
+micro_Q43,Q43,Microambiente,Comunicação Positiva
+micro_Q44,Q44,Microambiente,Ambiente Psicológico Seguro
+micro_Q45,Q45,Microambiente,Comunicação Positiva
+micro_Q46,Q46,Microambiente,Comunicação Positiva
+micro_Q47,Q47,Microambiente,Ambiente Psicológico Seguro
+micro_Q48,Q48,Microambiente,Ambiente Psicológico Seguro
