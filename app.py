@@ -2440,7 +2440,23 @@ with tab3:
         # ==================== SCORE FINAL + TERMÔMETRO ====================
         st.subheader("🌡️ Score Final de Saúde Emocional")
         
-        # Calcular score baseado nos dois gráficos
+        # Calcular score final de forma consistente com o gráfico de Compliance
+        # Se uma categoria específica foi filtrada, usar o valor daquela categoria
+        # Caso contrário, usar a média das 5 categorias
+        if categoria_selecionada and categoria_selecionada != "Todas" and categoria_selecionada in categoria_medias:
+            # Quando filtra uma categoria, mostrar o score daquela categoria específica
+            score_final = categoria_medias[categoria_selecionada]
+        elif categoria_medias and len(categoria_medias) > 0:
+            # Sem filtro: calcular média das 5 categorias (mesmas do gráfico de Compliance)
+            valores_categorias = [v for v in categoria_medias.values() if v > 0]
+            if valores_categorias:
+                score_final = np.mean(valores_categorias)
+            else:
+                score_final = 0
+        else:
+            score_final = 0
+        
+        # Calcular scores individuais para exibição (opcional, para referência)
         score_arquetipos = 0
         score_microambiente = 0
         
@@ -2491,16 +2507,6 @@ with tab3:
             # Converter gap para score (gap baixo = score alto)
             score_microambiente = max(0, 100 - gap_medio)
         
-        # Score final combinado
-        if score_arquetipos > 0 and score_microambiente > 0:
-            score_final = (score_arquetipos + score_microambiente) / 2
-        elif score_arquetipos > 0:
-            score_final = score_arquetipos
-        elif score_microambiente > 0:
-            score_final = score_microambiente
-        else:
-            score_final = 0
-        
         # Interpretação do score
         if score_final >= 80:
             interpretacao = "🟢 EXCELENTE - Ambiente muito saudável"
@@ -2532,9 +2538,9 @@ with tab3:
             <div style="padding: 20px; background-color: rgba(0,0,0,0.05); border-radius: 10px;">
                 <h3>📊 Como o Score é Calculado</h3>
                 <p><strong>{interpretacao}</strong></p>
-                <p><strong>🧠 Score Arquétipos:</strong> {score_arquetipos:.1f}% (baseado na tendência favorável/desfavorável)</p>
-                <p><strong>🏢 Score Microambiente:</strong> {score_microambiente:.1f}% (baseado no gap Real vs Ideal)</p>
-                <p><strong>💚 Score Final:</strong> Média dos dois scores</p>
+                <p><strong>🧠 Score Arquétipos:</strong> {score_arquetipos:.1f}% (referência)</p>
+                <p><strong>🏢 Score Microambiente:</strong> {score_microambiente:.1f}% (referência)</p>
+                <p><strong>💚 Score Final:</strong> {'Score da categoria filtrada' if categoria_selecionada and categoria_selecionada != 'Todas' else 'Média das 5 categorias do gráfico de Compliance'} (consistente com o gráfico acima)</p>
                 <p><strong>🎯 Interpretação:</strong> Quanto maior o score, melhor a saúde emocional proporcionada pelo líder</p>
             </div>
             """, unsafe_allow_html=True)
