@@ -2164,7 +2164,7 @@ with tab3:
                                 # Nova afirmação
                                 novas_afirmacoes.append({
                                     'cod': cod,
-                                    'codigo_original': codigo_original,
+                                    'codigo_original': codigo_original if codigo_original and codigo_original != '' else cod,
                                     'tipo': tipo,
                                     'afirmacao': afirmacao_texto,
                                     'dimensao': para,
@@ -2173,13 +2173,23 @@ with tab3:
                             else:
                                 # Reclassificação de afirmação existente
                                 # Usar código original se disponível, senão usar COD
-                                codigo_chave = codigo_original if codigo_original and codigo_original != '' else cod
+                                # Normalizar código (remover espaços, converter para string)
+                                codigo_chave = str(codigo_original).strip() if codigo_original and str(codigo_original).strip() != '' else str(cod).strip()
+                                # Também armazenar por COD para garantir que encontre
                                 reclassificacoes[codigo_chave] = {
                                     'de': de,
                                     'para': para,
                                     'tipo': tipo,
                                     'cod': cod
                                 }
+                                # Se COD e código_original forem diferentes, armazenar ambos
+                                if cod != codigo_chave and codigo_original:
+                                    reclassificacoes[str(cod).strip()] = {
+                                        'de': de,
+                                        'para': para,
+                                        'tipo': tipo,
+                                        'cod': cod
+                                    }
                     
                     st.info(f"📊 Processadas: {len(reclassificacoes)} reclassificações e {len(novas_afirmacoes)} novas afirmações")
                     
@@ -2279,8 +2289,18 @@ with tab3:
             
             # PRIMEIRO: Verificar se há reclassificação manual (do CSV importado)
             codigo_af = str(af['chave']).strip()
-            if codigo_af in reclassificacoes:
-                categoria_atribuida = reclassificacoes[codigo_af]['para']
+            # Tentar diferentes variações do código
+            codigos_para_tentar = [codigo_af, codigo_af.upper(), codigo_af.lower()]
+            # Se o código começar com Q, tentar também sem o Q
+            if codigo_af.startswith('Q'):
+                codigos_para_tentar.append(codigo_af[1:])
+                codigos_para_tentar.append(codigo_af[1:].zfill(2))  # Q01 -> 01 -> 01, Q1 -> 1 -> 01
+            
+            categoria_atribuida = None
+            for cod_tentativa in codigos_para_tentar:
+                if cod_tentativa in reclassificacoes:
+                    categoria_atribuida = reclassificacoes[cod_tentativa]['para']
+                    break
             else:
                 # Se não houver reclassificação, usar lógica de palavras-chave
                 for dimensao, palavras in palavras_chave_dimensoes.items():
