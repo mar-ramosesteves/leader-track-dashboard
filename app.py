@@ -2116,8 +2116,13 @@ with tab3:
             st.metric("💚 Total SE", len(afirmacoes_saude_emocional))
         
         with col4:
-            percentual = (len(afirmacoes_saude_emocional) / 97) * 100
-            st.metric("📊 % das 97 Afirmações", f"{percentual:.1f}%")
+            # Calcular percentual baseado no total do CSV, não fixo em 97
+            total_csv = len(carregar_classificacoes_saude_emocional())
+            if total_csv > 0:
+                percentual = (len(afirmacoes_saude_emocional) / total_csv) * 100
+                st.metric(f"📊 % das {total_csv} Afirmações (CSV)", f"{percentual:.1f}%")
+            else:
+                st.metric("📊 Total de Afirmações", len(afirmacoes_saude_emocional))
         
         st.divider()
         
@@ -2136,23 +2141,13 @@ with tab3:
         # Para cada afirmação, calcular seu valor baseado nos dados filtrados
         for af in afirmacoes_saude_emocional:
             codigo = af['chave']
-            categoria = None
             
-            # Identificar categoria
-            af_lower = af['afirmacao'].lower()
-            if any(palavra in af_lower for palavra in ['estresse', 'ansiedade', 'pressão', 'pressao', 'cobrança', 'cobranca', 'deadline', 'prazos', 'tensão', 'tensao', 'sobrecarga' ,  'preocupa com o tempo', 'preocupa com detalhes', 'preocupa se', 'preocupa com',
-'necessidade de se aprofundar', 'aprofundar nos detalhes', 'detalhes na execução', 'detalhes de realização', 'detalhes do trabalho', 'sem necessidade de ficar de olho', 'fazer todo o possivel', 'resolver problemas particulares', 'problemas particulares urgentes',
-'atuar na solução de conflitos', 'solução de conflitos em sua equipe', 'risco calculado', 'resultasse em algo negativo', 'seriam apoiados', 'leais uns com os outros', 'mais elogiados e incentivados', 'do que criticados' ]):
-                categoria = 'Prevenção de Estresse'
-            elif any(palavra in af_lower for palavra in ['ambiente', 'seguro', 'proteção', 'protecao', 'respeito', 'cuidadoso', 'palavras']):
-                categoria = 'Ambiente Psicológico Seguro'
-            elif any(palavra in af_lower for palavra in ['suporte', 'apoio', 'ajuda', 'assistência', 'assistencia', 'ajudar', 'resolver', 'percebe', 'oferece']):
-                categoria = 'Suporte Emocional'
-            elif any(palavra in af_lower for palavra in ['feedback', 'positivo', 'construtivo', 'encorajamento', 'comentários', 'comentarios', 'positivos', 'desenvolvimento', 'futuro']):
-                categoria = 'Comunicação Positiva'
-            elif any(palavra in af_lower for palavra in ['equilíbrio', 'equilibrio', 'flexibilidade', 'horários', 'horarios', 'tempo', 'família', 'familia', 'pessoal', 'relação', 'relacao', 'vida pessoal']):
-                categoria = 'Equilíbrio Vida-Trabalho'
-            else:
+            # USAR APENAS a dimensão que já vem do CSV (dimensao_saude_emocional)
+            categoria = af.get('dimensao_saude_emocional', 'Suporte Emocional')
+            
+            # Normalizar nome da dimensão
+            if categoria not in categoria_valores:
+                # Se não estiver nas categorias esperadas, usar Suporte Emocional como padrão
                 categoria = 'Suporte Emocional'
             
             # Calcular valor da questão
