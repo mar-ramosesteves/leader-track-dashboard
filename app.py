@@ -2403,67 +2403,9 @@ with tab3:
                 st.error(f"❌ Erro ao processar arquivo: {str(e)}")
                 st.info("💡 Verifique se o arquivo está no formato CSV correto e com encoding UTF-8")
         
-        # Carregar classificações do CSV para garantir que todas as afirmações tenham dimensao_saude_emocional
-        classificacoes_csv = carregar_classificacoes_saude_emocional()
-        
-        # Expandir para incluir TODAS as 97 afirmações (sempre)
-        # Obter todas as afirmações únicas de arquétipos
-        todas_afirmacoes_arq_unicas = matriz_arq[['COD_AFIRMACAO', 'AFIRMACAO', 'ARQUETIPO']].drop_duplicates(subset=['COD_AFIRMACAO'])
-        todas_afirmacoes_micro_unicas = matriz_micro[['COD', 'AFIRMACAO', 'DIMENSAO', 'SUBDIMENSAO']].drop_duplicates(subset=['COD'])
-        
-        # Criar set de códigos já em afirmacoes_saude_emocional (usando chave composta)
-        codigos_ja_em_se = set()
-        for af in afirmacoes_saude_emocional:
-            codigo = str(af['chave']).strip()
-            tipo = af.get('tipo', '').strip()
-            if 'Arquétipo' in tipo or 'Arquetipo' in tipo:
-                codigos_ja_em_se.add(f"arq_{codigo}")
-            elif 'Microambiente' in tipo or 'Micro' in tipo:
-                codigos_ja_em_se.add(f"micro_{codigo}")
-            else:
-                codigos_ja_em_se.add(codigo)
-        
-        # Adicionar todas as afirmações de arquétipos que ainda não estão
-        for _, row in todas_afirmacoes_arq_unicas.iterrows():
-            codigo = str(row['COD_AFIRMACAO']).strip()
-            codigo_key = f"arq_{codigo}"
-            
-            # Verificar se já está na lista
-            if codigo_key not in codigos_ja_em_se:
-                # Buscar dimensão no CSV
-                dimensao_se = classificacoes_csv.get(codigo_key, classificacoes_csv.get(codigo, 'Suporte Emocional'))
-                
-                afirmacoes_saude_emocional.append({
-                    'tipo': 'Arquétipo',
-                    'afirmacao': row['AFIRMACAO'],
-                    'dimensao': row['ARQUETIPO'],
-                    'subdimensao': 'N/A',
-                    'chave': codigo,
-                    'dimensao_saude_emocional': dimensao_se
-                })
-                codigos_ja_em_se.add(codigo_key)
-        
-        # Adicionar todas as afirmações de microambiente que ainda não estão
-        for _, row in todas_afirmacoes_micro_unicas.iterrows():
-            codigo = str(row['COD']).strip()
-            codigo_key = f"micro_{codigo}"
-            
-            # Verificar se já está na lista
-            if codigo_key not in codigos_ja_em_se:
-                # Buscar dimensão no CSV
-                dimensao_se = classificacoes_csv.get(codigo_key, classificacoes_csv.get(codigo, 'Suporte Emocional'))
-                
-                afirmacoes_saude_emocional.append({
-                    'tipo': 'Microambiente',
-                    'afirmacao': row['AFIRMACAO'],
-                    'dimensao': row['DIMENSAO'],
-                    'subdimensao': row['SUBDIMENSAO'],
-                    'chave': codigo,
-                    'dimensao_saude_emocional': dimensao_se
-                })
-                codigos_ja_em_se.add(codigo_key)
-        
-        st.info(f"✅ **100% das afirmações incluídas!** Total: {len(afirmacoes_saude_emocional)} afirmações (todas as 97)")
+        # NÃO expandir mais - usar APENAS as afirmações que estão no CSV
+        # O CSV já contém todas as afirmações que devem ser consideradas
+        st.info(f"✅ **Afirmações do CSV incluídas!** Total: {len(afirmacoes_saude_emocional)} afirmações (apenas as que estão no CSV)")
         
         st.divider()
         
