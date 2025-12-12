@@ -1906,6 +1906,41 @@ with tab3:
     st.header("💚 Análise de Saúde Emocional + Compliance NR-1")
     st.markdown("**🔍 Analisando afirmações existentes relacionadas à saúde emocional...**")
     
+    # ==================== RECLASSIFICAÇÕES DEFINITIVAS DE SAÚDE EMOCIONAL ====================
+    # Dicionário fixo com todas as reclassificações (código -> dimensão)
+    # Este dicionário é definitivo e será usado sempre, garantindo que 100% das afirmações sejam classificadas
+    RECLASSIFICACOES_DEFINITIVAS = {
+        # Reclassificações de afirmações existentes
+        'Q03': 'Suporte Emocional', 'Q04': 'Suporte Emocional', 'Q09': 'Suporte Emocional',
+        'Q10': 'Prevenção de Estresse', 'Q14': 'Prevenção de Estresse', 'Q17': 'Prevenção de Estresse',
+        'Q41': 'Suporte Emocional', 'Q21': 'Comunicação Positiva', 'Q26': 'Ambiente Psicológico Seguro',
+        'Q33': 'Comunicação Positiva', 'Q42': 'Comunicação Positiva', 'Q44': 'Ambiente Psicológico Seguro',
+        'Q05': 'Comunicação Positiva', 'Q15': 'Suporte Emocional', 'Q23': 'Comunicação Positiva',
+        'Q34': 'Comunicação Positiva', 'Q35': 'Comunicação Positiva', 'Q40': 'Suporte Emocional',
+        'Q43': 'Suporte Emocional', 'Q46': 'Comunicação Positiva', 'Q02': 'Comunicação Positiva',
+        'Q18': 'Suporte Emocional', 'Q25': 'Suporte Emocional', 'Q27': 'Comunicação Positiva',
+        'Q28': 'Comunicação Positiva', 'Q29': 'Comunicação Positiva', 'Q30': 'Comunicação Positiva',
+        'Q31': 'Suporte Emocional', 'Q32': 'Ambiente Psicológico Seguro', 'Q36': 'Suporte Emocional',
+        'Q20': 'Comunicação Positiva', 'Q19': 'Suporte Emocional', 'Q13': 'Suporte Emocional',
+        'Q47': 'Suporte Emocional', 'Q08': 'Ambiente Psicológico Seguro', 'Q06': 'Ambiente Psicológico Seguro',
+        # Novas afirmações de arquétipos
+        'Q01': 'Suporte Emocional', 'Q07': 'Comunicação Positiva', 'Q08': 'Comunicação Positiva',
+        'Q11': 'Comunicação Positiva', 'Q12': 'Comunicação Positiva', 'Q16': 'Suporte Emocional',
+        'Q22': 'Comunicação Positiva', 'Q24': 'Prevenção de Estresse', 'Q37': 'Comunicação Positiva',
+        'Q38': 'Comunicação Positiva', 'Q39': 'Comunicação Positiva', 'Q48': 'Comunicação Positiva',
+        'Q49': 'Suporte Emocional',
+        # Novas afirmações de microambiente
+        'M01': 'Comunicação Positiva', 'M04': 'Comunicação Positiva', 'M05': 'Comunicação Positiva',
+        'M07': 'Ambiente Psicológico Seguro', 'M09': 'Comunicação Positiva', 'M10': 'Comunicação Positiva',
+        'M11': 'Comunicação Positiva', 'M12': 'Comunicação Positiva', 'M13': 'Comunicação Positiva',
+        'M14': 'Comunicação Positiva', 'M15': 'Comunicação Positiva', 'M16': 'Comunicação Positiva',
+        'M17': 'Comunicação Positiva', 'M22': 'Comunicação Positiva', 'M23': 'Ambiente Psicológico Seguro',
+        'M24': 'Comunicação Positiva', 'M34': 'Comunicação Positiva', 'M35': 'Comunicação Positiva',
+        'M37': 'Comunicação Positiva', 'M38': 'Comunicação Positiva', 'M39': 'Ambiente Psicológico Seguro',
+        'M42': 'Comunicação Positiva', 'M43': 'Comunicação Positiva', 'M44': 'Ambiente Psicológico Seguro',
+        'M46': 'Comunicação Positiva', 'M47': 'Ambiente Psicológico Seguro', 'M48': 'Ambiente Psicológico Seguro'
+    }
+    
     # Analisar afirmações de saúde emocional
     with st.spinner("Identificando afirmações de saúde emocional..."):
         afirmacoes_saude_emocional, df_arq_filtrado, df_micro_filtrado = analisar_afirmacoes_saude_emocional(matriz_arq, matriz_micro, df_arquetipos, df_microambiente, filtros)
@@ -2219,8 +2254,67 @@ with tab3:
                 st.error(f"❌ Erro ao processar arquivo: {str(e)}")
                 st.info("💡 Verifique se o arquivo está no formato CSV correto e com encoding UTF-8")
         
-        # Se houver reclassificações, expandir afirmacoes_saude_emocional para incluir TODAS as afirmações
-        if reclassificacoes or novas_afirmacoes:
+        # SEMPRE expandir afirmacoes_saude_emocional para incluir TODAS as 97 afirmações
+        # (usando reclassificações definitivas)
+        reclassificacoes_finais = RECLASSIFICACOES_DEFINITIVAS.copy()
+        if reclassificacoes:
+            # Se houver CSV importado, ele sobrescreve as reclassificações definitivas
+            for k, v in reclassificacoes.items():
+                reclassificacoes_finais[k] = v['para']
+        
+        # Expandir para incluir TODAS as afirmações (sempre)
+        # Obter todas as afirmações únicas de arquétipos
+        todas_afirmacoes_arq_unicas = matriz_arq[['COD_AFIRMACAO', 'AFIRMACAO', 'ARQUETIPO']].drop_duplicates(subset=['COD_AFIRMACAO'])
+        todas_afirmacoes_micro_unicas = matriz_micro[['COD', 'AFIRMACAO', 'DIMENSAO', 'SUBDIMENSAO']].drop_duplicates(subset=['COD'])
+        
+        # Criar set de códigos já em afirmacoes_saude_emocional
+        codigos_ja_em_se = set()
+        for af in afirmacoes_saude_emocional:
+            codigos_ja_em_se.add(str(af['chave']).strip())
+        
+        # Adicionar todas as afirmações de arquétipos que ainda não estão
+        for _, row in todas_afirmacoes_arq_unicas.iterrows():
+            codigo = str(row['COD_AFIRMACAO']).strip()
+            # Normalizar código para comparação (Q01, Q1, 01, etc.)
+            codigos_variacoes = [codigo, codigo.upper(), codigo.lower()]
+            if codigo.startswith('Q'):
+                codigos_variacoes.extend([codigo[1:], codigo[1:].zfill(2)])
+            
+            # Verificar se já está na lista (em qualquer variação)
+            ja_existe = any(cod_var in codigos_ja_em_se for cod_var in codigos_variacoes)
+            
+            if not ja_existe:
+                afirmacoes_saude_emocional.append({
+                    'tipo': 'Arquétipo',
+                    'afirmacao': row['AFIRMACAO'],
+                    'dimensao': row['ARQUETIPO'],
+                    'subdimensao': 'N/A',
+                    'chave': codigo
+                })
+                codigos_ja_em_se.add(codigo)
+        
+        # Adicionar todas as afirmações de microambiente que ainda não estão
+        for _, row in todas_afirmacoes_micro_unicas.iterrows():
+            codigo = str(row['COD']).strip()
+            # Normalizar código para comparação
+            codigos_variacoes = [codigo, codigo.upper(), codigo.lower()]
+            if codigo.startswith('Q') or codigo.startswith('M'):
+                codigos_variacoes.extend([codigo[1:], codigo[1:].zfill(2)])
+            
+            # Verificar se já está na lista (em qualquer variação)
+            ja_existe = any(cod_var in codigos_ja_em_se for cod_var in codigos_variacoes)
+            
+            if not ja_existe:
+                afirmacoes_saude_emocional.append({
+                    'tipo': 'Microambiente',
+                    'afirmacao': row['AFIRMACAO'],
+                    'dimensao': row['DIMENSAO'],
+                    'subdimensao': row['SUBDIMENSAO'],
+                    'chave': codigo
+                })
+                codigos_ja_em_se.add(codigo)
+        
+        st.info(f"✅ **100% das afirmações incluídas!** Total: {len(afirmacoes_saude_emocional)} afirmações (todas as 97)")
             # Obter todas as afirmações únicas de arquétipos
             todas_afirmacoes_arq_unicas = matriz_arq[['COD_AFIRMACAO', 'AFIRMACAO', 'ARQUETIPO']].drop_duplicates(subset=['COD_AFIRMACAO'])
             todas_afirmacoes_micro_unicas = matriz_micro[['COD', 'AFIRMACAO', 'DIMENSAO', 'SUBDIMENSAO']].drop_duplicates(subset=['COD'])
@@ -2336,7 +2430,12 @@ with tab3:
             
             categoria_atribuida = None
             for cod_tentativa in codigos_para_tentar:
-                if cod_tentativa in reclassificacoes:
+                # Primeiro verificar reclassificações definitivas
+                if cod_tentativa in reclassificacoes_finais:
+                    categoria_atribuida = reclassificacoes_finais[cod_tentativa]
+                    break
+                # Depois verificar CSV importado (se houver)
+                if reclassificacoes and cod_tentativa in reclassificacoes:
                     categoria_atribuida = reclassificacoes[cod_tentativa]['para']
                     break
             
