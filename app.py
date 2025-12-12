@@ -2315,58 +2315,6 @@ with tab3:
                 codigos_ja_em_se.add(codigo)
         
         st.info(f"✅ **100% das afirmações incluídas!** Total: {len(afirmacoes_saude_emocional)} afirmações (todas as 97)")
-            # Obter todas as afirmações únicas de arquétipos
-            todas_afirmacoes_arq_unicas = matriz_arq[['COD_AFIRMACAO', 'AFIRMACAO', 'ARQUETIPO']].drop_duplicates(subset=['COD_AFIRMACAO'])
-            todas_afirmacoes_micro_unicas = matriz_micro[['COD', 'AFIRMACAO', 'DIMENSAO', 'SUBDIMENSAO']].drop_duplicates(subset=['COD'])
-            
-            # Criar set de códigos já em afirmacoes_saude_emocional
-            codigos_ja_em_se = set()
-            for af in afirmacoes_saude_emocional:
-                codigos_ja_em_se.add(str(af['chave']).strip())
-            
-            # Adicionar todas as afirmações de arquétipos que ainda não estão
-            for _, row in todas_afirmacoes_arq_unicas.iterrows():
-                codigo = str(row['COD_AFIRMACAO']).strip()
-                # Normalizar código para comparação (Q01, Q1, 01, etc.)
-                codigos_variacoes = [codigo, codigo.upper(), codigo.lower()]
-                if codigo.startswith('Q'):
-                    codigos_variacoes.extend([codigo[1:], codigo[1:].zfill(2)])
-                
-                # Verificar se já está na lista (em qualquer variação)
-                ja_existe = any(cod_var in codigos_ja_em_se for cod_var in codigos_variacoes)
-                
-                if not ja_existe:
-                    afirmacoes_saude_emocional.append({
-                        'tipo': 'Arquétipo',
-                        'afirmacao': row['AFIRMACAO'],
-                        'dimensao': row['ARQUETIPO'],
-                        'subdimensao': 'N/A',
-                        'chave': codigo
-                    })
-                    codigos_ja_em_se.add(codigo)
-            
-            # Adicionar todas as afirmações de microambiente que ainda não estão
-            for _, row in todas_afirmacoes_micro_unicas.iterrows():
-                codigo = str(row['COD']).strip()
-                # Normalizar código para comparação
-                codigos_variacoes = [codigo, codigo.upper(), codigo.lower()]
-                if codigo.startswith('Q'):
-                    codigos_variacoes.extend([codigo[1:], codigo[1:].zfill(2)])
-                
-                # Verificar se já está na lista (em qualquer variação)
-                ja_existe = any(cod_var in codigos_ja_em_se for cod_var in codigos_variacoes)
-                
-                if not ja_existe:
-                    afirmacoes_saude_emocional.append({
-                        'tipo': 'Microambiente',
-                        'afirmacao': row['AFIRMACAO'],
-                        'dimensao': row['DIMENSAO'],
-                        'subdimensao': row['SUBDIMENSAO'],
-                        'chave': codigo
-                    })
-                    codigos_ja_em_se.add(codigo)
-            
-            st.info(f"✅ **100% das afirmações incluídas!** Total: {len(afirmacoes_saude_emocional)} afirmações (incluindo reclassificações)")
         
         st.divider()
         
