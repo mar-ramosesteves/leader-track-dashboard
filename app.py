@@ -18,100 +18,29 @@ NORMALIZAR_POR_SUBDIMENSAO = False  # deixa sempre False para mostrar valores br
 
 # ANALISAR AFIRMAÇÕES EXISTENTES PARA SAÚDE EMOCIONAL (COM FILTROS)
 def analisar_afirmacoes_saude_emocional(matriz_arq, matriz_micro, df_arquetipos, df_microambiente, filtros):
-    """Analisa afirmações existentes e identifica as relacionadas à saúde emocional com filtros aplicados"""
+    """Versão SIMPLES: lê apenas o CSV e retorna exatamente o que está lá - SEM expansão, SEM palavras-chave"""
     
-    # Carregar classificações do CSV (com debug)
-    classificacoes = carregar_classificacoes_saude_emocional()
+    import pandas as pd
+    import os
     
-    # DEBUG: Mostrar quantas classificações foram carregadas
-    if classificacoes:
-        chaves_compostas = [k for k in classificacoes.keys() if k.startswith('arq_') or k.startswith('micro_')]
-        st.info(f"🔍 **DEBUG:** {len(chaves_compostas)} chaves compostas carregadas do CSV")
-    else:
-        st.warning("⚠️ **ATENÇÃO:** Nenhuma classificação foi carregada do CSV!")
+    # 1. Carregar CSV
+    arquivo_csv = 'classificacoes_saude_emocional_97_afirmacoes.csv'
     
-    # Palavras-chave relacionadas à saúde emocional (mantidas para referência, mas não usadas)
-    palavras_chave_saude_emocional = [
-        # Empatia e Compreensão
-        'empatia', 'compreensão', 'compreensao', 'entendimento', 'percebe', 'oferece',
-        'compreensivo', 'atento', 'sensível', 'sensivel', 'cuidadoso',
-            
-        # Suporte e Apoio
-        'suporte', 'apoio', 'ajuda', 'assistência', 'assistencia', 'ajudar', 'resolver',
-        'orientar', 'guiar', 'acompanhar', 'estar presente', 'disponível', 'disponivel',
-            
-        # Estresse e Pressão (EXPANDIDO)
-        'estresse', 'ansiedade', 'pressão', 'pressao', 'cobrança', 'cobranca', 'deadline', 
-        'prazos', 'tensão', 'tensao', 'sobrecarga', 'excesso', 'cansaço', 'cansaco', 'fadiga', 
-        'desgaste', 'preocupação', 'preocupacao', 'nervoso', 'irritado', 'frustrado', 'angustiado', 
-        'estressado', 'sobrecarregado',
-            
-        # Bem-estar e Saúde
-        'bem-estar', 'bem estar', 'saúde', 'saude', 'mental', 'felicidade', 'satisfação', 'satisfacao',
-        'alegria', 'motivação', 'motivacao', 'energia', 'vitalidade', 'disposição', 'disposicao',
-            
-        # Reconhecimento e Valorização
-        'reconhecimento', 'celebração', 'celebracao', 'valorização', 'valorizacao', 'elogio',
-        'agradecimento', 'gratidão', 'gratidao', 'merece', 'merecido', 'esforço', 'esforco',
-            
-        # Feedback e Comunicação Positiva
-        'feedback', 'positivo', 'construtivo', 'encorajamento', 'comentários', 'comentarios',
-        'palavras', 'amáveis', 'amaveis', 'gentil', 'carinhoso', 'atencioso',
-        'desenvolvimento', 'futuro', 'potencial', 'capacidade', 'habilidade',
-            
-        # Ambiente e Segurança
-        'ambiente', 'seguro', 'proteção', 'protecao', 'respeito', 'cuidadoso', 'palavras',
-        'acolhedor', 'inclusivo', 'tolerante', 'paciente', 'calmo', 'tranquilo',
-            
-        # Equilíbrio Vida-Trabalho (EXPANDIDO)
-        'equilíbrio', 'equilibrio', 'flexibilidade', 'horários', 'horarios', 'tempo', 'família', 'familia',
-        'pessoal', 'relação', 'relacao', 'vida pessoal', 'descanso', 'pausa', 'intervalo', 'folga', 
-        'feriado', 'férias', 'ferias', 'licença', 'licenca',
-            
-        # Desenvolvimento e Crescimento
-        'desenvolvimento', 'crescimento', 'pessoal', 'participação', 'participacao', 'motivação', 'motivacao',
-        'aprendizado', 'evolução', 'evolucao', 'progresso', 'melhoria', 'oportunidades', 'expressar', 
-        'ideias', 'opiniões', 'opinioes', 'criatividade',
-            
-        # Comunicação e Diálogo
-        'comunicação', 'comunicacao', 'diálogo', 'dialogo', 'escuta', 'ouvir', 'conversa',
-        'debate', 'discussão', 'discussao', 'colaboração', 'colaboracao', 'trabalho em equipe',
-            
-        # Confiança e Respeito
-        'confiança', 'confianca', 'respeito', 'dignidade', 'humanidade', 'honestidade',
-        'transparência', 'transparencia', 'ética', 'etica', 'moral', 'valores',
-            
-        # Prevenção e Gestão (NOVAS - para capturar questões de prevenção)
-        'prevenção', 'prevencao', 'evitar', 'reduzir', 'diminuir', 'controlar', 'gerenciar',
-        'administrar', 'organizar', 'planejar', 'estratégia', 'estrategia', 'método', 'metodo',
-        'técnica', 'tecnica', 'ferramenta', 'recurso', 'solução', 'solucao', 'alternativa',
-        'opção', 'opcao', 'escolha', 'decisão', 'decisao', 'ação', 'acao', 'medida',
-        'política', 'politica', 'procedimento', 'protocolo', 'norma', 'regra', 'padrão', 'padrao',
-            
-        # Prevenção de Estresse - Palavras-chave ESPECÍFICAS das suas afirmações
-        'preocupa com o tempo', 'preocupa com detalhes', 'preocupa se', 'preocupa com',
-        'necessidade de se aprofundar', 'aprofundar nos detalhes', 'detalhes na execução',
-        'detalhes de realização', 'detalhes do trabalho', 'sem necessidade de ficar de olho',
-        'fazer todo o possivel', 'resolver problemas particulares', 'problemas particulares urgentes',
-        'atuar na solução de conflitos', 'solução de conflitos em sua equipe',
-        'risco calculado', 'resultasse em algo negativo', 'seriam apoiados',
-        'leais uns com os outros', 'mais elogiados e incentivados', 'do que criticados'
-    ]
+    if not os.path.exists(arquivo_csv):
+        st.error(f"❌ CSV não encontrado: {arquivo_csv}")
+        return [], df_arquetipos, df_microambiente
     
-    afirmacoes_se = []
-    codigos_ja_processados = set()  # Para evitar repetições
+    df_csv = pd.read_csv(arquivo_csv, encoding='utf-8-sig')
+    st.info(f"✅ CSV carregado: {len(df_csv)} afirmações")
     
-    # Aplicar filtros aos dados
+    # 2. Aplicar filtros aos dados
     df_arq_filtrado = df_arquetipos.copy()
     df_micro_filtrado = df_microambiente.copy()
     
-    # Filtrar arquétipos
     if filtros['empresa'] != "Todas":
         df_arq_filtrado = df_arq_filtrado[df_arq_filtrado['empresa'] == filtros['empresa']]
     if filtros['codrodada'] != "Todas":
         df_arq_filtrado = df_arq_filtrado[df_arq_filtrado['codrodada'] == filtros['codrodada']]
-    if 'emailLider' in filtros and filtros['emailLider'] != "Todos":
-        df_arq_filtrado = df_arq_filtrado[df_arq_filtrado['emailLider'] == filtros['emaillider']]
     if filtros['estado'] != "Todos":
         df_arq_filtrado = df_arq_filtrado[df_arq_filtrado['estado'] == filtros['estado']]
     if filtros['sexo'] != "Todos":
@@ -127,13 +56,11 @@ def analisar_afirmacoes_saude_emocional(matriz_arq, matriz_micro, df_arquetipos,
             holding_filtro = str(filtros['holding']).upper().strip()
             df_arq_filtrado = df_arq_filtrado[df_arq_filtrado['holding'].astype(str).str.upper().str.strip() == holding_filtro]
     
-    # Filtrar microambiente
+    # Mesmos filtros para microambiente
     if filtros['empresa'] != "Todas":
         df_micro_filtrado = df_micro_filtrado[df_micro_filtrado['empresa'] == filtros['empresa']]
     if filtros['codrodada'] != "Todas":
         df_micro_filtrado = df_micro_filtrado[df_micro_filtrado['codrodada'] == filtros['codrodada']]
-    if 'emailLider' in filtros and filtros['emailLider'] != "Todos":
-        df_micro_filtrado = df_micro_filtrado[df_micro_filtrado['emailLider'] == filtros['emailLider']]
     if filtros['estado'] != "Todos":
         df_micro_filtrado = df_micro_filtrado[df_micro_filtrado['estado'] == filtros['estado']]
     if filtros['sexo'] != "Todos":
@@ -149,93 +76,54 @@ def analisar_afirmacoes_saude_emocional(matriz_arq, matriz_micro, df_arquetipos,
             holding_filtro = str(filtros['holding']).upper().strip()
             df_micro_filtrado = df_micro_filtrado[df_micro_filtrado['holding'].astype(str).str.upper().str.strip() == holding_filtro]
     
-    # Obter afirmações únicas de arquétipos (evitar duplicatas por código)
-    matriz_arq_unicos = matriz_arq[['COD_AFIRMACAO', 'AFIRMACAO', 'ARQUETIPO']].drop_duplicates(subset=['COD_AFIRMACAO'])
+    # 3. Criar dicionário do CSV: TIPO_CODIGO -> DIMENSAO
+    csv_dict = {}
+    for _, row in df_csv.iterrows():
+        tipo_codigo = str(row['TIPO_CODIGO']).strip()
+        dimensao = str(row['DIMENSAO_SAUDE_EMOCIONAL']).strip()
+        csv_dict[tipo_codigo] = dimensao
     
-    # Analisar matriz de arquétipos
+    # 4. Buscar afirmações nas matrizes APENAS se estiverem no CSV
+    afirmacoes_se = []
+    codigos_processados = set()
+    
+    # Arquétipos
+    matriz_arq_unicos = matriz_arq[['COD_AFIRMACAO', 'AFIRMACAO', 'ARQUETIPO']].drop_duplicates(subset=['COD_AFIRMACAO'])
     for _, row in matriz_arq_unicos.iterrows():
         codigo = str(row['COD_AFIRMACAO']).strip()
-        codigo_key = f"arq_{codigo}"
+        tipo_codigo = f"arq_{codigo}"
         
-        # Verificar se já foi processado
-        if codigo_key in codigos_ja_processados:
-            continue
-        
-        # PRIMEIRO: Verificar se está no CSV (chave composta)
-        dimensao = None
-        if codigo_key in classificacoes:
-            dimensao = classificacoes[codigo_key]
-        elif codigo in classificacoes:
-            dimensao = classificacoes[codigo]
-        # NÃO usar palavras-chave - apenas CSV
-        
-        # Se encontrou classificação no CSV, adicionar
-        if dimensao:
+        # SÓ adiciona se estiver no CSV
+        if tipo_codigo in csv_dict and tipo_codigo not in codigos_processados:
             afirmacoes_se.append({
                 'tipo': 'Arquétipo',
                 'afirmacao': row['AFIRMACAO'],
                 'dimensao': row['ARQUETIPO'],
                 'subdimensao': 'N/A',
                 'chave': codigo,
-                'dimensao_saude_emocional': dimensao
+                'dimensao_saude_emocional': csv_dict[tipo_codigo]
             })
-            codigos_ja_processados.add(codigo_key)
+            codigos_processados.add(tipo_codigo)
     
-    # Obter afirmações únicas de microambiente (evitar duplicatas por código)
+    # Microambiente
     matriz_micro_unicos = matriz_micro[['COD', 'AFIRMACAO', 'DIMENSAO', 'SUBDIMENSAO']].drop_duplicates(subset=['COD'])
-    
-    # Analisar matriz de microambiente
     for _, row in matriz_micro_unicos.iterrows():
         codigo = str(row['COD']).strip()
-        codigo_key = f"micro_{codigo}"
+        tipo_codigo = f"micro_{codigo}"
         
-        # Verificar se já foi processado
-        if codigo_key in codigos_ja_processados:
-            continue
-        
-        # PRIMEIRO: Verificar se está no CSV (chave composta)
-        dimensao = None
-        if codigo_key in classificacoes:
-            dimensao = classificacoes[codigo_key]
-        elif codigo in classificacoes:
-            dimensao = classificacoes[codigo]
-        # NÃO usar palavras-chave - apenas CSV
-        
-        # Se encontrou classificação no CSV, adicionar
-        if dimensao:
+        # SÓ adiciona se estiver no CSV
+        if tipo_codigo in csv_dict and tipo_codigo not in codigos_processados:
             afirmacoes_se.append({
                 'tipo': 'Microambiente',
                 'afirmacao': row['AFIRMACAO'],
                 'dimensao': row['DIMENSAO'],
                 'subdimensao': row['SUBDIMENSAO'],
                 'chave': codigo,
-                'dimensao_saude_emocional': dimensao
+                'dimensao_saude_emocional': csv_dict[tipo_codigo]
             })
-            codigos_ja_processados.add(codigo_key)
+            codigos_processados.add(tipo_codigo)
     
-    # DEBUG: Mostrar resumo final
-    st.info(f"📊 **DEBUG - Resumo de afirmações encontradas:**")
-    st.write(f"  - Total de afirmações SE: {len(afirmacoes_se)}")
-    arq_count = len([a for a in afirmacoes_se if a['tipo'] == 'Arquétipo'])
-    micro_count = len([a for a in afirmacoes_se if a['tipo'] == 'Microambiente'])
-    st.write(f"  - Arquétipos: {arq_count}")
-    st.write(f"  - Microambiente: {micro_count}")
-    
-    # Contar por dimensão
-    dimensoes_count = {}
-    for af in afirmacoes_se:
-        dim = af.get('dimensao_saude_emocional', 'Não classificada')
-        if dim not in dimensoes_count:
-            dimensoes_count[dim] = {'arq': 0, 'micro': 0}
-        if af['tipo'] == 'Arquétipo':
-            dimensoes_count[dim]['arq'] += 1
-        else:
-            dimensoes_count[dim]['micro'] += 1
-    
-    st.write(f"📋 **Distribuição por dimensão:**")
-    for dim, contagem in sorted(dimensoes_count.items()):
-        total = contagem['arq'] + contagem['micro']
-        st.write(f"  - {dim}: {total} total ({contagem['arq']} arquétipos + {contagem['micro']} microambiente)")
+    st.info(f"📊 Total encontrado: {len(afirmacoes_se)} afirmações (apenas as que estão no CSV)")
     
     return afirmacoes_se, df_arq_filtrado, df_micro_filtrado
     
