@@ -2216,6 +2216,149 @@ with tab3:
         st.info("💡 **Dica:** Use esta tabela para revisar se as afirmações estão classificadas corretamente. Se precisar ajustar, você pode modificar as palavras-chave no código (variável `palavras_chave_dimensoes`).")
         st.divider()
         
+        # ==================== AFIRMAÇÕES QUE NÃO ESTÃO EM SAÚDE EMOCIONAL ====================
+        st.subheader("📝 Afirmações que NÃO estão em Saúde Emocional")
+        st.markdown("**🔍 Lista completa de afirmações que não foram classificadas como saúde emocional, com códigos únicos para movimentação.**")
+        
+        # Obter códigos das afirmações de saúde emocional
+        codigos_se = set()
+        for af in afirmacoes_saude_emocional:
+            codigos_se.add(af['chave'])
+        
+        # Listar todas as afirmações de arquétipos que NÃO estão em SE
+        afirmacoes_nao_se_arq = []
+        codigos_arq_unicos = set()
+        
+        for _, row in matriz_arq.iterrows():
+            codigo = row['COD_AFIRMACAO']
+            if codigo not in codigos_se and codigo not in codigos_arq_unicos:
+                codigos_arq_unicos.add(codigo)
+                afirmacoes_nao_se_arq.append({
+                    'codigo_original': codigo,
+                    'afirmacao': row['AFIRMACAO'],
+                    'arquetipo': row['ARQUETIPO']
+                })
+        
+        # Listar todas as afirmações de microambiente que NÃO estão em SE
+        afirmacoes_nao_se_micro = []
+        codigos_micro_unicos = set()
+        
+        for _, row in matriz_micro.iterrows():
+            codigo = row['COD']
+            if codigo not in codigos_se and codigo not in codigos_micro_unicos:
+                codigos_micro_unicos.add(codigo)
+                afirmacoes_nao_se_micro.append({
+                    'codigo_original': codigo,
+                    'afirmacao': row['AFIRMACAO'],
+                    'dimensao': row['DIMENSAO'],
+                    'subdimensao': row['SUBDIMENSAO']
+                })
+        
+        # Criar códigos únicos (a01, a02, ... para arquétipos, m01, m02, ... para microambiente)
+        afirmacoes_com_codigo = []
+        
+        # Arquétipos
+        for idx, af in enumerate(afirmacoes_nao_se_arq, 1):
+            codigo_unico = f"a{idx:02d}"  # a01, a02, a03, ...
+            afirmacoes_com_codigo.append({
+                'codigo': codigo_unico,
+                'codigo_original': af['codigo_original'],
+                'tipo': 'Arquétipo',
+                'afirmacao': af['afirmacao'],
+                'dimensao': af['arquetipo'],
+                'subdimensao': 'N/A'
+            })
+        
+        # Microambiente
+        for idx, af in enumerate(afirmacoes_nao_se_micro, 1):
+            codigo_unico = f"m{idx:02d}"  # m01, m02, m03, ...
+            afirmacoes_com_codigo.append({
+                'codigo': codigo_unico,
+                'codigo_original': af['codigo_original'],
+                'tipo': 'Microambiente',
+                'afirmacao': af['afirmacao'],
+                'dimensao': af['dimensao'],
+                'subdimensao': af['subdimensao']
+            })
+        
+        # Exibir no dashboard
+        col1, col2 = st.columns(2)
+        with col1:
+            st.metric("🧠 Arquétipos não-SE", len(afirmacoes_nao_se_arq))
+        with col2:
+            st.metric("🏢 Microambiente não-SE", len(afirmacoes_nao_se_micro))
+        
+        # Tabela completa
+        if afirmacoes_com_codigo:
+            df_nao_se = pd.DataFrame(afirmacoes_com_codigo)
+            df_nao_se.columns = ['Código', 'Código Original', 'Tipo', 'Afirmação', 'Dimensão/Arquétipo', 'Subdimensão']
+            st.dataframe(df_nao_se, use_container_width=True, hide_index=True)
+            
+            # Botão de download
+            csv_nao_se = df_nao_se.to_csv(index=False, encoding='utf-8-sig')
+            st.download_button(
+                label="📥 Download CSV - Afirmações NÃO em Saúde Emocional",
+                data=csv_nao_se,
+                file_name="afirmacoes_nao_saude_emocional.csv",
+                mime="text/csv",
+                key="download_nao_se"
+            )
+            
+            # Salvar também em arquivo TXT simples
+            try:
+                with open('AFIRMACOES_NAO_SAUDE_EMOCIONAL.txt', 'w', encoding='utf-8') as f:
+                    f.write("=" * 80 + "\n")
+                    f.write("AFIRMAÇÕES QUE NÃO ESTÃO EM SAÚDE EMOCIONAL\n")
+                    f.write("=" * 80 + "\n\n")
+                    f.write(f"Total: {len(afirmacoes_com_codigo)} afirmações\n")
+                    f.write(f"  - Arquétipos: {len(afirmacoes_nao_se_arq)}\n")
+                    f.write(f"  - Microambiente: {len(afirmacoes_nao_se_micro)}\n\n")
+                    f.write("=" * 80 + "\n\n")
+                    
+                    # Arquétipos
+                    f.write("ARQUÉTIPOS\n")
+                    f.write("-" * 80 + "\n")
+                    for af in afirmacoes_nao_se_arq:
+                        idx = afirmacoes_nao_se_arq.index(af) + 1
+                        codigo_unico = f"a{idx:02d}"
+                        f.write(f"\n[{codigo_unico}] {af['codigo_original']}\n")
+                        f.write(f"Arquétipo: {af['arquetipo']}\n")
+                        f.write(f"Afirmação: {af['afirmacao']}\n")
+                        f.write("-" * 80 + "\n")
+                    
+                    f.write("\n\n")
+                    
+                    # Microambiente
+                    f.write("MICROAMBIENTE\n")
+                    f.write("-" * 80 + "\n")
+                    for af in afirmacoes_nao_se_micro:
+                        idx = afirmacoes_nao_se_micro.index(af) + 1
+                        codigo_unico = f"m{idx:02d}"
+                        f.write(f"\n[{codigo_unico}] {af['codigo_original']}\n")
+                        f.write(f"Dimensão: {af['dimensao']}\n")
+                        f.write(f"Subdimensão: {af['subdimensao']}\n")
+                        f.write(f"Afirmação: {af['afirmacao']}\n")
+                        f.write("-" * 80 + "\n")
+                    
+                    f.write("\n\n")
+                    f.write("=" * 80 + "\n")
+                    f.write("INSTRUÇÕES PARA MOVIMENTAÇÃO:\n")
+                    f.write("=" * 80 + "\n")
+                    f.write("Para adicionar uma afirmação à Saúde Emocional, forneça o código.\n")
+                    f.write("Exemplo: 'Adicionar a05 à Prevenção de Estresse'\n")
+                    f.write("Exemplo: 'Mover m12 de Suporte Emocional para Comunicação Positiva'\n")
+                    f.write("=" * 80 + "\n")
+                
+                st.success(f"✅ Arquivo salvo: `AFIRMACOES_NAO_SAUDE_EMOCIONAL.txt` ({len(afirmacoes_com_codigo)} afirmações)")
+            except Exception as e:
+                st.warning(f"⚠️ Não foi possível salvar arquivo TXT: {str(e)}")
+            
+            st.info("💡 **Como usar os códigos:** Use os códigos (ex: `a05`, `m12`) para me pedir movimentações. Exemplo: 'Adicionar a05 à Prevenção de Estresse' ou 'Mover m12 para Comunicação Positiva'")
+        else:
+            st.success("✅ Todas as afirmações já estão classificadas em Saúde Emocional!")
+        
+        st.divider()
+        
         # ==================== DRILL-DOWN POR CATEGORIA ====================
         st.subheader("🔍 Drill-Down por Categoria de Compliance")
         
