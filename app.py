@@ -2302,8 +2302,9 @@ with tab3:
         st.markdown(f"- **Soma (SE + Não-SE): {total_se + total_nao_se}**")
         st.markdown(f"- **Diferença: {total_geral_esperado - (total_se + total_nao_se)} afirmações faltando**")
         
-        if codigos_faltantes:
-            st.error(f"❌ **Erro:** {len(codigos_faltantes)} códigos não foram encontrados!")
+        total_codigos_faltantes = len(codigos_faltantes_arq) + len(codigos_faltantes_micro)
+        if total_codigos_faltantes > 0:
+            st.error(f"❌ **Erro:** {total_codigos_faltantes} códigos não foram encontrados!")
             if codigos_faltantes_arq:
                 st.error(f"   - Arquétipos faltantes ({len(codigos_faltantes_arq)}): {sorted(codigos_faltantes_arq)[:20]}{'...' if len(codigos_faltantes_arq) > 20 else ''}")
             if codigos_faltantes_micro:
@@ -2313,13 +2314,19 @@ with tab3:
             with st.expander("🔍 Ver afirmações faltantes em detalhes"):
                 if codigos_faltantes_arq:
                     st.markdown("**Arquétipos faltantes:**")
-                    df_faltantes_arq = todas_afirmacoes_arq[todas_afirmacoes_arq['COD_AFIRMACAO'].isin(codigos_faltantes_arq)]
-                    st.dataframe(df_faltantes_arq[['COD_AFIRMACAO', 'AFIRMACAO', 'ARQUETIPO']], use_container_width=True, hide_index=True)
+                    # Converter códigos para o mesmo tipo que está no DataFrame
+                    codigos_faltantes_arq_conv = [str(c).strip() for c in codigos_faltantes_arq]
+                    df_faltantes_arq = todas_afirmacoes_arq[todas_afirmacoes_arq['COD_AFIRMACAO'].astype(str).str.strip().isin(codigos_faltantes_arq_conv)]
+                    if not df_faltantes_arq.empty:
+                        st.dataframe(df_faltantes_arq[['COD_AFIRMACAO', 'AFIRMACAO', 'ARQUETIPO']], use_container_width=True, hide_index=True)
                 
                 if codigos_faltantes_micro:
                     st.markdown("**Microambiente faltantes:**")
-                    df_faltantes_micro = todas_afirmacoes_micro[todas_afirmacoes_micro['COD'].isin(codigos_faltantes_micro)]
-                    st.dataframe(df_faltantes_micro[['COD', 'AFIRMACAO', 'DIMENSAO', 'SUBDIMENSAO']], use_container_width=True, hide_index=True)
+                    # Converter códigos para o mesmo tipo que está no DataFrame
+                    codigos_faltantes_micro_conv = [str(c).strip() for c in codigos_faltantes_micro]
+                    df_faltantes_micro = todas_afirmacoes_micro[todas_afirmacoes_micro['COD'].astype(str).str.strip().isin(codigos_faltantes_micro_conv)]
+                    if not df_faltantes_micro.empty:
+                        st.dataframe(df_faltantes_micro[['COD', 'AFIRMACAO', 'DIMENSAO', 'SUBDIMENSAO']], use_container_width=True, hide_index=True)
         
         if total_se + total_nao_se != total_geral_esperado:
             st.warning(f"⚠️ **Atenção:** Há uma diferença de {total_geral_esperado - (total_se + total_nao_se)} afirmações. Verificando...")
