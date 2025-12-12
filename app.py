@@ -2282,13 +2282,35 @@ with tab3:
             'Equilíbrio Vida-Trabalho': ['equilíbrio', 'equilibrio', 'flexibilidade', 'horários', 'horarios', 'tempo', 'família', 'familia', 'pessoal', 'relação', 'relacao', 'vida pessoal']
         }
         
+        # Normalizar nome da dimensão (remover acentos e normalizar)
+        dimensoes_normalizadas = {
+            'Prevenção de Estresse': 'Prevenção de Estresse',
+            'Prevencao de Estresse': 'Prevenção de Estresse',
+            'Ambiente Psicológico Seguro': 'Ambiente Psicológico Seguro',
+            'Ambiente Psicologico Seguro': 'Ambiente Psicológico Seguro',
+            'Suporte Emocional': 'Suporte Emocional',
+            'Comunicação Positiva': 'Comunicação Positiva',
+            'Comunicacao Positiva': 'Comunicação Positiva',
+            'Equilíbrio Vida-Trabalho': 'Equilíbrio Vida-Trabalho',
+            'Equilibrio Vida-Trabalho': 'Equilíbrio Vida-Trabalho'
+        }
+        
+        # Set para rastrear códigos já processados (evitar duplicatas)
+        codigos_processados = set()
+        
         # Classificar todas as afirmações de saúde emocional
         for af in afirmacoes_saude_emocional:
+            codigo_af = str(af['chave']).strip()
+            
+            # Verificar se já foi processado (evitar duplicatas)
+            if codigo_af in codigos_processados:
+                continue
+            codigos_processados.add(codigo_af)
+            
             af_lower = af['afirmacao'].lower()
             categoria_atribuida = None
             
             # PRIMEIRO: Verificar se há reclassificação manual (do CSV importado)
-            codigo_af = str(af['chave']).strip()
             # Tentar diferentes variações do código
             codigos_para_tentar = [codigo_af, codigo_af.upper(), codigo_af.lower()]
             # Se o código começar com Q, tentar também sem o Q
@@ -2301,7 +2323,8 @@ with tab3:
                 if cod_tentativa in reclassificacoes:
                     categoria_atribuida = reclassificacoes[cod_tentativa]['para']
                     break
-            else:
+            
+            if not categoria_atribuida:
                 # Se não houver reclassificação, usar lógica de palavras-chave
                 for dimensao, palavras in palavras_chave_dimensoes.items():
                     if any(palavra in af_lower for palavra in palavras):
@@ -2312,18 +2335,7 @@ with tab3:
                 if not categoria_atribuida:
                     categoria_atribuida = 'Suporte Emocional'
             
-            # Normalizar nome da dimensão (remover acentos e normalizar)
-            dimensoes_normalizadas = {
-                'Prevenção de Estresse': 'Prevenção de Estresse',
-                'Prevencao de Estresse': 'Prevenção de Estresse',
-                'Ambiente Psicológico Seguro': 'Ambiente Psicológico Seguro',
-                'Ambiente Psicologico Seguro': 'Ambiente Psicológico Seguro',
-                'Suporte Emocional': 'Suporte Emocional',
-                'Comunicação Positiva': 'Comunicação Positiva',
-                'Comunicacao Positiva': 'Comunicação Positiva',
-                'Equilíbrio Vida-Trabalho': 'Equilíbrio Vida-Trabalho',
-                'Equilibrio Vida-Trabalho': 'Equilíbrio Vida-Trabalho'
-            }
+            # Normalizar nome da dimensão
             categoria_atribuida = dimensoes_normalizadas.get(categoria_atribuida, categoria_atribuida)
             
             # Garantir que a dimensão existe no mapeamento
@@ -2345,8 +2357,15 @@ with tab3:
                     'subdimensao': af['subdimensao']
                 })
         
-        # Adicionar novas afirmações do CSV
+        # Adicionar novas afirmações do CSV (apenas se não estiverem já na lista)
         for nova_af in novas_afirmacoes:
+            codigo_nova = str(nova_af.get('codigo_original', nova_af['cod'])).strip()
+            
+            # Verificar se já foi processado (evitar duplicatas)
+            if codigo_nova in codigos_processados:
+                continue
+            codigos_processados.add(codigo_nova)
+            
             dimensao = nova_af['dimensao']
             # Normalizar dimensão
             dimensao = dimensoes_normalizadas.get(dimensao, dimensao)
@@ -2355,13 +2374,13 @@ with tab3:
             
             if nova_af['tipo'] == 'Arquétipo' or 'Arquétipo' in nova_af['tipo']:
                 mapeamento_por_dimensao[dimensao]['arquetipos'].append({
-                    'codigo': nova_af.get('codigo_original', nova_af['cod']),
+                    'codigo': codigo_nova,
                     'afirmacao': nova_af['afirmacao'],
                     'dimensao': 'N/A'
                 })
             else:  # Microambiente
                 mapeamento_por_dimensao[dimensao]['microambiente'].append({
-                    'codigo': nova_af.get('codigo_original', nova_af['cod']),
+                    'codigo': codigo_nova,
                     'afirmacao': nova_af['afirmacao'],
                     'dimensao': 'N/A',
                     'subdimensao': 'N/A'
