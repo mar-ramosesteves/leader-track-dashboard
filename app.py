@@ -1910,6 +1910,9 @@ with tab3:
     with st.spinner("Identificando afirmações de saúde emocional..."):
         afirmacoes_saude_emocional, df_arq_filtrado, df_micro_filtrado = analisar_afirmacoes_saude_emocional(matriz_arq, matriz_micro, df_arquetipos, df_microambiente, filtros)
         
+        # Se houver reclassificações importadas, incluir TODAS as afirmações (não apenas as com palavras-chave)
+        # Isso será feito depois do upload do CSV, mas precisamos preparar a estrutura
+        
         
         
         # ✅ CALCULAR COMPLIANCE AQUI (DEPOIS DOS FILTROS!)
@@ -2107,6 +2110,146 @@ with tab3:
         st.plotly_chart(fig_compliance, use_container_width=True)
         st.divider()
         
+        # ==================== IMPORTAR E APLICAR RECLASSIFICAÇÕES ====================
+        st.subheader("📤 Importar Reclassificações de Afirmações")
+        st.markdown("**📋 Faça upload do CSV com as reclassificações (colunas: COD, STATUS, DE, PARA, Tipo, Código, Afirmação)**")
+        
+        uploaded_file = st.file_uploader(
+            "Escolha o arquivo CSV com as reclassificações",
+            type=['csv'],
+            key="upload_reclassificacoes"
+        )
+        
+        # Dicionário para armazenar reclassificações (será usado na classificação)
+        reclassificacoes = {}
+        novas_afirmacoes = []
+        
+        if uploaded_file is not None:
+            try:
+                df_reclass = pd.read_csv(uploaded_file, encoding='utf-8-sig')
+                
+                # Normalizar nomes das colunas (remover acentos, espaços, etc.)
+                df_reclass.columns = df_reclass.columns.str.strip()
+                
+                # Verificar colunas necessárias
+                colunas_necessarias = ['COD', 'STATUS', 'DE', 'PARA', 'Tipo', 'Código']
+                colunas_encontradas = [col for col in colunas_necessarias if col in df_reclass.columns]
+                
+                if len(colunas_encontradas) >= 4:  # Pelo menos COD, STATUS, PARA, Tipo
+                    st.success(f"✅ Arquivo carregado com sucesso! {len(df_reclass)} linhas processadas.")
+                    
+                    # Processar reclassificações
+                    for _, row in df_reclass.iterrows():
+                        cod = str(row.get('COD', '')).strip()
+                        status = str(row.get('STATUS', '')).strip()
+                        de = str(row.get('DE', '')).strip() if pd.notna(row.get('DE')) else ''
+                        para = str(row.get('PARA', '')).strip() if pd.notna(row.get('PARA')) else ''
+                        tipo = str(row.get('Tipo', '')).strip()
+                        codigo_original = str(row.get('Código', '')).strip()
+                        
+                        # Obter texto da afirmação (pode estar em qualquer coluna que não seja as já processadas)
+                        coluna_afirmacao = None
+                        for col in df_reclass.columns:
+                            if col not in ['COD', 'STATUS', 'DE', 'PARA', 'Tipo', 'Código'] and pd.notna(row.get(col)):
+                                coluna_afirmacao = col
+                                break
+                        
+                        afirmacao_texto = ''
+                        if coluna_afirmacao:
+                            afirmacao_texto = str(row.get(coluna_afirmacao, '')).strip()
+                        
+                        if para and para.upper() != 'NAN' and para != '':
+                            # Identificar se é código novo (aXX ou mXX) ou existente (QXX)
+                            if cod.startswith('a') or cod.startswith('m'):
+                                # Nova afirmação
+                                novas_afirmacoes.append({
+                                    'cod': cod,
+                                    'codigo_original': codigo_original,
+                                    'tipo': tipo,
+                                    'afirmacao': afirmacao_texto,
+                                    'dimensao': para,
+                                    'status': status
+                                })
+                            else:
+                                # Reclassificação de afirmação existente
+                                # Usar código original se disponível, senão usar COD
+                                codigo_chave = codigo_original if codigo_original and codigo_original != '' else cod
+                                reclassificacoes[codigo_chave] = {
+                                    'de': de,
+                                    'para': para,
+                                    'tipo': tipo,
+                                    'cod': cod
+                                }
+                    
+                    st.info(f"📊 Processadas: {len(reclassificacoes)} reclassificações e {len(novas_afirmacoes)} novas afirmações")
+                    
+                    # Mostrar preview
+                    with st.expander("👁️ Visualizar Reclassificações Processadas"):
+                        if reclassificacoes:
+                            st.markdown("**🔄 Reclassificações:**")
+                            df_reclass_preview = pd.DataFrame([
+                                {
+                                    'Código': k,
+                                    'DE': v['de'] if v['de'] else '(sem origem)',
+                                    'PARA': v['para'],
+                                    'Tipo': v['tipo']
+                                }
+                                for k, v in reclassificacoes.items()
+                            ])
+                            st.dataframe(df_reclass_preview, use_container_width=True, hide_index=True)
+                        
+                        if novas_afirmacoes:
+                            st.markdown("**➕ Novas Afirmações:**")
+                            df_novas_preview = pd.DataFrame(novas_afirmacoes)
+                            st.dataframe(df_novas_preview, use_container_width=True, hide_index=True)
+                else:
+                    st.error(f"❌ Colunas necessárias não encontradas. Encontradas: {', '.join(df_reclass.columns.tolist())}")
+                    st.info("💡 Colunas esperadas: COD, STATUS, DE, PARA, Tipo, Código, e uma coluna com o texto da afirmação")
+            except Exception as e:
+                st.error(f"❌ Erro ao processar arquivo: {str(e)}")
+                st.info("💡 Verifique se o arquivo está no formato CSV correto e com encoding UTF-8")
+        
+        # Se houver reclassificações, expandir afirmacoes_saude_emocional para incluir TODAS as afirmações
+        if reclassificacoes or novas_afirmacoes:
+            # Obter todas as afirmações únicas de arquétipos
+            todas_afirmacoes_arq_unicas = matriz_arq[['COD_AFIRMACAO', 'AFIRMACAO', 'ARQUETIPO']].drop_duplicates(subset=['COD_AFIRMACAO'])
+            todas_afirmacoes_micro_unicas = matriz_micro[['COD', 'AFIRMACAO', 'DIMENSAO', 'SUBDIMENSAO']].drop_duplicates(subset=['COD'])
+            
+            # Criar set de códigos já em afirmacoes_saude_emocional
+            codigos_ja_em_se = set()
+            for af in afirmacoes_saude_emocional:
+                codigos_ja_em_se.add(str(af['chave']).strip())
+            
+            # Adicionar todas as afirmações de arquétipos que ainda não estão
+            for _, row in todas_afirmacoes_arq_unicas.iterrows():
+                codigo = str(row['COD_AFIRMACAO']).strip()
+                if codigo not in codigos_ja_em_se:
+                    afirmacoes_saude_emocional.append({
+                        'tipo': 'Arquétipo',
+                        'afirmacao': row['AFIRMACAO'],
+                        'dimensao': row['ARQUETIPO'],
+                        'subdimensao': 'N/A',
+                        'chave': codigo
+                    })
+                    codigos_ja_em_se.add(codigo)
+            
+            # Adicionar todas as afirmações de microambiente que ainda não estão
+            for _, row in todas_afirmacoes_micro_unicas.iterrows():
+                codigo = str(row['COD']).strip()
+                if codigo not in codigos_ja_em_se:
+                    afirmacoes_saude_emocional.append({
+                        'tipo': 'Microambiente',
+                        'afirmacao': row['AFIRMACAO'],
+                        'dimensao': row['DIMENSAO'],
+                        'subdimensao': row['SUBDIMENSAO'],
+                        'chave': codigo
+                    })
+                    codigos_ja_em_se.add(codigo)
+            
+            st.info(f"✅ **100% das afirmações incluídas!** Total: {len(afirmacoes_saude_emocional)} afirmações (incluindo reclassificações)")
+        
+        st.divider()
+        
         # ==================== MAPEAMENTO COMPLETO: AFIRMAÇÕES POR DIMENSÃO ====================
         st.subheader("📋 Mapeamento Completo: Afirmações por Dimensão de Saúde Emocional")
         st.markdown("**🔍 Use esta seção para revisar e ajustar a classificação das afirmações nas dimensões.**")
@@ -2134,15 +2277,38 @@ with tab3:
             af_lower = af['afirmacao'].lower()
             categoria_atribuida = None
             
-            # Identificar categoria usando a mesma lógica
-            for dimensao, palavras in palavras_chave_dimensoes.items():
-                if any(palavra in af_lower for palavra in palavras):
-                    categoria_atribuida = dimensao
-                    break
+            # PRIMEIRO: Verificar se há reclassificação manual (do CSV importado)
+            codigo_af = str(af['chave']).strip()
+            if codigo_af in reclassificacoes:
+                categoria_atribuida = reclassificacoes[codigo_af]['para']
+            else:
+                # Se não houver reclassificação, usar lógica de palavras-chave
+                for dimensao, palavras in palavras_chave_dimensoes.items():
+                    if any(palavra in af_lower for palavra in palavras):
+                        categoria_atribuida = dimensao
+                        break
+                
+                # Se não encontrou, coloca em Suporte Emocional (padrão)
+                if not categoria_atribuida:
+                    categoria_atribuida = 'Suporte Emocional'
             
-            # Se não encontrou, coloca em Suporte Emocional (padrão)
-            if not categoria_atribuida:
-                categoria_atribuida = 'Suporte Emocional'
+            # Normalizar nome da dimensão (remover acentos e normalizar)
+            dimensoes_normalizadas = {
+                'Prevenção de Estresse': 'Prevenção de Estresse',
+                'Prevencao de Estresse': 'Prevenção de Estresse',
+                'Ambiente Psicológico Seguro': 'Ambiente Psicológico Seguro',
+                'Ambiente Psicologico Seguro': 'Ambiente Psicológico Seguro',
+                'Suporte Emocional': 'Suporte Emocional',
+                'Comunicação Positiva': 'Comunicação Positiva',
+                'Comunicacao Positiva': 'Comunicação Positiva',
+                'Equilíbrio Vida-Trabalho': 'Equilíbrio Vida-Trabalho',
+                'Equilibrio Vida-Trabalho': 'Equilíbrio Vida-Trabalho'
+            }
+            categoria_atribuida = dimensoes_normalizadas.get(categoria_atribuida, categoria_atribuida)
+            
+            # Garantir que a dimensão existe no mapeamento
+            if categoria_atribuida not in mapeamento_por_dimensao:
+                categoria_atribuida = 'Suporte Emocional'  # Fallback
             
             # Adicionar à dimensão correspondente
             if af['tipo'] == 'Arquétipo':
@@ -2157,6 +2323,28 @@ with tab3:
                     'afirmacao': af['afirmacao'],
                     'dimensao': af['dimensao'],
                     'subdimensao': af['subdimensao']
+                })
+        
+        # Adicionar novas afirmações do CSV
+        for nova_af in novas_afirmacoes:
+            dimensao = nova_af['dimensao']
+            # Normalizar dimensão
+            dimensao = dimensoes_normalizadas.get(dimensao, dimensao)
+            if dimensao not in mapeamento_por_dimensao:
+                dimensao = 'Suporte Emocional'  # Fallback
+            
+            if nova_af['tipo'] == 'Arquétipo' or 'Arquétipo' in nova_af['tipo']:
+                mapeamento_por_dimensao[dimensao]['arquetipos'].append({
+                    'codigo': nova_af.get('codigo_original', nova_af['cod']),
+                    'afirmacao': nova_af['afirmacao'],
+                    'dimensao': 'N/A'
+                })
+            else:  # Microambiente
+                mapeamento_por_dimensao[dimensao]['microambiente'].append({
+                    'codigo': nova_af.get('codigo_original', nova_af['cod']),
+                    'afirmacao': nova_af['afirmacao'],
+                    'dimensao': 'N/A',
+                    'subdimensao': 'N/A'
                 })
         
         # Criar DataFrame completo para exportação
