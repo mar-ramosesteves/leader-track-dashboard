@@ -2233,7 +2233,15 @@ with tab3:
             # Adicionar todas as afirmações de arquétipos que ainda não estão
             for _, row in todas_afirmacoes_arq_unicas.iterrows():
                 codigo = str(row['COD_AFIRMACAO']).strip()
-                if codigo not in codigos_ja_em_se:
+                # Normalizar código para comparação (Q01, Q1, 01, etc.)
+                codigos_variacoes = [codigo, codigo.upper(), codigo.lower()]
+                if codigo.startswith('Q'):
+                    codigos_variacoes.extend([codigo[1:], codigo[1:].zfill(2)])
+                
+                # Verificar se já está na lista (em qualquer variação)
+                ja_existe = any(cod_var in codigos_ja_em_se for cod_var in codigos_variacoes)
+                
+                if not ja_existe:
                     afirmacoes_saude_emocional.append({
                         'tipo': 'Arquétipo',
                         'afirmacao': row['AFIRMACAO'],
@@ -2246,7 +2254,15 @@ with tab3:
             # Adicionar todas as afirmações de microambiente que ainda não estão
             for _, row in todas_afirmacoes_micro_unicas.iterrows():
                 codigo = str(row['COD']).strip()
-                if codigo not in codigos_ja_em_se:
+                # Normalizar código para comparação
+                codigos_variacoes = [codigo, codigo.upper(), codigo.lower()]
+                if codigo.startswith('Q'):
+                    codigos_variacoes.extend([codigo[1:], codigo[1:].zfill(2)])
+                
+                # Verificar se já está na lista (em qualquer variação)
+                ja_existe = any(cod_var in codigos_ja_em_se for cod_var in codigos_variacoes)
+                
+                if not ja_existe:
                     afirmacoes_saude_emocional.append({
                         'tipo': 'Microambiente',
                         'afirmacao': row['AFIRMACAO'],
@@ -2331,8 +2347,14 @@ with tab3:
                         categoria_atribuida = dimensao
                         break
                 
-                # Se não encontrou, coloca em Suporte Emocional (padrão)
-                if not categoria_atribuida:
+                # Se não encontrou e há reclassificações, verificar se há alguma reclassificação para esta afirmação
+                # usando o código original da matriz
+                if not categoria_atribuida and (reclassificacoes or novas_afirmacoes):
+                    # Tentar encontrar por código original na matriz
+                    # Se não encontrar, coloca em Suporte Emocional (padrão)
+                    categoria_atribuida = 'Suporte Emocional'
+                elif not categoria_atribuida:
+                    # Se não encontrou e não há reclassificações, coloca em Suporte Emocional (padrão)
                     categoria_atribuida = 'Suporte Emocional'
             
             # Normalizar nome da dimensão
@@ -2388,6 +2410,9 @@ with tab3:
         
         # Criar DataFrame completo para exportação
         dados_exportacao = []
+        
+        # Calcular total geral para verificação
+        total_mapeamento = sum(len(dados['arquetipos']) + len(dados['microambiente']) for dados in mapeamento_por_dimensao.values())
         
         # Exibir mapeamento organizado
         for dimensao, dados in mapeamento_por_dimensao.items():
@@ -2449,6 +2474,15 @@ with tab3:
                 mime="text/csv",
                 key="download_mapeamento"
             )
+        
+        # Mostrar total do mapeamento
+        st.markdown(f"**📊 Total de afirmações no mapeamento: {total_mapeamento}**")
+        if reclassificacoes or novas_afirmacoes:
+            total_esperado = len(afirmacoes_saude_emocional)
+            if total_mapeamento != total_esperado:
+                st.warning(f"⚠️ **Atenção:** O mapeamento tem {total_mapeamento} afirmações, mas deveria ter {total_esperado}. Verifique se todas as afirmações foram classificadas.")
+            else:
+                st.success(f"✅ **Perfeito!** Todas as {total_esperado} afirmações estão classificadas nas dimensões.")
         
         st.info("💡 **Dica:** Use esta tabela para revisar se as afirmações estão classificadas corretamente. Se precisar ajustar, você pode modificar as palavras-chave no código (variável `palavras_chave_dimensoes`).")
         st.divider()
