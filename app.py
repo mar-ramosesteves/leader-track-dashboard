@@ -1910,11 +1910,63 @@ with tab3:
     # Dicionário fixo com todas as reclassificações (código -> dimensão)
     # Este dicionário é definitivo e será usado sempre, garantindo que 100% das afirmações sejam classificadas
     RECLASSIFICACOES_DEFINITIVAS = {
-        # TODAS as 97 reclassificações baseadas no CSV completo (código -> dimensão)
-        # Usando a última ocorrência de cada código no CSV (dimensão final)
+        # Reclassificações definitivas baseadas na imagem fornecida - TODAS as 97 afirmações
+        # Total: 97 afirmações (49 arquétipos Q01-Q49 + 48 microambiente Q01-Q48)
+        # Baseado no arquivo: reclassificacoes_completas_97_afirmacoes.csv
+        # Chaves compostas: "arq_Q01" para arquétipos, "micro_Q01" para microambiente
+        # Chaves simples: "Q01" como fallback (usa última ocorrência do CSV)
+        
+        # ========== ARQUÉTIPOS (49 afirmações) ==========
+        # Prevenção de Estresse (4 arquétipos)
+        'arq_Q10': 'Prevenção de Estresse', 'arq_Q14': 'Prevenção de Estresse', 'arq_Q17': 'Prevenção de Estresse',
+        'arq_Q24': 'Prevenção de Estresse',
+        
+        # Ambiente Psicológico Seguro (2 arquétipos)
+        'arq_Q32': 'Ambiente Psicológico Seguro', 'arq_Q44': 'Ambiente Psicológico Seguro',
+        
+        # Suporte Emocional (15 arquétipos)
+        'arq_Q01': 'Suporte Emocional', 'arq_Q03': 'Suporte Emocional', 'arq_Q04': 'Suporte Emocional',
+        'arq_Q09': 'Suporte Emocional', 'arq_Q13': 'Suporte Emocional', 'arq_Q15': 'Suporte Emocional',
+        'arq_Q16': 'Suporte Emocional', 'arq_Q18': 'Suporte Emocional', 'arq_Q19': 'Suporte Emocional',
+        'arq_Q25': 'Suporte Emocional', 'arq_Q31': 'Suporte Emocional', 'arq_Q36': 'Suporte Emocional',
+        'arq_Q40': 'Suporte Emocional', 'arq_Q41': 'Suporte Emocional', 'arq_Q43': 'Suporte Emocional',
+        'arq_Q49': 'Suporte Emocional',
+        
+        # Comunicação Positiva (28 arquétipos)
+        'arq_Q02': 'Comunicação Positiva', 'arq_Q05': 'Comunicação Positiva', 'arq_Q07': 'Comunicação Positiva',
+        'arq_Q08': 'Comunicação Positiva', 'arq_Q11': 'Comunicação Positiva', 'arq_Q12': 'Comunicação Positiva',
+        'arq_Q20': 'Comunicação Positiva', 'arq_Q21': 'Comunicação Positiva', 'arq_Q22': 'Comunicação Positiva',
+        'arq_Q23': 'Comunicação Positiva', 'arq_Q27': 'Comunicação Positiva', 'arq_Q28': 'Comunicação Positiva',
+        'arq_Q29': 'Comunicação Positiva', 'arq_Q30': 'Comunicação Positiva', 'arq_Q33': 'Comunicação Positiva',
+        'arq_Q34': 'Comunicação Positiva', 'arq_Q35': 'Comunicação Positiva', 'arq_Q37': 'Comunicação Positiva',
+        'arq_Q38': 'Comunicação Positiva', 'arq_Q39': 'Comunicação Positiva', 'arq_Q42': 'Comunicação Positiva',
+        'arq_Q45': 'Comunicação Positiva', 'arq_Q46': 'Comunicação Positiva', 'arq_Q47': 'Comunicação Positiva',
+        'arq_Q48': 'Comunicação Positiva',
+        
+        # ========== MICROAMBIENTE (48 afirmações) ==========
+        # Ambiente Psicológico Seguro (11 microambiente)
+        'micro_Q06': 'Ambiente Psicológico Seguro', 'micro_Q07': 'Ambiente Psicológico Seguro',
+        'micro_Q08': 'Ambiente Psicológico Seguro', 'micro_Q23': 'Ambiente Psicológico Seguro',
+        'micro_Q26': 'Ambiente Psicológico Seguro', 'micro_Q39': 'Ambiente Psicológico Seguro',
+        'micro_Q40': 'Ambiente Psicológico Seguro', 'micro_Q41': 'Ambiente Psicológico Seguro',
+        'micro_Q44': 'Ambiente Psicológico Seguro', 'micro_Q47': 'Ambiente Psicológico Seguro',
+        'micro_Q48': 'Ambiente Psicológico Seguro',
+        
+        # Comunicação Positiva (37 microambiente)
+        'micro_Q01': 'Comunicação Positiva', 'micro_Q04': 'Comunicação Positiva', 'micro_Q05': 'Comunicação Positiva',
+        'micro_Q09': 'Comunicação Positiva', 'micro_Q10': 'Comunicação Positiva', 'micro_Q11': 'Comunicação Positiva',
+        'micro_Q12': 'Comunicação Positiva', 'micro_Q13': 'Comunicação Positiva', 'micro_Q14': 'Comunicação Positiva',
+        'micro_Q15': 'Comunicação Positiva', 'micro_Q16': 'Comunicação Positiva', 'micro_Q17': 'Comunicação Positiva',
+        'micro_Q22': 'Comunicação Positiva', 'micro_Q24': 'Comunicação Positiva', 'micro_Q34': 'Comunicação Positiva',
+        'micro_Q35': 'Comunicação Positiva', 'micro_Q37': 'Comunicação Positiva', 'micro_Q38': 'Comunicação Positiva',
+        'micro_Q42': 'Comunicação Positiva', 'micro_Q43': 'Comunicação Positiva', 'micro_Q45': 'Comunicação Positiva',
+        'micro_Q46': 'Comunicação Positiva',
+        
+        # ========== FALLBACK (chaves simples - última ocorrência do CSV) ==========
+        # Usado quando não encontrar chave composta
         'Q01': 'Comunicação Positiva', 'Q02': 'Comunicação Positiva', 'Q03': 'Comunicação Positiva',
         'Q04': 'Comunicação Positiva', 'Q05': 'Comunicação Positiva', 'Q06': 'Ambiente Psicológico Seguro',
-        'Q07': 'Ambiente Psicológico Seguro', 'Q08': 'Comunicação Positiva', 'Q09': 'Comunicação Positiva',
+        'Q07': 'Ambiente Psicológico Seguro', 'Q08': 'Ambiente Psicológico Seguro', 'Q09': 'Comunicação Positiva',
         'Q10': 'Comunicação Positiva', 'Q11': 'Comunicação Positiva', 'Q12': 'Comunicação Positiva',
         'Q13': 'Comunicação Positiva', 'Q14': 'Comunicação Positiva', 'Q15': 'Comunicação Positiva',
         'Q16': 'Comunicação Positiva', 'Q17': 'Comunicação Positiva', 'Q18': 'Suporte Emocional',
@@ -1928,7 +1980,7 @@ with tab3:
         'Q40': 'Ambiente Psicológico Seguro', 'Q41': 'Ambiente Psicológico Seguro', 'Q42': 'Comunicação Positiva',
         'Q43': 'Comunicação Positiva', 'Q44': 'Ambiente Psicológico Seguro', 'Q45': 'Comunicação Positiva',
         'Q46': 'Comunicação Positiva', 'Q47': 'Ambiente Psicológico Seguro', 'Q48': 'Ambiente Psicológico Seguro',
-        'Q49': 'Suporte Emocional'
+        'Q49': 'Suporte Emocional',
     }
     
     # Analisar afirmações de saúde emocional
@@ -2367,15 +2419,39 @@ with tab3:
                 codigos_para_tentar.append(codigo_af[1:].zfill(2))  # Q01 -> 01 -> 01, Q1 -> 1 -> 01
             
             categoria_atribuida = None
-            for cod_tentativa in codigos_para_tentar:
-                # Primeiro verificar reclassificações definitivas
-                if cod_tentativa in reclassificacoes_finais:
-                    categoria_atribuida = reclassificacoes_finais[cod_tentativa]
-                    break
-                # Depois verificar CSV importado (se houver)
-                if reclassificacoes and cod_tentativa in reclassificacoes:
-                    categoria_atribuida = reclassificacoes[cod_tentativa]['para']
-                    break
+            # Primeiro tentar buscar usando chave composta (tipo_codigo) para diferenciar arquétipo de microambiente
+            tipo_af = af.get('tipo', '').strip()
+            if tipo_af:
+                # Criar prefixo baseado no tipo
+                if 'Arquétipo' in tipo_af or 'Arquetipo' in tipo_af:
+                    prefixo = 'arq_'
+                elif 'Microambiente' in tipo_af or 'Micro' in tipo_af:
+                    prefixo = 'micro_'
+                else:
+                    prefixo = ''
+                
+                # Tentar buscar com chave composta primeiro
+                for cod_tentativa in codigos_para_tentar:
+                    chave_composta = f"{prefixo}{cod_tentativa}"
+                    if chave_composta in reclassificacoes_finais:
+                        categoria_atribuida = reclassificacoes_finais[chave_composta]
+                        break
+                    # Depois verificar CSV importado (se houver)
+                    if reclassificacoes and chave_composta in reclassificacoes:
+                        categoria_atribuida = reclassificacoes[chave_composta]['para']
+                        break
+            
+            # Se não encontrou com chave composta, tentar apenas com código (fallback)
+            if not categoria_atribuida:
+                for cod_tentativa in codigos_para_tentar:
+                    # Primeiro verificar reclassificações definitivas
+                    if cod_tentativa in reclassificacoes_finais:
+                        categoria_atribuida = reclassificacoes_finais[cod_tentativa]
+                        break
+                    # Depois verificar CSV importado (se houver)
+                    if reclassificacoes and cod_tentativa in reclassificacoes:
+                        categoria_atribuida = reclassificacoes[cod_tentativa]['para']
+                        break
             
             if not categoria_atribuida:
                 # Se não houver reclassificação, usar lógica de palavras-chave
@@ -2451,12 +2527,13 @@ with tab3:
         # Calcular total geral para verificação
         total_mapeamento = sum(len(dados['arquetipos']) + len(dados['microambiente']) for dados in mapeamento_por_dimensao.values())
         
-        # Exibir mapeamento organizado
+        # Exibir mapeamento organizado (sempre mostrar todas as dimensões, mesmo vazias)
         for dimensao, dados in mapeamento_por_dimensao.items():
             total_arq = len(dados['arquetipos'])
             total_micro = len(dados['microambiente'])
             total_geral = total_arq + total_micro
             
+            # Sempre mostrar a dimensão, mesmo se estiver vazia
             if total_geral > 0:
                 with st.expander(f"📁 **{dimensao}** ({total_geral} afirmações: {total_arq} arquétipos + {total_micro} microambiente)", expanded=False):
                     # Mostrar palavras-chave que identificam esta dimensão
@@ -2499,6 +2576,10 @@ with tab3:
                                 'Arquétipo/Dimensão': row['Dimensão'],
                                 'Subdimensão': row['Subdimensão']
                             })
+            else:
+                # Mostrar dimensão vazia com mensagem
+                with st.expander(f"📁 **{dimensao}** (0 afirmações)", expanded=False):
+                    st.info(f"ℹ️ Nenhuma afirmação classificada nesta dimensão ainda.")
         
         # Botão de download do mapeamento completo
         if dados_exportacao:
