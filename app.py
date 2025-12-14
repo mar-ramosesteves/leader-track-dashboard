@@ -2852,14 +2852,14 @@ with tab3:
 
 
         
-            if categoria_selecionada:
-                st.markdown(f"### 📋 Questões da Categoria: **{categoria_selecionada}**")
+        if categoria_selecionada:
+            st.markdown(f"### 📋 Questões da Categoria: **{categoria_selecionada}**")
             
-                # ✅ FILTRO ÚNICO E CORRETO: pela dimensão definida na TABELA_SAUDE_EMOCIONAL.csv
-                afirmacoes_categoria = [
-                    af for af in afirmacoes_saude_emocional_filtradas
-                    if af.get('dimensao_saude_emocional') == categoria_selecionada
-                ]
+            # ✅ FILTRO ÚNICO E CORRETO: pela dimensão definida na TABELA_SAUDE_EMOCIONAL.csv
+            afirmacoes_categoria = [
+                af for af in afirmacoes_saude_emocional_filtradas
+                if af.get('dimensao_saude_emocional') == categoria_selecionada
+            ]
             
             if afirmacoes_categoria:
                 st.success(f"✅ Encontradas {len(afirmacoes_categoria)} questões na categoria {categoria_selecionada}")
