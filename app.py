@@ -2838,7 +2838,7 @@ with tab3:
         else:
             # Sem filtro ou "Todas" selecionada
             afirmacoes_saude_emocional_filtradas = afirmacoes_saude_emocional
-
+        
         # Separar afirmações por tipo (DEPOIS do filtro)
         afirmacoes_arq = [
             a for a in afirmacoes_saude_emocional_filtradas
@@ -2848,22 +2848,22 @@ with tab3:
             a for a in afirmacoes_saude_emocional_filtradas
             if a['tipo'] == 'Microambiente'
         ]
-
-
-
         
-        if categoria_selecionada:
+        # ============================================================
+        # 📋 Questões da Categoria (filtrando pela dimensão do CSV)
+        # ============================================================
+        if categoria_selecionada and categoria_selecionada != "Todas":
             st.markdown(f"### 📋 Questões da Categoria: **{categoria_selecionada}**")
-            
+        
             # ✅ FILTRO ÚNICO E CORRETO: pela dimensão definida na TABELA_SAUDE_EMOCIONAL.csv
             afirmacoes_categoria = [
                 af for af in afirmacoes_saude_emocional_filtradas
                 if af.get('dimensao_saude_emocional') == categoria_selecionada
             ]
-            
+        
             if afirmacoes_categoria:
                 st.success(f"✅ Encontradas {len(afirmacoes_categoria)} questões na categoria {categoria_selecionada}")
-                
+        
                 # Mostrar questões encontradas com dados enriquecidos
                 for i, af in enumerate(afirmacoes_categoria, 1):
                     with st.expander(f" Questão {i}: {af['afirmacao'][:100]}..."):
@@ -2872,34 +2872,34 @@ with tab3:
                         if af['subdimensao'] != 'N/A':
                             st.markdown(f"**Subdimensão:** {af['subdimensao']}")
                         st.markdown(f"**Afirmação completa:** {af['afirmacao']}")
-                        
+        
                         # Adicionar dados da questão
                         st.divider()
                         st.markdown("**📊 Dados da Questão:**")
-                        
+        
                         if af['tipo'] == 'Arquétipo':
                             # Para arquétipos, calcular % tendência
                             codigo = af['chave']
                             arquétipo = af['dimensao']
                             estrelas_questao = []
-                            
+        
                             for _, respondente in df_arq_filtrado.iterrows():
                                 if 'respostas' in respondente and codigo in respondente['respostas']:
                                     estrelas = int(respondente['respostas'][codigo])
                                     estrelas_questao.append(estrelas)
-                            
+        
                             if estrelas_questao:
                                 media_estrelas = np.mean(estrelas_questao)
                                 media_arredondada = round(media_estrelas)
-                                
+        
                                 # Buscar % tendência
                                 chave = f"{arquétipo}{media_arredondada}{codigo}"
                                 linha_tendencia = matriz_arq[matriz_arq['CHAVE'] == chave]
-                                
+        
                                 if not linha_tendencia.empty:
                                     tendencia_percentual = linha_tendencia['% Tendência'].iloc[0] * 100
                                     tendencia_info = linha_tendencia['Tendência'].iloc[0]
-                                    
+        
                                     col1, col2, col3 = st.columns(3)
                                     with col1:
                                         st.metric("⭐ Média Estrelas", f"{media_estrelas:.1f}")
@@ -2907,16 +2907,16 @@ with tab3:
                                         st.metric("% Tendência", f"{tendencia_percentual:.1f}%")
                                     with col3:
                                         st.metric("Nº Respostas", len(estrelas_questao))
-                                    
+        
                                     st.info(f"**Tendência:** {tendencia_info}")
                                 else:
                                     st.warning("⚠️ Dados de tendência não encontrados")
                             else:
                                 st.warning("⚠️ Nenhuma resposta encontrada para esta questão")
-                        
+        
                         else:  # Microambiente
                             codigo_canonico = af['chave']  # ex.: Q45 (matriz)
-
+        
                             # Mapeamento form->canônico e reverso canônico->form
                             MAPEAMENTO_QUESTOES = {
                                 'Q01': 'Q01','Q02': 'Q12','Q03': 'Q23','Q04': 'Q34','Q05': 'Q44','Q06': 'Q45',
@@ -2930,37 +2930,39 @@ with tab3:
                             }
                             REVERSO_FORM = {can: form for form, can in MAPEAMENTO_QUESTOES.items()}
                             codigo_form_json = REVERSO_FORM.get(codigo_canonico, codigo_canonico)  # ex.: Q45 -> Q06
-                        
+        
                             estrelas_real = []
                             estrelas_ideal = []
-                        
+        
                             for _, respondente in df_micro_filtrado.iterrows():
                                 respostas = respondente.get('respostas', {})
                                 if not isinstance(respostas, dict):
                                     continue
-                        
+        
                                 questao_real = f"{codigo_form_json}C"
                                 questao_ideal = f"{codigo_form_json}k"
-                        
+        
                                 if questao_real in respostas:
                                     estrelas_real.append(int(respostas[questao_real]))
                                 if questao_ideal in respostas:
                                     estrelas_ideal.append(int(respostas[questao_ideal]))
-                        
+        
                             if estrelas_real and estrelas_ideal:
-                                media_real = np.mean(estrelas_real); media_ideal = np.mean(estrelas_ideal)
-                                media_real_arredondada = round(media_real); media_ideal_arredondada = round(media_ideal)
-                        
+                                media_real = np.mean(estrelas_real)
+                                media_ideal = np.mean(estrelas_ideal)
+                                media_real_arredondada = round(media_real)
+                                media_ideal_arredondada = round(media_ideal)
+        
                                 chave = f"{codigo_canonico}_I{media_ideal_arredondada}_R{media_real_arredondada}"
                                 linha = matriz_micro[matriz_micro['CHAVE'] == chave]
-                        
+        
                                 if not linha.empty:
                                     pontuacao_real = float(linha['PONTUACAO_REAL'].iloc[0])
                                     pontuacao_ideal = float(linha['PONTUACAO_IDEAL'].iloc[0])
                                     gap = pontuacao_ideal - pontuacao_real
                                 else:
                                     pontuacao_real = pontuacao_ideal = gap = 0.0
-                        
+        
                                 col1, col2, col3, col4 = st.columns(4)
                                 with col1:
                                     st.metric("⭐ Real", f"{media_real:.1f} ({pontuacao_real:.1f}%)")
@@ -2970,7 +2972,7 @@ with tab3:
                                     st.metric(" Gap", f"{gap:.1f}%")
                                 with col4:
                                     st.metric("Nº Respostas", len(estrelas_real))
-                        
+        
                                 if gap > 80:
                                     st.error(f" **Gap Alto:** {gap:.1f}%")
                                 elif gap > 60:
@@ -2983,8 +2985,8 @@ with tab3:
                                     st.success(f"✅ **Gap Mínimo:** {gap:.1f}%")
                             else:
                                 st.warning("⚠️ Dados insuficientes para calcular gap")
-        else:
-            st.warning(f"⚠️ Nenhuma questão encontrada na categoria {categoria_selecionada}")
+            else:
+                st.warning(f"⚠️ Nenhuma questão encontrada na categoria {categoria_selecionada}.")
 
 
 
