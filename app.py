@@ -3424,7 +3424,8 @@ with tab3:
                 mime="text/csv"
             )
     
-    else:
+    if not afirmacoes_saude_emocional:
         st.warning("⚠️ Nenhuma afirmação relacionada à saúde emocional foi identificada.")
         st.info(" Dica: Verifique se as palavras-chave estão presentes nas afirmações existentes.")
+
 
