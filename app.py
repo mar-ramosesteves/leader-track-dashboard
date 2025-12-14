@@ -2818,66 +2818,48 @@ with tab3:
         # ==================== APLICAR FILTRO NOS DADOS DOS GRÁFICOS ====================
         # Usar dados filtrados se uma categoria específica foi selecionada
         if categoria_selecionada and categoria_selecionada != "Todas":
-            # Filtrar apenas questões da categoria selecionada
-            questoes_filtradas = []
-            for af in afirmacoes_saude_emocional:
-                af_lower = af['afirmacao'].lower()
-                
-                # Aplicar a mesma lógica de categorização
-                if categoria_selecionada == 'Prevenção de Estresse':
-                    if any(palavra in af_lower for palavra in ['estresse', 'ansiedade', 'pressão', 'pressao', 'cobrança', 'cobranca', 'deadline', 'prazos', 'tensão', 'tensao', 'sobrecarga', 'preocupa com o tempo', 'preocupa com detalhes', 'preocupa se', 'preocupa com', 'necessidade de se aprofundar', 'aprofundar nos detalhes', 'detalhes na execução', 'detalhes de realização', 'detalhes do trabalho', 'sem necessidade de ficar de olho', 'fazer todo o possivel', 'resolver problemas particulares', 'problemas particulares urgentes', 'atuar na solução de conflitos', 'solução de conflitos em sua equipe', 'risco calculado', 'resultasse em algo negativo', 'seriam apoiados', 'leais uns com os outros', 'mais elogiados e incentivados', 'do que criticados']):
-                        questoes_filtradas.append(af)
-                elif categoria_selecionada == 'Ambiente Psicológico Seguro':
-                    if any(palavra in af_lower for palavra in ['ambiente', 'seguro', 'proteção', 'protecao', 'respeito', 'cuidadoso', 'palavras']):
-                        questoes_filtradas.append(af)
-                elif categoria_selecionada == 'Suporte Emocional':
-                    if any(palavra in af_lower for palavra in ['suporte', 'apoio', 'ajuda', 'assistência', 'assistencia', 'ajudar', 'resolver', 'percebe', 'oferece']):
-                        questoes_filtradas.append(af)
-                elif categoria_selecionada == 'Comunicação Positiva':
-                    if any(palavra in af_lower for palavra in ['feedback', 'positivo', 'construtivo', 'encorajamento', 'comentários', 'comentarios', 'positivos', 'desenvolvimento', 'futuro']):
-                        questoes_filtradas.append(af)
-                elif categoria_selecionada == 'Equilíbrio Vida-Trabalho':
-                    if any(palavra in af_lower for palavra in ['equilíbrio', 'equilibrio', 'flexibilidade', 'horários', 'horarios', 'tempo', 'família', 'familia', 'pessoal', 'relação', 'relacao', 'vida pessoal']):
-                        questoes_filtradas.append(af)
-        
-            # Usar apenas questões filtradas para os gráficos
-            if questoes_filtradas:
-                afirmacoes_saude_emocional_filtradas = questoes_filtradas
-                st.success(f"✅ **Filtro aplicado:** {len(questoes_filtradas)} questões da categoria '{categoria_selecionada}'")
+            # Filtrar usando diretamente a dimensão de saúde emocional da TABELA_SAUDE_EMOCIONAL.csv
+            afirmacoes_saude_emocional_filtradas = [
+                af for af in afirmacoes_saude_emocional
+                if af.get('dimensao_saude_emocional') == categoria_selecionada
+            ]
+
+            if afirmacoes_saude_emocional_filtradas:
+                st.success(
+                    f"✅ **Filtro aplicado:** {len(afirmacoes_saude_emocional_filtradas)} questões "
+                    f"da categoria '{categoria_selecionada}'"
+                )
             else:
                 afirmacoes_saude_emocional_filtradas = afirmacoes_saude_emocional
-                st.warning(f"⚠️ **Nenhuma questão encontrada** para a categoria '{categoria_selecionada}'. Mostrando todas as questões.")
+                st.warning(
+                    f"⚠️ **Nenhuma questão encontrada** para a categoria "
+                    f"'{categoria_selecionada}'. Mostrando todas as questões."
+                )
         else:
             # Sem filtro ou "Todas" selecionada
             afirmacoes_saude_emocional_filtradas = afirmacoes_saude_emocional
-        
+
         # Separar afirmações por tipo (DEPOIS do filtro)
-        afirmacoes_arq = [a for a in afirmacoes_saude_emocional_filtradas if a['tipo'] == 'Arquétipo']
+        afirmacoes_arq = [
+            a for a in afirmacoes_saude_emocional_filtradas
+            if a['tipo'] == 'Arquétipo'
+        ]
+        afirmacoes_micro = [
+            a for a in afirmacoes_saude_emocional_filtradas
+            if a['tipo'] == 'Microambiente'
+        ]
+
+
+
         
-        if categoria_selecionada:
-            st.markdown(f"### 📋 Questões da Categoria: **{categoria_selecionada}**")
+            if categoria_selecionada:
+                st.markdown(f"### 📋 Questões da Categoria: **{categoria_selecionada}**")
             
-            # Filtrar afirmações da categoria selecionada
-            afirmacoes_categoria = []
-            for af in afirmacoes_saude_emocional_filtradas:
-                af_lower = af['afirmacao'].lower()
-                
-                # Aplicar a mesma lógica de categorização
-                if categoria_selecionada == 'Prevenção de Estresse':
-                    if any(palavra in af_lower for palavra in ['estresse', 'ansiedade', 'pressão', 'pressao', 'cobrança', 'cobranca', 'deadline', 'prazos', 'tensão', 'tensao', 'sobrecarga', 'preocupa com o tempo', 'preocupa com detalhes', 'preocupa se', 'preocupa com', 'necessidade de se aprofundar', 'aprofundar nos detalhes', 'detalhes na execução', 'detalhes de realização', 'detalhes do trabalho', 'sem necessidade de ficar de olho', 'fazer todo o possivel', 'resolver problemas particulares', 'problemas particulares urgentes', 'atuar na solução de conflitos', 'solução de conflitos em sua equipe', 'risco calculado', 'resultasse em algo negativo', 'seriam apoiados', 'leais uns com os outros', 'mais elogiados e incentivados', 'do que criticados']):
-                        afirmacoes_categoria.append(af)
-                elif categoria_selecionada == 'Ambiente Psicológico Seguro':
-                    if any(palavra in af_lower for palavra in ['ambiente', 'seguro', 'proteção', 'protecao', 'respeito', 'cuidadoso', 'palavras']):
-                        afirmacoes_categoria.append(af)
-                elif categoria_selecionada == 'Suporte Emocional':
-                    if any(palavra in af_lower for palavra in ['suporte', 'apoio', 'ajuda', 'assistência', 'assistencia', 'ajudar', 'resolver', 'percebe', 'oferece']):
-                        afirmacoes_categoria.append(af)
-                elif categoria_selecionada == 'Comunicação Positiva':
-                    if any(palavra in af_lower for palavra in ['feedback', 'positivo', 'construtivo', 'encorajamento', 'comentários', 'comentarios', 'positivos', 'desenvolvimento', 'futuro']):
-                        afirmacoes_categoria.append(af)
-                elif categoria_selecionada == 'Equilíbrio Vida-Trabalho':
-                    if any(palavra in af_lower for palavra in ['equilíbrio', 'equilibrio', 'flexibilidade', 'horários', 'horarios', 'tempo', 'família', 'familia', 'pessoal', 'relação', 'relacao', 'vida pessoal']):
-                        afirmacoes_categoria.append(af)
+                # ✅ FILTRO ÚNICO E CORRETO: pela dimensão definida na TABELA_SAUDE_EMOCIONAL.csv
+                afirmacoes_categoria = [
+                    af for af in afirmacoes_saude_emocional_filtradas
+                    if af.get('dimensao_saude_emocional') == categoria_selecionada
+                ]
             
             if afirmacoes_categoria:
                 st.success(f"✅ Encontradas {len(afirmacoes_categoria)} questões na categoria {categoria_selecionada}")
