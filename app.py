@@ -18,25 +18,46 @@ NORMALIZAR_POR_SUBDIMENSAO = False  # deixa sempre False para mostrar valores br
 
 # ANALISAR AFIRMAÇÕES EXISTENTES PARA SAÚDE EMOCIONAL (COM FILTROS)
 def analisar_afirmacoes_saude_emocional(matriz_arq, matriz_micro, df_arquetipos, df_microambiente, filtros):
-    """Versão SIMPLES: lê apenas o CSV e retorna exatamente o que está lá - SEM expansão, SEM palavras-chave"""
-    
+    """
+    Lê a TABELA_SAUDE_EMOCIONAL.csv e usa ESSA tabela como única
+    fonte de verdade para:
+      - quais afirmações entram em Saúde Emocional (97 no total)
+      - a dimensão de saúde emocional de cada afirmação
+    """
     import pandas as pd
     import os
-    
-    # 1. Carregar CSV
-    arquivo_csv = 'classificacoes_saude_emocional_97_afirmacoes.csv'
-    
+
+    # 1. Carregar CSV NOVO
+    arquivo_csv = 'TABELA_SAUDE_EMOCIONAL.csv'
+
     if not os.path.exists(arquivo_csv):
         st.error(f"❌ CSV não encontrado: {arquivo_csv}")
         return [], df_arquetipos, df_microambiente
-    
-    df_csv = pd.read_csv(arquivo_csv, encoding='utf-8-sig')
-    st.info(f"✅ CSV carregado: {len(df_csv)} afirmações")
-    
-    # 2. Aplicar filtros aos dados
+
+    # Atenção: separador ';'
+    df_csv = pd.read_csv(arquivo_csv, sep=';', encoding='utf-8-sig')
+
+    # Normalizar colunas
+    df_csv['TIPO'] = df_csv['TIPO'].astype(str).str.strip().str.upper()
+    df_csv['COD_AFIRMACAO'] = df_csv['COD_AFIRMACAO'].astype(str).str.strip()
+    df_csv['DIMENSAO_SAUDE_EMOCIONAL'] = (
+        df_csv['DIMENSAO_SAUDE_EMOCIONAL']
+        .astype(str)
+        .str.strip()
+        .replace({'Equilíbrio Vida- Trabalho': 'Equilíbrio Vida-Trabalho'})
+    )
+
+    # Debug opcional: ver total e distribuição (somar = 97)
+    st.info(f"✅ CSV de Saúde Emocional carregado: {len(df_csv)} afirmações (esperado: 97)")
+    contagem_dim = df_csv['DIMENSAO_SAUDE_EMOCIONAL'].value_counts().sort_index()
+    st.write("📋 Distribuição por dimensão (TABELA_SAUDE_EMOCIONAL):")
+    for dim, qtd in contagem_dim.items():
+        st.write(f"- {dim}: {qtd} afirmações")
+
+    # 2. Aplicar filtros aos dados de respostas (mantendo sua lógica atual)
     df_arq_filtrado = df_arquetipos.copy()
     df_micro_filtrado = df_microambiente.copy()
-    
+
     if filtros['empresa'] != "Todas":
         df_arq_filtrado = df_arq_filtrado[df_arq_filtrado['empresa'] == filtros['empresa']]
     if filtros['codrodada'] != "Todas":
@@ -54,8 +75,10 @@ def analisar_afirmacoes_saude_emocional(matriz_arq, matriz_micro, df_arquetipos,
     if 'holding' in filtros and filtros['holding'] != "Todas":
         if 'holding' in df_arq_filtrado.columns:
             holding_filtro = str(filtros['holding']).upper().strip()
-            df_arq_filtrado = df_arq_filtrado[df_arq_filtrado['holding'].astype(str).str.upper().str.strip() == holding_filtro]
-    
+            df_arq_filtrado = df_arq_filtrado[
+                df_arq_filtrado['holding'].astype(str).str.upper().str.strip() == holding_filtro
+            ]
+
     # Mesmos filtros para microambiente
     if filtros['empresa'] != "Todas":
         df_micro_filtrado = df_micro_filtrado[df_micro_filtrado['empresa'] == filtros['empresa']]
@@ -74,26 +97,41 @@ def analisar_afirmacoes_saude_emocional(matriz_arq, matriz_micro, df_arquetipos,
     if 'holding' in filtros and filtros['holding'] != "Todas":
         if 'holding' in df_micro_filtrado.columns:
             holding_filtro = str(filtros['holding']).upper().strip()
-            df_micro_filtrado = df_micro_filtrado[df_micro_filtrado['holding'].astype(str).str.upper().str.strip() == holding_filtro]
-    
-    # 3. Criar dicionário do CSV: TIPO_CODIGO -> DIMENSAO
+            df_micro_filtrado = df_micro_filtrado[
+                df_micro_filtrado['holding'].astype(str).str.upper().str.strip() == holding_filtro
+            ]
+
+    # 3. Criar dicionário TIPO + CÓDIGO -> dimensão de saúde emocional
+    # Ex.: ARQUETIPOS + Q01 -> 'Prevenção de Estresse'
     csv_dict = {}
     for _, row in df_csv.iterrows():
-        tipo_codigo = str(row['TIPO_CODIGO']).strip()
-        dimensao = str(row['DIMENSAO_SAUDE_EMOCIONAL']).strip()
-        csv_dict[tipo_codigo] = dimensao
-    
-    # 4. Buscar afirmações nas matrizes APENAS se estiverem no CSV
+        tipo = row['TIPO']           # ARQUETIPOS / MICROAMBIENTE
+        codigo = row['COD_AFIRMACAO']
+        dimensao_se = row['DIMENSAO_SAUDE_EMOCIONAL']
+
+        tipo = str(tipo).upper().strip()
+        codigo = str(codigo).strip()
+
+        if tipo.startswith('ARQ'):          # ARQUETIPOS
+            tipo_codigo = f"arq_{codigo}"
+        elif tipo.startswith('MICRO'):      # MICROAMBIENTE
+            tipo_codigo = f"micro_{codigo}"
+        else:
+            # se algum dia vier outro tipo, ignora
+            continue
+
+        csv_dict[tipo_codigo] = dimensao_se
+
+    # 4. Montar lista de afirmações de saúde emocional (apenas o que estiver no CSV)
     afirmacoes_se = []
     codigos_processados = set()
-    
+
     # Arquétipos
     matriz_arq_unicos = matriz_arq[['COD_AFIRMACAO', 'AFIRMACAO', 'ARQUETIPO']].drop_duplicates(subset=['COD_AFIRMACAO'])
     for _, row in matriz_arq_unicos.iterrows():
         codigo = str(row['COD_AFIRMACAO']).strip()
         tipo_codigo = f"arq_{codigo}"
-        
-        # SÓ adiciona se estiver no CSV
+
         if tipo_codigo in csv_dict and tipo_codigo not in codigos_processados:
             afirmacoes_se.append({
                 'tipo': 'Arquétipo',
@@ -104,14 +142,13 @@ def analisar_afirmacoes_saude_emocional(matriz_arq, matriz_micro, df_arquetipos,
                 'dimensao_saude_emocional': csv_dict[tipo_codigo]
             })
             codigos_processados.add(tipo_codigo)
-    
+
     # Microambiente
     matriz_micro_unicos = matriz_micro[['COD', 'AFIRMACAO', 'DIMENSAO', 'SUBDIMENSAO']].drop_duplicates(subset=['COD'])
     for _, row in matriz_micro_unicos.iterrows():
         codigo = str(row['COD']).strip()
         tipo_codigo = f"micro_{codigo}"
-        
-        # SÓ adiciona se estiver no CSV
+
         if tipo_codigo in csv_dict and tipo_codigo not in codigos_processados:
             afirmacoes_se.append({
                 'tipo': 'Microambiente',
@@ -122,9 +159,9 @@ def analisar_afirmacoes_saude_emocional(matriz_arq, matriz_micro, df_arquetipos,
                 'dimensao_saude_emocional': csv_dict[tipo_codigo]
             })
             codigos_processados.add(tipo_codigo)
-    
-    st.info(f"📊 Total encontrado: {len(afirmacoes_se)} afirmações (apenas as que estão no CSV)")
-    
+
+    st.info(f"📊 Total encontrado na página de Saúde Emocional: {len(afirmacoes_se)} afirmações (esperado: 97)")
+
     return afirmacoes_se, df_arq_filtrado, df_micro_filtrado
     
 # MAPEAR COMPLIANCE COM NR-1
@@ -174,67 +211,76 @@ def init_supabase():
 
 # ==================== CARREGAR CLASSIFICAÇÕES DE SAÚDE EMOCIONAL ====================
 @st.cache_data(ttl=3600)
+@st.cache_data(ttl=3600)
 def carregar_classificacoes_saude_emocional():
-    """Carrega as classificações das 97 afirmações de saúde emocional do CSV"""
+    """
+    Carrega as classificações das 97 afirmações de saúde emocional
+    USANDO a TABELA_SAUDE_EMOCIONAL.csv como fonte única.
+    Retorna um dicionário de chaves:
+      - "arq_Q01", "micro_Q10" etc. -> dimensão
+      - "Q01" (fallback simples)    -> dimensão
+    """
     import os
-    
-    # Verificar se o arquivo existe
-    arquivo_csv = 'classificacoes_saude_emocional_97_afirmacoes.csv'
+
+    arquivo_csv = 'TABELA_SAUDE_EMOCIONAL.csv'
     caminho_completo = os.path.abspath(arquivo_csv)
-    
+
     try:
-        # Verificar se arquivo existe
         if not os.path.exists(arquivo_csv):
-            st.error(f"❌ **ARQUIVO NÃO ENCONTRADO!**")
+            st.error("❌ **ARQUIVO NÃO ENCONTRADO!**")
             st.error(f"📁 Procurando em: `{caminho_completo}`")
             st.error(f"💡 Certifique-se de que o arquivo `{arquivo_csv}` está no mesmo diretório que `app.py`")
             return {}
-        
-        df_classificacoes = pd.read_csv(arquivo_csv, encoding='utf-8-sig')
-        
-        # DEBUG: Mostrar informações do CSV
-        st.success(f"✅ **CSV CARREGADO COM SUCESSO!**")
+
+        df_classificacoes = pd.read_csv(arquivo_csv, sep=';', encoding='utf-8-sig')
+
+        # Normalizar colunas
+        df_classificacoes['TIPO'] = df_classificacoes['TIPO'].astype(str).str.strip().str.upper()
+        df_classificacoes['COD_AFIRMACAO'] = df_classificacoes['COD_AFIRMACAO'].astype(str).str.strip()
+        df_classificacoes['DIMENSAO_SAUDE_EMOCIONAL'] = (
+            df_classificacoes['DIMENSAO_SAUDE_EMOCIONAL']
+            .astype(str)
+            .str.strip()
+            .replace({'Equilíbrio Vida- Trabalho': 'Equilíbrio Vida-Trabalho'})
+        )
+
+        st.success("✅ **TABELA_SAUDE_EMOCIONAL.csv carregada com sucesso!**")
         st.info(f"📊 Total de linhas no CSV: {len(df_classificacoes)}")
-        
-        # Criar dicionário com chaves compostas (tipo_codigo) e simples (codigo) como fallback
+
         classificacoes = {}
-        
+
         for _, row in df_classificacoes.iterrows():
-            tipo_codigo = str(row['TIPO_CODIGO']).strip()
-            codigo_original = str(row['CODIGO_ORIGINAL']).strip()
-            dimensao = str(row['DIMENSAO_SAUDE_EMOCIONAL']).strip()
-            
-            # Armazenar com chave composta (prioridade)
+            tipo = row['TIPO']
+            codigo = row['COD_AFIRMACAO']
+            dimensao = row['DIMENSAO_SAUDE_EMOCIONAL']
+
+            tipo = str(tipo).upper().strip()
+            codigo = str(codigo).strip()
+
+            # chave composta
+            if tipo.startswith('ARQ'):
+                tipo_codigo = f"arq_{codigo}"
+            elif tipo.startswith('MICRO'):
+                tipo_codigo = f"micro_{codigo}"
+            else:
+                tipo_codigo = codigo  # se algum dia vier outro tipo
+
             classificacoes[tipo_codigo] = dimensao
-            
-            # Armazenar também com chave simples como fallback
-            if codigo_original not in classificacoes:
-                classificacoes[codigo_original] = dimensao
-        
-        # DEBUG: Mostrar distribuição por dimensão
-        dimensoes_contagem = {}
-        for key, dim in classificacoes.items():
-            if key.startswith('arq_') or key.startswith('micro_'):
-                if dim not in dimensoes_contagem:
-                    dimensoes_contagem[dim] = {'arq': 0, 'micro': 0}
-                if key.startswith('arq_'):
-                    dimensoes_contagem[dim]['arq'] += 1
-                elif key.startswith('micro_'):
-                    dimensoes_contagem[dim]['micro'] += 1
-        
-        st.info(f"📋 **Distribuição por dimensão:**")
-        for dim, contagem in sorted(dimensoes_contagem.items()):
-            total = contagem['arq'] + contagem['micro']
-            st.write(f"  - {dim}: {total} total ({contagem['arq']} arquétipos + {contagem['micro']} microambiente)")
-        
+
+            # chave simples como fallback (Q01, Q02, ...)
+            if codigo not in classificacoes:
+                classificacoes[codigo] = dimensao
+
+        # Debug: distribuição por dimensão
+        contagem_dim = df_classificacoes['DIMENSAO_SAUDE_EMOCIONAL'].value_counts().sort_index()
+        st.info("📋 **Distribuição por dimensão (TABELA_SAUDE_EMOCIONAL):**")
+        for dim, qtd in contagem_dim.items():
+            st.write(f"  - {dim}: {qtd} afirmações")
+
         st.info(f"🔑 **Total de chaves no dicionário:** {len(classificacoes)}")
-        
+
         return classificacoes
-    except FileNotFoundError:
-        st.error(f"❌ **ARQUIVO NÃO ENCONTRADO!**")
-        st.error(f"📁 Procurando em: `{caminho_completo}`")
-        st.error(f"💡 Certifique-se de que o arquivo `{arquivo_csv}` está no mesmo diretório que `app.py`")
-        return {}
+
     except Exception as e:
         st.error(f"❌ **ERRO ao carregar classificações:** {str(e)}")
         st.error(f"📁 Tentando carregar de: `{caminho_completo}`")
@@ -1990,27 +2036,18 @@ with tab3:
         # ✅ CALCULAR COMPLIANCE AQUI (DEPOIS DOS FILTROS!)
         compliance_nr1 = mapear_compliance_nr1(afirmacoes_saude_emocional)
 
-    if afirmacoes_saude_emocional:
-        # Métricas principais
-        col1, col2, col3, col4 = st.columns(4)
-        
-        with col1:
-            st.metric("🧠 Arquétipos SE", len([a for a in afirmacoes_saude_emocional if a['tipo'] == 'Arquétipo']))
-        
-        with col2:
-            st.metric(" Microambiente SE", len([a for a in afirmacoes_saude_emocional if a['tipo'] == 'Microambiente']))
-        
-        with col3:
-            st.metric("💚 Total SE", len(afirmacoes_saude_emocional))
-        
-        with col4:
-            # Calcular percentual baseado no total do CSV, não fixo em 97
-            total_csv = len(carregar_classificacoes_saude_emocional())
-            if total_csv > 0:
-                percentual = (len(afirmacoes_saude_emocional) / total_csv) * 100
+            with col4:
+            # Métrica de percentual baseado no total do CSV oficial de Saúde Emocional
+            import os
+            arquivo_csv = 'TABELA_SAUDE_EMOCIONAL.csv'
+            if os.path.exists(arquivo_csv):
+                df_csv_temp = pd.read_csv(arquivo_csv, sep=';', encoding='utf-8-sig')
+                total_csv = len(df_csv_temp)
+                percentual = (len(afirmacoes_saude_emocional) / total_csv) * 100 if total_csv > 0 else 0
                 st.metric(f"📊 % das {total_csv} Afirmações (CSV)", f"{percentual:.1f}%")
             else:
                 st.metric("📊 Total de Afirmações", len(afirmacoes_saude_emocional))
+
         
         st.divider()
         
@@ -2324,8 +2361,11 @@ with tab3:
             'Comunicação Positiva': 'Comunicação Positiva',
             'Comunicacao Positiva': 'Comunicação Positiva',
             'Equilíbrio Vida-Trabalho': 'Equilíbrio Vida-Trabalho',
-            'Equilibrio Vida-Trabalho': 'Equilíbrio Vida-Trabalho'
+            'Equilibrio Vida-Trabalho': 'Equilíbrio Vida-Trabalho',
+            'Equilíbrio Vida- Trabalho': 'Equilíbrio Vida-Trabalho',
+            'Equilibrio Vida- Trabalho': 'Equilíbrio Vida-Trabalho'
         }
+
         
         # Carregar classificações do CSV
         classificacoes = carregar_classificacoes_saude_emocional()
