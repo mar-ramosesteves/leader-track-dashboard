@@ -2034,22 +2034,42 @@ with tab3:
         
         
         # ✅ CALCULAR COMPLIANCE AQUI (DEPOIS DOS FILTROS!)
+       
         compliance_nr1 = mapear_compliance_nr1(afirmacoes_saude_emocional)
-
+    
+        if afirmacoes_saude_emocional:
+            # Métricas principais
+            col1, col2, col3, col4 = st.columns(4)
+            
+            with col1:
+                st.metric("🧠 Arquétipos SE", len([
+                    a for a in afirmacoes_saude_emocional 
+                    if a['tipo'] == 'Arquétipo'
+                ]))
+            
+            with col2:
+                st.metric(" Microambiente SE", len([
+                    a for a in afirmacoes_saude_emocional 
+                    if a['tipo'] == 'Microambiente'
+                ]))
+            
+            with col3:
+                st.metric("💚 Total SE", len(afirmacoes_saude_emocional))
+            
             with col4:
-            # Métrica de percentual baseado no total do CSV oficial de Saúde Emocional
-            import os
-            arquivo_csv = 'TABELA_SAUDE_EMOCIONAL.csv'
-            if os.path.exists(arquivo_csv):
-                df_csv_temp = pd.read_csv(arquivo_csv, sep=';', encoding='utf-8-sig')
-                total_csv = len(df_csv_temp)
-                percentual = (len(afirmacoes_saude_emocional) / total_csv) * 100 if total_csv > 0 else 0
-                st.metric(f"📊 % das {total_csv} Afirmações (CSV)", f"{percentual:.1f}%")
-            else:
-                st.metric("📊 Total de Afirmações", len(afirmacoes_saude_emocional))
+                # Métrica de percentual baseado no total do CSV oficial de Saúde Emocional
+                import os
+                arquivo_csv = 'TABELA_SAUDE_EMOCIONAL.csv'
+                if os.path.exists(arquivo_csv):
+                    df_csv_temp = pd.read_csv(arquivo_csv, sep=';', encoding='utf-8-sig')
+                    total_csv = len(df_csv_temp)
+                    percentual = (len(afirmacoes_saude_emocional) / total_csv) * 100 if total_csv > 0 else 0
+                    st.metric(f"📊 % das {total_csv} Afirmações (CSV)", f"{percentual:.1f}%")
+                else:
+                    st.metric("📊 Total de Afirmações", len(afirmacoes_saude_emocional))
+    
+            st.divider()
 
-        
-        st.divider()
         
         # ==================== GRÁFICO 1: COMPLIANCE NR-1 COM VALORES ====================
         st.subheader("📊 Compliance NR-1 + Adendo Saúde Mental - Valores das Questões")
