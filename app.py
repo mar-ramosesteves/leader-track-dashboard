@@ -2194,20 +2194,30 @@ with tab3:
         
         # Gráfico de barras horizontais com VALORES
         fig_compliance = go.Figure()
-        
-        # Cores baseadas no valor
+
+        # Cores baseadas no valor (alinhadas com o Score Final)
+        # Excelente:  >= 95
+        # Ótimo:      90 a 94,99
+        # Bom:        80 a 89,99
+        # Regular:    70 a 79,99
+        # Não adequado: abaixo de 70
         cores_compliance = []
         for valor in categoria_medias.values():
-            if valor >= 80:
-                cores_compliance.append('rgba(0, 128, 0, 0.8)')  # Verde
-            elif valor >= 60:
-                cores_compliance.append('rgba(144, 238, 144, 0.7)')  # Verde claro
-            elif valor >= 40:
-                cores_compliance.append('rgba(255, 255, 0, 0.7)')  # Amarelo
-            elif valor >= 20:
-                cores_compliance.append('rgba(255, 165, 0, 0.7)')  # Laranja
+            if valor >= 95:
+                # Excelente - verde bem forte
+                cores_compliance.append('rgba(0, 128, 0, 0.9)')
+            elif valor >= 90:
+                # Ótimo - verde
+                cores_compliance.append('rgba(46, 204, 113, 0.9)')
+            elif valor >= 80:
+                # Bom - verde claro
+                cores_compliance.append('rgba(144, 238, 144, 0.9)')
+            elif valor >= 70:
+                # Regular - amarelo
+                cores_compliance.append('rgba(255, 215, 0, 0.9)')
             else:
-                cores_compliance.append('rgba(255, 0, 0, 0.8)')  # Vermelho
+                # Não adequado - laranja/vermelho
+                cores_compliance.append('rgba(255, 99, 71, 0.9)')
         
         fig_compliance.add_trace(go.Bar(
             y=list(categoria_medias.keys()),
