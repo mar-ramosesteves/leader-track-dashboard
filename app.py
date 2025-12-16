@@ -3187,19 +3187,23 @@ with tab3:
             # Converter gap para score (gap baixo = score alto)
             score_microambiente = max(0, 100 - gap_medio)
         
-        # Interpretação do score
-        if score_final >= 80:
-            interpretacao = "🟢 EXCELENTE - Ambiente muito saudável"
+        # Interpretação do score (faixas mais severas)
+        if score_final >= 95:
+            interpretacao = "🟢 EXCELENTE - acima de 95%"
             cor_score = "green"
-        elif score_final >= 60:
-            interpretacao = "🟡 BOM - Ambiente saudável com melhorias"
+        elif score_final >= 90:
+            interpretacao = "🟢 ÓTIMO - entre 90% e 94,99%"
+            cor_score = "darkgreen"
+        elif score_final >= 80:
+            interpretacao = "🟡 BOM - entre 80% e 89,99%"
             cor_score = "orange"
-        elif score_final >= 40:
-            interpretacao = " REGULAR - Ambiente com problemas moderados"
+        elif score_final >= 70:
+            interpretacao = "🟠 REGULAR - entre 70% e 79,99%"
             cor_score = "darkorange"
         else:
-            interpretacao = "🔴 RUIM - Ambiente com problemas sérios"
+            interpretacao = "🔴 NÃO ADEQUADO - abaixo de 70%"
             cor_score = "red"
+
         
         # Exibir score final
         col1, col2 = st.columns([1, 2])
