@@ -3226,8 +3226,43 @@ with tab3:
                 <p><strong>🏢 Score Microambiente:</strong> {score_microambiente:.1f}% (referência)</p>
                 <p><strong>💚 Score Final:</strong> {'Score da categoria filtrada' if categoria_selecionada and categoria_selecionada != 'Todas' else 'Média das 5 categorias do gráfico de Compliance'} (consistente com o gráfico acima)</p>
                 <p><strong>🎯 Interpretação:</strong> Quanto maior o score, melhor a saúde emocional proporcionada pelo líder</p>
+                <hr>
+                <h4>Legenda dos Níveis</h4>
+                <table style="width:100%; font-size: 13px; border-collapse: collapse;">
+                    <tr>
+                        <th style="text-align:left; padding: 4px; border-bottom: 1px solid #ccc;">Faixa</th>
+                        <th style="text-align:left; padding: 4px; border-bottom: 1px solid #ccc;">Nível</th>
+                        <th style="text-align:left; padding: 4px; border-bottom: 1px solid #ccc;">Descrição</th>
+                    </tr>
+                    <tr>
+                        <td style="padding: 4px;">≥ 95%</td>
+                        <td style="padding: 4px;">Excelente</td>
+                        <td style="padding: 4px;">Ambiente saudável de excelência</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 4px;">90% a 94,99%</td>
+                        <td style="padding: 4px;">Ótimo</td>
+                        <td style="padding: 4px;">Ambiente saudável</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 4px;">80% a 89,99%</td>
+                        <td style="padding: 4px;">Bom</td>
+                        <td style="padding: 4px;">Ambiente saudável com pontos a melhorar</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 4px;">70% a 79,99%</td>
+                        <td style="padding: 4px;">Regular</td>
+                        <td style="padding: 4px;">Ambiente necessita melhorias</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 4px;">&lt; 70%</td>
+                        <td style="padding: 4px;">Não Adequado</td>
+                        <td style="padding: 4px;">Ambiente necessita apoio em plano de ação (PDI)</td>
+                    </tr>
+                </table>
             </div>
             """, unsafe_allow_html=True)
+
         
         st.divider()
         
