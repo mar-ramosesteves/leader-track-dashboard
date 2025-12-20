@@ -2205,23 +2205,23 @@ with tab3:
         fig_compliance = go.Figure()
 
         # Cores baseadas no valor (alinhadas com o Score Final)
-        # Excelente:  >= 95
-        # Ótimo:      90 a 94,99
-        # Bom:        80 a 89,99
-        # Regular:    70 a 79,99
-        # Não adequado: abaixo de 70
+        # Excelente:  >= 80
+        # Ótimo:      75 a 79,99
+        # Bom:        70 a 74,99
+        # Regular:    60 a 69,99
+        # Não adequado: abaixo de 60
         cores_compliance = []
         for valor in categoria_medias.values():
-            if valor >= 95:
+            if valor >= 80:
                 # Excelente - verde bem forte
                 cores_compliance.append('rgba(0, 128, 0, 0.9)')
-            elif valor >= 90:
+            elif valor >= 75:
                 # Ótimo - verde
                 cores_compliance.append('rgba(46, 204, 113, 0.9)')
-            elif valor >= 80:
+            elif valor >= 70:
                 # Bom - verde claro
                 cores_compliance.append('rgba(144, 238, 144, 0.9)')
-            elif valor >= 70:
+            elif valor >= 60:
                 # Regular - amarelo
                 cores_compliance.append('rgba(255, 215, 0, 0.9)')
             else:
@@ -3207,20 +3207,20 @@ with tab3:
             score_microambiente = max(0, 100 - gap_medio)
         
         # Interpretação do score (faixas mais severas)
-        if score_final >= 95:
-            interpretacao = "🟢 EXCELENTE - acima de 95%"
+        if score_final >= 80:
+            interpretacao = "🟢 EXCELENTE - acima de 80%"
             cor_score = "green"
-        elif score_final >= 90:
-            interpretacao = "🟢 ÓTIMO - entre 90% e 94,99%"
+        elif score_final >= 75:
+            interpretacao = "🟢 ÓTIMO - entre 75% e 79,99%"
             cor_score = "darkgreen"
-        elif score_final >= 80:
-            interpretacao = "🟡 BOM - entre 80% e 89,99%"
-            cor_score = "orange"
         elif score_final >= 70:
-            interpretacao = "🟠 REGULAR - entre 70% e 79,99%"
+            interpretacao = "🟡 BOM - entre 70% e 74,99%"
+            cor_score = "orange"
+        elif score_final >= 60:
+            interpretacao = "🟠 REGULAR - entre 60% e 69,99%"
             cor_score = "darkorange"
         else:
-            interpretacao = "🔴 NÃO ADEQUADO - abaixo de 70%"
+            interpretacao = "🔴 NÃO ADEQUADO - abaixo de 60%"
             cor_score = "red"
 
         
@@ -3254,27 +3254,27 @@ with tab3:
                         <th style="text-align:left; padding: 4px; border-bottom: 1px solid #ccc;">Descrição</th>
                     </tr>
                     <tr>
-                        <td style="padding: 4px;">≥ 95%</td>
+                        <td style="padding: 4px;">≥ 80%</td>
                         <td style="padding: 4px;">Excelente</td>
                         <td style="padding: 4px;">Ambiente saudável de excelência</td>
                     </tr>
                     <tr>
-                        <td style="padding: 4px;">90% a 94,99%</td>
+                        <td style="padding: 4px;">75% a 79,99%</td>
                         <td style="padding: 4px;">Ótimo</td>
                         <td style="padding: 4px;">Ambiente saudável</td>
                     </tr>
                     <tr>
-                        <td style="padding: 4px;">80% a 89,99%</td>
+                        <td style="padding: 4px;">70% a 74,99%</td>
                         <td style="padding: 4px;">Bom</td>
                         <td style="padding: 4px;">Ambiente saudável com pontos a melhorar</td>
                     </tr>
                     <tr>
-                        <td style="padding: 4px;">70% a 79,99%</td>
+                        <td style="padding: 4px;">60% a 69,99%</td>
                         <td style="padding: 4px;">Regular</td>
                         <td style="padding: 4px;">Ambiente necessita melhorias</td>
                     </tr>
                     <tr>
-                        <td style="padding: 4px;">&lt; 70%</td>
+                        <td style="padding: 4px;">&lt; 60%</td>
                         <td style="padding: 4px;">Não Adequado</td>
                         <td style="padding: 4px;">Ambiente necessita apoio em plano de ação (PDI)</td>
                     </tr>
