@@ -1335,7 +1335,7 @@ if matriz_arq is not None and matriz_micro is not None:
         if 'holding' in df_microambiente.columns:
             holdings_micro = set(df_microambiente['holding'].dropna().unique())
         
-        todas_holdings = sorted(list(holdings_arq.union(holdings_micro)))
+        todas_holdings = sorted([str(h) for h in list(holdings_arq.union(holdings_micro))])
         
         # Remover valores vazios ou 'N/A' se não quiser mostrá-los
         todas_holdings = [h for h in todas_holdings if h and str(h).strip() and str(h).upper() != 'N/A']
@@ -1352,51 +1352,52 @@ if matriz_arq is not None and matriz_micro is not None:
         # Combinar empresas de ambos os datasets (tudo minúsculas)
         empresas_arq = set(df_arquetipos['empresa'].unique())
         empresas_micro = set(df_microambiente['empresa'].unique())
-        todas_empresas = sorted(list(empresas_arq.union(empresas_micro)))
+        todas_empresas = sorted([str(e) for e in list(empresas_arq.union(empresas_micro))])
         empresas = ["Todas"] + todas_empresas
         empresa_selecionada = st.sidebar.selectbox("   Empresa", empresas)
         
         # Combinar codrodadas de ambos os datasets
         codrodadas_arq = set(df_arquetipos['codrodada'].unique())
         codrodadas_micro = set(df_microambiente['codrodada'].unique())
-        todas_codrodadas = sorted(list(codrodadas_arq.union(codrodadas_micro)))
+        todas_codrodadas = sorted([str(c) for c in list(codrodadas_arq.union(codrodadas_micro))])
         codrodadas = ["Todas"] + todas_codrodadas
         codrodada_selecionada = st.sidebar.selectbox("   Código da Rodada", codrodadas)
         
         # Combinar emails de líderes de ambos os datasets
         emailliders_arq = set(df_arquetipos['emailLider'].unique())
         emailliders_micro = set(df_microambiente['emailLider'].unique())
-        todos_emailliders = sorted(list(emailliders_arq.union(emailliders_micro)))
+        todos_emailliders = sorted([str(e) for e in list(emailliders_arq.union(emailliders_micro))])
         emailliders = ["Todos"] + todos_emailliders
         emaillider_selecionado = st.sidebar.selectbox("👤 Email do Líder", emailliders)
         
         # Combinar estados de ambos os datasets
         estados_arq = set(df_arquetipos['estado'].unique())
         estados_micro = set(df_microambiente['estado'].unique())
-        todos_estados = sorted(list(estados_arq.union(estados_micro)))
+        todos_estados = sorted([str(e) for e in list(estados_arq.union(estados_micro))])
         estados = ["Todos"] + todos_estados
         estado_selecionado = st.sidebar.selectbox("🗺️ Estado", estados)
         
         # Combinar gêneros de ambos os datasets
         generos_arq = set(df_arquetipos['sexo'].unique())
         generos_micro = set(df_microambiente['sexo'].unique())
-        todos_generos = sorted(list(generos_arq.union(generos_micro)))
+        todos_generos = sorted([str(g) for g in list(generos_arq.union(generos_micro))])
         generos = ["Todos"] + todos_generos
         genero_selecionado = st.sidebar.selectbox("⚧ Gênero", generos)
         
         # Combinar etnias de ambos os datasets
         etnias_arq = set(df_arquetipos['etnia'].unique())
         etnias_micro = set(df_microambiente['etnia'].unique())
-        todas_etnias = sorted(list(etnias_arq.union(etnias_micro)))
+        todas_etnias = sorted([str(e) for e in list(etnias_arq.union(etnias_micro))])
         etnias = ["Todas"] + todas_etnias
         etnia_selecionada = st.sidebar.selectbox("   Etnia", etnias)
         
         # Combinar departamentos de ambos os datasets
         departamentos_arq = set(df_arquetipos['departamento'].unique())
         departamentos_micro = set(df_microambiente['departamento'].unique())
-        todos_departamentos = sorted(list(departamentos_arq.union(departamentos_micro)))
+        todos_departamentos = sorted([str(d) for d in list(departamentos_arq.union(departamentos_micro))])
         departamentos = ["Todos"] + todos_departamentos
         departamento_selecionado = st.sidebar.selectbox("🏢 Departamento", departamentos)
+
         
         # Combinar cargos de ambos os datasets
         cargos_arq = set(df_arquetipos['cargo'].unique())
