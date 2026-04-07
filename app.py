@@ -537,7 +537,7 @@ def calcular_real_ideal_gap_por_questao(df_micro_filtrado, matriz_micro, codigo_
     # código usado no JSON (FORM)
     codigo_form = _MAP_MATRIZ_TO_FORM.get(codigo_matriz, codigo_matriz)
 
-    vals_real, vals_ideal = [], []
+    estrelas_real, estrelas_ideal = [], []
     for _, resp in df_micro_filtrado.iterrows():
         respostas = resp.get('respostas', {})
         if not isinstance(respostas, dict):
@@ -550,21 +550,18 @@ def calcular_real_ideal_gap_por_questao(df_micro_filtrado, matriz_micro, codigo_
                 i = int(respostas[qI])
             except:
                 continue
-            # usa código da MATRIZ na chave (ex.: Q45_I6_R4)
-            chave = f"{codigo_matriz}_I{i}_R{r}"
-            linha = matriz_micro[matriz_micro['CHAVE'] == chave]
-            if not linha.empty:
-                vals_real.append(float(linha['PONTUACAO_REAL'].iloc[0]))
-                vals_ideal.append(float(linha['PONTUACAO_IDEAL'].iloc[0]))
+            estrelas_real.append(r)
+            estrelas_ideal.append(i)
 
-    if not vals_real or not vals_ideal:
+    if not estrelas_real or not estrelas_ideal:
         return None, None, None
 
-    real_pct  = float(np.mean(vals_real))
-    ideal_pct = float(np.mean(vals_ideal))
-    gap       = ideal_pct - real_pct
+    media_real  = float(np.mean(estrelas_real))
+    media_ideal = float(np.mean(estrelas_ideal))
+    real_pct  = round((media_real  / 6) * 100, 2)
+    ideal_pct = round((media_ideal / 6) * 100, 2)
+    gap       = round(ideal_pct - real_pct, 2)
     return real_pct, ideal_pct, gap
-
 
 
 # PROCESSAR DADOS INDIVIDUAIS (ARQUÉTIPOS) - CORRIGIDA COM NOMES CORRETOS
@@ -651,33 +648,31 @@ def processar_dados_arquetipos(consolidado_arq, matriz):
         # código usado no JSON (FORM)
         codigo_form = _MAP_MATRIZ_TO_FORM.get(codigo_matriz, codigo_matriz)
     
-        vals_real, vals_ideal = [], []
-        for _, resp in df_micro_filtrado.iterrows():
-            respostas = resp.get('respostas', {})
-            if not isinstance(respostas, dict):
+        estrelas_real, estrelas_ideal = [], []
+    for _, resp in df_micro_filtrado.iterrows():
+        respostas = resp.get('respostas', {})
+        if not isinstance(respostas, dict):
+            continue
+        qR = f"{codigo_form}C"
+        qI = f"{codigo_form}k"
+        if qR in respostas and qI in respostas:
+            try:
+                r = int(respostas[qR])
+                i = int(respostas[qI])
+            except:
                 continue
-            qR = f"{codigo_form}C"
-            qI = f"{codigo_form}k"
-            if qR in respostas and qI in respostas:
-                try:
-                    r = int(respostas[qR])
-                    i = int(respostas[qI])
-                except:
-                    continue
-                chave = f"{codigo_matriz}_I{i}_R{r}"   # usa código da MATRIZ
-                linha = matriz_micro[matriz_micro['CHAVE'] == chave]
-                if not linha.empty:
-                    vals_real.append(float(linha['PONTUACAO_REAL'].iloc[0]))
-                    vals_ideal.append(float(linha['PONTUACAO_IDEAL'].iloc[0]))
-    
-        if not vals_real or not vals_ideal:
-            return None, None, None
-    
-        real_pct  = float(np.mean(vals_real))
-        ideal_pct = float(np.mean(vals_ideal))
-        gap       = ideal_pct - real_pct
-        return real_pct, ideal_pct, gap
+            estrelas_real.append(r)
+            estrelas_ideal.append(i)
 
+    if not estrelas_real or not estrelas_ideal:
+        return None, None, None
+
+    media_real  = float(np.mean(estrelas_real))
+    media_ideal = float(np.mean(estrelas_ideal))
+    real_pct  = round((media_real  / 6) * 100, 2)
+    ideal_pct = round((media_ideal / 6) * 100, 2)
+    gap       = round(ideal_pct - real_pct, 2)
+    return real_pct, ideal_pct, gap
 
 
 # PROCESSAR DADOS APENAS DA EQUIPE (MICROAMBIENTE)
@@ -1924,7 +1919,7 @@ def calcular_real_ideal_gap_por_questao(df_micro_filtrado, matriz_micro, codigo_
     # código usado no JSON (FORM)
     codigo_form = _MAP_MATRIZ_TO_FORM.get(codigo_matriz, codigo_matriz)
 
-    vals_real, vals_ideal = [], []
+    estrelas_real, estrelas_ideal = [], []
     for _, resp in df_micro_filtrado.iterrows():
         respostas = resp.get('respostas', {})
         if not isinstance(respostas, dict):
@@ -1937,21 +1932,19 @@ def calcular_real_ideal_gap_por_questao(df_micro_filtrado, matriz_micro, codigo_
                 i = int(respostas[qI])
             except:
                 continue
-            # usa código da MATRIZ na chave
-            chave = f"{codigo_matriz}_I{i}_R{r}"
-            linha = matriz_micro[matriz_micro['CHAVE'] == chave]
-            if not linha.empty:
-                vals_real.append(float(linha['PONTUACAO_REAL'].iloc[0]))
-                vals_ideal.append(float(linha['PONTUACAO_IDEAL'].iloc[0]))
+            estrelas_real.append(r)
+            estrelas_ideal.append(i)
 
-    if not vals_real or not vals_ideal:
+    if not estrelas_real or not estrelas_ideal:
         return None, None, None
 
-    real_pct  = float(np.mean(vals_real))
-    ideal_pct = float(np.mean(vals_ideal))
-    gap       = ideal_pct - real_pct
+    media_real  = float(np.mean(estrelas_real))
+    media_ideal = float(np.mean(estrelas_ideal))
+    real_pct  = round((media_real  / 6) * 100, 2)
+    ideal_pct = round((media_ideal / 6) * 100, 2)
+    gap       = round(ideal_pct - real_pct, 2)
     return real_pct, ideal_pct, gap
-
+    
 with tab3:
     st.header("💚 Análise de Saúde Emocional + Compliance NR-1")
     st.markdown("**🔍 Analisando afirmações existentes relacionadas à saúde emocional...**")
