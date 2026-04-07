@@ -1554,7 +1554,7 @@ if matriz_arq is not None and matriz_micro is not None:
                                     return 'background-color: rgba(200, 200, 200, 0.1)' # Cinza para outros casos
                             
                             # Aplicar cores
-                            df_questoes_styled = df_questoes[['Questão', 'Afirmação', '% Tendência', 'Tendência', 'Média Estrelas', 'Média Arredondada', 'Nº Respostas']].style.applymap(color_tendencia, subset=['Tendência'])
+                            df_questoes_styled = df_questoes[['Questão', 'Afirmação', '% Tendência', 'Tendência', 'Média Estrelas', 'Média Arredondada', 'Nº Respostas']].style.map(color_tendencia, subset=['Tendência'])
                             
                             # Exibir tabela colorida
                             st.dataframe(
@@ -1856,7 +1856,7 @@ if matriz_arq is not None and matriz_micro is not None:
                                     return 'background-color: transparent'
                             
                             # Aplicar cores
-                            df_questoes_styled = df_questoes[['Questão', 'Afirmação', 'Dimensão', 'Subdimensão', 'Média Real', 'Média Ideal', 'Pontuação Real', 'Pontuação Ideal', 'Gap', 'Nº Respostas']].style.applymap(color_gap, subset=['Gap'])
+                            df_questoes_styled = df_questoes[['Questão', 'Afirmação', 'Dimensão', 'Subdimensão', 'Média Real', 'Média Ideal', 'Pontuação Real', 'Pontuação Ideal', 'Gap', 'Nº Respostas']].style.map(color_gap, subset=['Gap'])
                             
                             st.dataframe(
                                 df_questoes_styled,
@@ -3358,7 +3358,7 @@ with tab3:
             df_arq_exibir.columns = ['Questão', 'Afirmação', 'Arquétipo', '% Tendência', 'Tendência']
             
             # Aplicar cores
-            df_arq_styled = df_arq_exibir.style.applymap(color_tendencia_arq, subset=['Tendência'])
+            df_arq_styled = df_arq_exibir.style.map(color_tendencia_arq, subset=['Tendência'])
             
             st.dataframe(df_arq_styled, use_container_width=True)
             
@@ -3447,7 +3447,7 @@ with tab3:
             df_micro_exibir.columns = ['Questão', 'Afirmação', 'Dimensão', 'Subdimensão', 'Real (%)', 'Ideal (%)', 'Gap']
             
             # Aplicar cores
-            df_micro_styled = df_micro_exibir.style.applymap(color_gap_micro, subset=['Gap'])
+            df_micro_styled = df_micro_exibir.style.map(color_gap_micro, subset=['Gap'])
             
             st.dataframe(df_micro_styled, use_container_width=True)
             
