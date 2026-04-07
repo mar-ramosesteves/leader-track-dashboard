@@ -1401,7 +1401,7 @@ if matriz_arq is not None and matriz_micro is not None:
         # Combinar cargos de ambos os datasets
         cargos_arq = set(df_arquetipos['cargo'].unique())
         cargos_micro = set(df_microambiente['cargo'].unique())
-        todos_cargos = sorted(list(cargos_arq.union(cargos_micro)))
+        todos_cargos = sorted([str(c) for c in list(cargos_arq.union(cargos_micro))])
         cargos = ["Todos"] + todos_cargos
         cargo_selecionado = st.sidebar.selectbox("💼 Cargo", cargos)
         
