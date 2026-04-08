@@ -881,7 +881,10 @@ if matriz_arq is not None and matriz_micro is not None:
                     arquétipo_selecionado = st.selectbox("Selecione um arquétipo:", arquétipos, index=None, placeholder="Escolha um arquétipo...", key="arquetipo_select")
                     if arquétipo_selecionado:
                         st.markdown(f"### 📋 Questões que Impactam: **{arquétipo_selecionado}**")
-                        questoes_detalhadas = gerar_drill_down_arquetipos(arquétipo_selecionado, df_filtrado_arq, matriz_arq)
+                        
+                        df_equipe_arq = df_filtrado_arq[df_filtrado_arq['tipo'] == 'Avaliação Equipe']
+                        questoes_detalhadas = gerar_drill_down_arquetipos(arquétipo_selecionado, df_equipe_arq, matriz_arq)
+                        
                         if questoes_detalhadas:
                             questoes = [q['questao'] for q in questoes_detalhadas]
                             valores_grafico = [q['valor_grafico'] for q in questoes_detalhadas]
