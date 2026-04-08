@@ -160,14 +160,8 @@ def calcular_saude_emocional_lider(
         if dim_se not in scores_dim:
             continue
 
-        # Qual arquétipo usar para esta questão?
-        # Usa o arquétipo com maior PONTOS_MAXIMOS para esta questão
-        linha_ref = matriz_arq[matriz_arq['COD_AFIRMACAO'] == q]
-        if linha_ref.empty:
-            continue
-        arq_questao = linha_ref.loc[linha_ref['PONTOS_MAXIMOS'].idxmax(), 'ARQUETIPO']
-
         # Calcular individualmente para cada membro da equipe
+        # usando TODOS os arquétipos (mesma lógica do dashboard)
         percentuais_ind = []
         for membro in equipe_arq:
             respostas = membro.get('respostas', {})
@@ -177,16 +171,21 @@ def calcular_saude_emocional_lider(
                 nota = int(respostas[q])
             except:
                 continue
-            chave = f"{arq_questao}{nota}{q}"
-            linha = matriz_arq[matriz_arq['CHAVE'] == chave]
-            if not linha.empty:
-                pct = float(linha['% Tendência'].iloc[0]) * 100
-                # Se desfavorável, inverter
-                tend = str(linha['Tendência'].iloc[0])
-                if 'DESFAVORÁVEL' in tend:
-                    pct = max(0, 100 - pct)
-                percentuais_ind.append(pct)
+            # Média dos 6 arquétipos para este respondente/questão
+            pcts_arq = []
+            for arq_nome in ['Imperativo','Resoluto','Cuidativo','Consultivo','Prescritivo','Formador']:
+                chave = f"{arq_nome}{nota}{q}"
+                linha = matriz_arq[matriz_arq['CHAVE'] == chave]
+                if not linha.empty:
+                    pct = float(linha['% Tendência'].iloc[0]) * 100
+                    tend = str(linha['Tendência'].iloc[0])
+                    if 'DESFAVORÁVEL' in tend:
+                        pct = max(0, 100 - pct)
+                    pcts_arq.append(pct)
+            if pcts_arq:
+                percentuais_ind.append(np.mean(pcts_arq))
 
+        
         if percentuais_ind:
             scores_dim[dim_se].append(np.mean(percentuais_ind))
 
