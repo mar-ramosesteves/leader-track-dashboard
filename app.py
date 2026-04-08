@@ -3312,17 +3312,16 @@ with tab3:
                     if estrelas_questao:
                         media_estrelas = np.mean(estrelas_questao)
                         media_arredondada = round(media_estrelas)
+                        percentual_calculado = round((media_estrelas / 6) * 100, 2)
                         
-                        # Buscar % tendência
+                        # Buscar tendência baseado na média arredondada (apenas para o texto)
                         chave = f"{arquétipo}{media_arredondada}{codigo}"
                         linha_tendencia = matriz_arq[matriz_arq['CHAVE'] == chave]
                         
                         if not linha_tendencia.empty:
-                            tendencia_percentual = linha_tendencia['% Tendência'].iloc[0] * 100
                             tendencia_info = linha_tendencia['Tendência'].iloc[0]
-                            
                             tendencias_arq.append(tendencia_info)
-                            percentuais_arq.append(f"{tendencia_percentual:.1f}%")
+                            percentuais_arq.append(f"{percentual_calculado:.1f}%")
                         else:
                             tendencias_arq.append("N/A")
                             percentuais_arq.append("N/A")
@@ -3336,6 +3335,7 @@ with tab3:
             df_arq_detalhado['% Tendência'] = percentuais_arq
             df_arq_detalhado['Tendência'] = tendencias_arq
             
+                        
             # Função para aplicar cores baseadas na tendência
             def color_tendencia_arq(val):
                 val_str = str(val).strip()
