@@ -62,6 +62,31 @@ NINEBOX_CORES = {
     7:"rgba(255,200,0,0.4)", 8:"rgba(255,100,0,0.5)",  9:"rgba(255,0,0,0.7)"
 }
 
+
+def calcular_ninebox(performance_rating, potential_rating):
+    """
+    Lógica idêntica à página WordPress:
+    - Arredondamento natural (6.8→7, 5.4→5)
+    - Bands: 1-3=baixo, 4-6=médio, 7-9=alto
+    """
+    def to_int(v):
+        try:
+            n = round(float(v))
+            return max(1, min(9, n))
+        except:
+            return None
+    def band(n):
+        if n <= 3: return 0
+        if n <= 6: return 1
+        return 2
+    perf = to_int(performance_rating)
+    pot  = to_int(potential_rating)
+    if perf is None or pot is None:
+        return None
+    row = 2 - band(pot)
+    col = 2 - band(perf)
+    return row * 3 + col + 1
+
 def rating_label(rating):
     try:
         v = float(rating)
@@ -81,7 +106,16 @@ def classificar_termometro(qtd_gaps):
     else: return "DESMOTIVAÇÃO", "🔴"
 
 def fmt(val, decimais=1):
-    try: return round(float(val), decimais)
+    try:
+        v = round(float(val), decimais)
+        return v
+    except: return "—"
+
+def fmt_str(val, decimais=1):
+    """Formata para exibição com arredondamento natural"""
+    try:
+        v = round(float(val), decimais)
+        return f"{v:.{decimais}f}"
     except: return "—"
 
 # ==================== CÁLCULOS ====================
@@ -361,7 +395,8 @@ for email in todos_lideres_emails:
         final_rating = ninebox_data.get('final_rating') or eval_data.get('final_rating')
         perf_rating  = ninebox_data.get('performance_rating') or eval_data.get('performance_rating')
         pot_rating   = ninebox_data.get('potential_rating') or eval_data.get('potential_rating')
-        nb_pos       = ninebox_data.get('nine_box_position') or eval_data.get('nine_box_position')
+        # Recalcular 9Box pela lógica correta (idêntica ao WordPress)
+        nb_pos = calcular_ninebox(perf_rating, pot_rating)
         round_aval   = ninebox_data.get('round_code') or eval_data.get('round_code','—')
 
         linhas.append({
