@@ -1,4 +1,5 @@
 import streamlit as st
+import streamlit.components.v1 as components
 from supabase import create_client
 import pandas as pd
 import numpy as np
@@ -63,6 +64,217 @@ NINEBOX_CORES = {
 }
 
 
+def gerar_tabela_html(df):
+    """
+    Gera tabela HTML com:
+    - Cabeçalhos agrupados por seção
+    - Coluna Nome congelada (sticky)
+    - Cores por valores
+    """
+
+    def cor_gap(val):
+        try:
+            v = float(val)
+            if v > 30: return "#fca5a5"
+            elif v > 20: return "#fdba74"
+            elif v > 10: return "#fef08a"
+            else: return "#bbf7d0"
+        except: return "transparent"
+
+    def cor_termo(val):
+        v = str(val)
+        if 'ALTO ESTÍM' in v: return "#86efac"
+        elif 'ESTÍMULO' in v: return "#bbf7d0"
+        elif 'NEUTRO' in v: return "#fef08a"
+        elif 'BAIXO' in v: return "#fdba74"
+        elif 'DESMOTIV' in v: return "#fca5a5"
+        return "transparent"
+
+    def cor_rating(val):
+        try:
+            v = float(val)
+            if v <= 1.5: return "#86efac"
+            elif v <= 2.5: return "#bbf7d0"
+            elif v <= 3.5: return "#fef08a"
+            elif v <= 4.5: return "#fdba74"
+            else: return "#fca5a5"
+        except: return "transparent"
+
+    def cor_ninebox(val):
+        cores = {
+            1:"#6ee7b7", 2:"#a7f3d0", 3:"#d1fae5",
+            4:"#93c5fd", 5:"#fde68a", 6:"#fecaca",
+            7:"#fef08a", 8:"#fed7aa", 9:"#fca5a5"
+        }
+        try: return cores.get(int(val), "transparent")
+        except: return "transparent"
+
+    # Grupos de colunas
+    grupos = [
+        {
+            "titulo": "👤 Identificação",
+            "bg": "#1e3a5f",
+            "colunas": ["Nome", "Cargo", "Empresa", "Holding", "Dept", "Status", "Rodada LT"]
+        },
+        {
+            "titulo": "🎯 Arquétipos de Gestão",
+            "bg": "#1e40af",
+            "colunas": ["Dominantes", "Suporte", "Arq #1", "Arq #2", "Arq #3", "N Resp Arq"]
+        },
+        {
+            "titulo": "🏢 Microambiente de Equipes",
+            "bg": "#065f46",
+            "colunas": ["Gap Geral%", "Gaps >20%", "Termômetro", "N Resp Micro",
+                        "Gap Adapt.", "Gap Colab.", "Gap Nitidez", "Gap Perf.", "Gap Reconh.", "Gap Resp."]
+        },
+        {
+            "titulo": "⭐ Avaliação de Desempenho",
+            "bg": "#7c2d12",
+            "colunas": ["Round Aval.", "Rating Final", "Classif.", "Instit.", "Funcional", "Individual", "Metas"]
+        },
+        {
+            "titulo": "🎲 9Box",
+            "bg": "#4c1d95",
+            "colunas": ["Desempenho", "Potencial", "9Box Pos", "9Box Label"]
+        },
+    ]
+
+    # Filtrar apenas colunas existentes no df
+    cols_disponiveis = list(df.columns)
+    grupos_filtrados = []
+    for g in grupos:
+        cols = [c for c in g["colunas"] if c in cols_disponiveis]
+        if cols:
+            grupos_filtrados.append({**g, "colunas": cols})
+
+    # Colunas na ordem correta
+    todas_cols = []
+    for g in grupos_filtrados:
+        todas_cols.extend(g["colunas"])
+
+    # CSS
+    css = """
+    <style>
+    .exec-table-wrap {
+        overflow-x: auto;
+        max-height: 500px;
+        overflow-y: auto;
+        border: 1px solid #e5e7eb;
+        border-radius: 10px;
+        font-family: system-ui, -apple-system, sans-serif;
+        font-size: 12px;
+    }
+    .exec-table {
+        border-collapse: collapse;
+        width: max-content;
+        min-width: 100%;
+    }
+    .exec-table th, .exec-table td {
+        padding: 7px 10px;
+        white-space: nowrap;
+        border: 1px solid #e5e7eb;
+        text-align: left;
+        vertical-align: middle;
+    }
+    /* Cabeçalho grupo */
+    .exec-table .th-group {
+        color: white;
+        font-weight: 700;
+        font-size: 11px;
+        text-align: center;
+        letter-spacing: 0.5px;
+        padding: 8px 10px;
+        position: sticky;
+        top: 0;
+        z-index: 3;
+    }
+    /* Cabeçalho coluna */
+    .exec-table .th-col {
+        background: #f1f5f9;
+        font-weight: 600;
+        font-size: 11px;
+        color: #374151;
+        position: sticky;
+        top: 33px;
+        z-index: 2;
+    }
+    /* Linhas alternadas */
+    .exec-table tbody tr:nth-child(even) td {
+        background: #f8fafc;
+    }
+    .exec-table tbody tr:hover td {
+        background: #e0f2fe !important;
+    }
+    /* Coluna Nome congelada */
+    .exec-table td.frozen,
+    .exec-table th.frozen {
+        position: sticky;
+        left: 0;
+        z-index: 4;
+        box-shadow: 2px 0 4px rgba(0,0,0,0.08);
+    }
+    .exec-table th.frozen {
+        z-index: 5;
+    }
+    .exec-table td.frozen {
+        background: #fff;
+        font-weight: 600;
+    }
+    .exec-table tbody tr:nth-child(even) td.frozen {
+        background: #f8fafc;
+    }
+    .exec-table tbody tr:hover td.frozen {
+        background: #e0f2fe !important;
+    }
+    </style>
+    """
+
+    html = css + '<div class="exec-table-wrap"><table class="exec-table">'
+
+    # ── Linha 1: cabeçalhos de grupo ──
+    html += "<thead><tr>"
+    for g in grupos_filtrados:
+        n_cols = len(g["colunas"])
+        frozen = 'class="th-group frozen"' if g["colunas"][0] == "Nome" else 'class="th-group"'
+        html += f'<th {frozen} colspan="{n_cols}" style="background:{g["bg"]}">{g["titulo"]}</th>'
+    html += "</tr>"
+
+    # ── Linha 2: nomes das colunas ──
+    html += "<tr>"
+    for i, col in enumerate(todas_cols):
+        frozen = ' frozen' if col == "Nome" else ""
+        html += f'<th class="th-col{frozen}">{col}</th>'
+    html += "</tr></thead>"
+
+    # ── Dados ──
+    html += "<tbody>"
+    for _, row in df.iterrows():
+        html += "<tr>"
+        for col in todas_cols:
+            val = row.get(col, "—")
+            val_str = str(val) if val != "" else "—"
+
+            # Cor de fundo baseada no tipo de coluna
+            bg = "transparent"
+            if col in ["Gap Geral%", "Gap Adapt.", "Gap Colab.", "Gap Nitidez", "Gap Perf.", "Gap Reconh.", "Gap Resp."]:
+                bg = cor_gap(val)
+            elif col == "Termômetro":
+                bg = cor_termo(val)
+            elif col == "Rating Final":
+                bg = cor_rating(val)
+            elif col == "9Box Pos":
+                bg = cor_ninebox(val)
+
+            frozen = ' class="frozen"' if col == "Nome" else ""
+            style = f'style="background:{bg}"' if bg != "transparent" else ""
+
+            html += f'<td{frozen} {style}>{val_str}</td>'
+        html += "</tr>"
+
+    html += "</tbody></table></div>"
+    return html
+
+
 def calcular_ninebox(performance_rating, potential_rating):
     """
     Lógica idêntica à página WordPress:
@@ -91,9 +303,9 @@ def rating_label(rating):
     try:
         v = float(rating)
         if v <= 1.5: return "⭐ Excelente"
-        elif v <= 2.5: return "🟢 Superou"
-        elif v <= 3.5: return "🟡 Atendeu"
-        elif v <= 4.5: return "🟠 Não Atendeu"
+        elif v <= 2.5: return "✅ Bom"
+        elif v <= 3.5: return "🟡 Regular"
+        elif v <= 4.5: return "🟠 Abaixo"
         else: return "🔴 Insuficiente"
     except: return "—"
 
@@ -477,56 +689,13 @@ st.markdown("---")
 
 # ==================== TABELA ÚNICA COMPLETA ====================
 st.subheader("📋 Tabela Consolidada — Uma linha por Líder")
-st.caption("🎯 LeaderTrack  |  🏢 Microambiente  |  ⭐ Avaliação de Desempenho  |  🎲 9Box")
-
-# Coloração
-def color_gap(val):
-    try:
-        v = float(val)
-        if v > 30: return 'background-color: rgba(255,0,0,0.2)'
-        elif v > 20: return 'background-color: rgba(255,165,0,0.2)'
-        elif v > 10: return 'background-color: rgba(255,255,0,0.2)'
-        else: return 'background-color: rgba(0,255,0,0.15)'
-    except: return ''
-
-def color_termo(val):
-    v = str(val)
-    if 'ALTO ESTÍM' in v: return 'background-color: rgba(0,128,0,0.3)'
-    elif 'ESTÍMULO' in v: return 'background-color: rgba(144,238,144,0.3)'
-    elif 'NEUTRO' in v: return 'background-color: rgba(255,255,0,0.3)'
-    elif 'BAIXO' in v: return 'background-color: rgba(255,165,0,0.3)'
-    elif 'DESMOTIV' in v: return 'background-color: rgba(255,0,0,0.3)'
-    return ''
-
-def color_rating(val):
-    try:
-        v = float(val)
-        if v <= 1.5: return 'background-color: rgba(0,128,0,0.3)'
-        elif v <= 2.5: return 'background-color: rgba(144,238,144,0.3)'
-        elif v <= 3.5: return 'background-color: rgba(255,255,0,0.3)'
-        elif v <= 4.5: return 'background-color: rgba(255,165,0,0.3)'
-        else: return 'background-color: rgba(255,0,0,0.3)'
-    except: return ''
-
-def color_ninebox(val):
-    try:
-        cor = NINEBOX_CORES.get(int(val),'')
-        return f'background-color: {cor}' if cor else ''
-    except: return ''
 
 cols_exibir = [c for c in df.columns if not c.startswith('_')]
 df_show = df[cols_exibir].copy()
 
-gap_cols = [c for c in ['Gap Geral%','Gap Adapt.','Gap Colab.','Gap Nitidez','Gap Perf.','Gap Reconh.','Gap Resp.'] if c in df_show.columns]
-styled = df_show.style\
-    .map(color_gap,    subset=gap_cols)\
-    .map(color_termo,  subset=['Termômetro'] if 'Termômetro' in df_show.columns else [])\
-    .map(color_rating, subset=['Rating Final'] if 'Rating Final' in df_show.columns else [])\
-    .map(color_ninebox,subset=['9Box Pos'] if '9Box Pos' in df_show.columns else [])
-
-st.dataframe(styled, use_container_width=True, hide_index=True, height=450,
-    column_config={"Nome": st.column_config.TextColumn("Nome", width="medium")},
-    column_order=["Nome", "Cargo"] + [c for c in df_show.columns if c not in ["Nome", "Cargo"]])
+# Tabela HTML com cabeçalhos agrupados e Nome congelado
+tabela_html = gerar_tabela_html(df_show)
+components.html(tabela_html, height=540, scrolling=True)
 
 # Download
 csv = df_show.to_csv(index=False, encoding='utf-8-sig')
