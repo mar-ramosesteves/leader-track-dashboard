@@ -306,9 +306,9 @@ def rating_label(rating):
     try:
         v = float(rating)
         if v <= 1.5: return "⭐ Excelente"
-        elif v <= 2.5: return "✅ Bom"
-        elif v <= 3.5: return "🟡 Regular"
-        elif v <= 4.5: return "🟠 Abaixo"
+        elif v <= 2.5: return "🟢 Superou"
+        elif v <= 3.5: return "🟡 Atendeu"
+        elif v <= 4.5: return "🟠 Não Atendeu"
         else: return "🔴 Insuficiente"
     except: return "—"
 
