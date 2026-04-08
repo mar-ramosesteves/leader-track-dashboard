@@ -1077,13 +1077,15 @@ def gerar_drill_down_arquetipos(arquétipo_clicado, df_respondentes_filtrado, ma
         
         if estrelas_questao:
             # Calcular média e arredondar
+            
             media_estrelas = np.mean(estrelas_questao)
             media_arredondada = round(media_estrelas)
+            percentual_calculado = round((media_estrelas / 6) * 100, 2)
             
-            # Buscar % tendência baseado na média arredondada
+            # Buscar tendência baseado na média arredondada (apenas para o texto da tendência)
             chave = f"{arquétipo_clicado}{media_arredondada}{questao}"
             linha = matriz[matriz['CHAVE'] == chave]
-            tendencia_percentual = linha['% Tendência'].iloc[0] * 100 if not linha.empty else 0
+            tendencia_percentual = percentual_calculado if not linha.empty else 0
             tendencia_info = linha['Tendência'].iloc[0] if not linha.empty else 'N/A'
             
             # CALCULAR VALOR PARA O GRÁFICO (negativo para desfavorável, positivo para favorável)
