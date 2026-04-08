@@ -176,7 +176,8 @@ def gerar_tabela_html(df):
         text-align: left;
         vertical-align: middle;
     }
-    /* Cabeçalho grupo */
+    /* Cabeçalho grupo — sticky apenas vertical (top), 
+       NÃO sticky horizontal, acompanha scroll X normalmente */
     .exec-table .th-group {
         color: white;
         font-weight: 700;
@@ -186,9 +187,9 @@ def gerar_tabela_html(df):
         padding: 8px 10px;
         position: sticky;
         top: 0;
-        z-index: 3;
+        z-index: 2;
     }
-    /* Cabeçalho coluna */
+    /* Cabeçalho coluna — sticky apenas vertical */
     .exec-table .th-col {
         background: #f1f5f9;
         font-weight: 600;
@@ -205,20 +206,21 @@ def gerar_tabela_html(df):
     .exec-table tbody tr:hover td {
         background: #e0f2fe !important;
     }
-    /* Coluna Nome congelada */
-    .exec-table td.frozen,
-    .exec-table th.frozen {
+    /* Coluna Nome congelada — sticky horizontal E vertical */
+    .exec-table td.frozen {
         position: sticky;
         left: 0;
-        z-index: 4;
-        box-shadow: 2px 0 4px rgba(0,0,0,0.08);
-    }
-    .exec-table th.frozen {
-        z-index: 5;
-    }
-    .exec-table td.frozen {
+        z-index: 3;
         background: #fff;
         font-weight: 600;
+        box-shadow: 2px 0 4px rgba(0,0,0,0.08);
+    }
+    /* Cabeçalho Nome — sticky horizontal E vertical (ambos) */
+    .exec-table th.frozen-col {
+        position: sticky;
+        left: 0;
+        z-index: 6;
+        box-shadow: 2px 0 4px rgba(0,0,0,0.08);
     }
     .exec-table tbody tr:nth-child(even) td.frozen {
         background: #f8fafc;
@@ -235,15 +237,16 @@ def gerar_tabela_html(df):
     html += "<thead><tr>"
     for g in grupos_filtrados:
         n_cols = len(g["colunas"])
-        frozen = 'class="th-group frozen"' if g["colunas"][0] == "Nome" else 'class="th-group"'
-        html += f'<th {frozen} colspan="{n_cols}" style="background:{g["bg"]}">{g["titulo"]}</th>'
+        # Cabeçalho de grupo: NUNCA frozen horizontalmente, só sticky top (CSS th-group)
+        html += f'<th class="th-group" colspan="{n_cols}" style="background:{g["bg"]}">{g["titulo"]}</th>'
     html += "</tr>"
 
     # ── Linha 2: nomes das colunas ──
     html += "<tr>"
     for i, col in enumerate(todas_cols):
-        frozen = ' frozen' if col == "Nome" else ""
-        html += f'<th class="th-col{frozen}">{col}</th>'
+        # Nome: sticky em X e Y (frozen-col)
+        extra = ' frozen-col' if col == "Nome" else ""
+        html += f'<th class="th-col{extra}">{col}</th>'
     html += "</tr></thead>"
 
     # ── Dados ──
