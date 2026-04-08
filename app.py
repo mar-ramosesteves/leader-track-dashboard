@@ -1096,7 +1096,7 @@ if matriz_arq is not None and matriz_micro is not None:
                     arquétipo = af['dimensao']
                     # ✅ LÓGICA CORRETA: busca individualmente na tabela
                     percentual_medio, tendencia_info, _ = calcular_tendencia_arquetipos_por_questao(
-                        df_arq_filtrado, matriz_arq, codigo, arquétipo
+                        df_arq_filtrado[df_arq_filtrado['tipo'] == 'Avaliação Equipe'], matriz_arq, codigo, arquétipo
                     )
                     if percentual_medio is not None and tendencia_info:
                         if 'DESFAVORÁVEL' in tendencia_info:
@@ -1329,7 +1329,7 @@ if matriz_arq is not None and matriz_micro is not None:
                                 arquétipo = af['dimensao']
                                 # ✅ LÓGICA CORRETA
                                 percentual_medio, tendencia_info, n_resp = calcular_tendencia_arquetipos_por_questao(
-                                    df_arq_filtrado, matriz_arq, codigo, arquétipo)
+                                    df_arq_filtrado[df_arq_filtrado['tipo'] == 'Avaliação Equipe'], matriz_arq, codigo, arquétipo)
                                 if percentual_medio is not None:
                                     # Média de estrelas para exibição
                                     estrelas_lista = [int(resp['respostas'][codigo]) for _, resp in df_arq_filtrado.iterrows() if 'respostas' in resp and codigo in resp['respostas']]
@@ -1421,7 +1421,7 @@ if matriz_arq is not None and matriz_micro is not None:
                     codigo = af['chave']
                     arquétipo = af['dimensao']
                     percentual_medio, tendencia_info, _ = calcular_tendencia_arquetipos_por_questao(
-                        df_arq_filtrado, matriz_arq, codigo, arquétipo)
+                        df_arq_filtrado[df_arq_filtrado['tipo'] == 'Avaliação Equipe'], matriz_arq, codigo, arquétipo)
                     if percentual_medio is not None and tendencia_info:
                         if 'DESFAVORÁVEL' in tendencia_info:
                             score = max(0, 100 - percentual_medio)
@@ -1483,7 +1483,7 @@ if matriz_arq is not None and matriz_micro is not None:
                     arquétipo = row['dimensao']
                     # ✅ LÓGICA CORRETA: busca individualmente na tabela
                     percentual_medio, tendencia_info, _ = calcular_tendencia_arquetipos_por_questao(
-                        df_arq_filtrado, matriz_arq, codigo, arquétipo)
+                        df_arq_filtrado[df_arq_filtrado['tipo'] == 'Avaliação Equipe'], matriz_arq, codigo, arquétipo)
                     if percentual_medio is not None:
                         tendencias_arq.append(tendencia_info)
                         percentuais_arq.append(f"{percentual_medio:.1f}%")
