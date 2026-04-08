@@ -157,6 +157,7 @@ def calcular_saude_emocional_lider(
         if chave_se not in cod_to_dim:
             continue
         dim_se = cod_to_dim[chave_se]
+        dim_se = dim_se.replace('Vida- Trabalho', 'Vida-Trabalho').strip()
         if dim_se not in scores_dim:
             continue
 
@@ -197,6 +198,7 @@ def calcular_saude_emocional_lider(
         if chave_se not in cod_to_dim:
             continue
         dim_se = cod_to_dim[chave_se]
+        dim_se = dim_se.replace('Vida- Trabalho', 'Vida-Trabalho').strip()
         if dim_se not in scores_dim:
             continue
 
