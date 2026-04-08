@@ -91,9 +91,9 @@ def rating_label(rating):
     try:
         v = float(rating)
         if v <= 1.5: return "⭐ Excelente"
-        elif v <= 2.5: return "✅ Bom"
-        elif v <= 3.5: return "🟡 Regular"
-        elif v <= 4.5: return "🟠 Abaixo"
+        elif v <= 2.5: return "🟢 Superou"
+        elif v <= 3.5: return "🟡 Atendeu"
+        elif v <= 4.5: return "🟠 Não Atendeu"
         else: return "🔴 Insuficiente"
     except: return "—"
 
@@ -524,7 +524,9 @@ styled = df_show.style\
     .map(color_rating, subset=['Rating Final'] if 'Rating Final' in df_show.columns else [])\
     .map(color_ninebox,subset=['9Box Pos'] if '9Box Pos' in df_show.columns else [])
 
-st.dataframe(styled, use_container_width=True, hide_index=True, height=450)
+st.dataframe(styled, use_container_width=True, hide_index=True, height=450,
+    column_config={"Nome": st.column_config.TextColumn("Nome", width="medium")},
+    column_order=["Nome", "Cargo"] + [c for c in df_show.columns if c not in ["Nome", "Cargo"]])
 
 # Download
 csv = df_show.to_csv(index=False, encoding='utf-8-sig')
