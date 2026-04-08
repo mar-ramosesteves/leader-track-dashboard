@@ -2115,22 +2115,24 @@ with tab3:
                 if estrelas_questao:
                     media_estrelas = np.mean(estrelas_questao)
                     media_arredondada = round(media_estrelas)
+                    percentual_corrigido = round((media_estrelas / 6) * 100, 2)
                     
-                    # Buscar % tendência
+                    # Buscar apenas o TEXTO da tendência na tabela
                     chave = f"{arquétipo}{media_arredondada}{codigo}"
                     linha_tendencia = matriz_arq[matriz_arq['CHAVE'] == chave]
                     
                     if not linha_tendencia.empty:
-                        tendencia_percentual = linha_tendencia['% Tendência'].iloc[0] * 100
                         tendencia_info = linha_tendencia['Tendência'].iloc[0]
                         
-                        # Converter para score positivo
+                        # Converter para score usando percentual corrigido
                         if 'DESFAVORÁVEL' in tendencia_info:
-                            valor = max(0, 100 - tendencia_percentual)
+                            valor = max(0, 100 - percentual_corrigido)
                         else:
-                            valor = tendencia_percentual
+                            valor = percentual_corrigido
                         
                         categoria_valores[categoria].append(valor)
+
+
             
             else:  # Microambiente
                 # Para microambiente, usar a mesma lógica do drill: CANÔNICO (matriz) → FORM (JSON)
@@ -2168,21 +2170,17 @@ with tab3:
                         estrelas_ideal.append(int(respostas[questao_ideal]))
             
                 if estrelas_real and estrelas_ideal:
-                    media_real = round(np.mean(estrelas_real))
-                    media_ideal = round(np.mean(estrelas_ideal))
+                    media_real = np.mean(estrelas_real)
+                    media_ideal = np.mean(estrelas_ideal)
+                    
+                    # Calcular percentuais diretamente da média sem arredondar
+                    pontuacao_real = round((media_real / 6) * 100, 2)
+                    pontuacao_ideal = round((media_ideal / 6) * 100, 2)
+                    gap = round(pontuacao_ideal - pontuacao_real, 2)
             
-                    # Chave na MATRIZ usa o CANÔNICO
-                    chave = f"{codigo_canonico}_I{media_ideal}_R{media_real}"
-                    linha = matriz_micro[matriz_micro['CHAVE'] == chave]
-            
-                    if not linha.empty:
-                        pontuacao_real = float(linha['PONTUACAO_REAL'].iloc[0])
-                        pontuacao_ideal = float(linha['PONTUACAO_IDEAL'].iloc[0])
-                        gap = pontuacao_ideal - pontuacao_real
-            
-                        # Score para a categoria (quanto menor o gap, maior o score)
-                        valor = max(0.0, 100.0 - gap)
-                        categoria_valores[categoria].append(valor)
+                    # Score para a categoria (quanto menor o gap, maior o score)
+                    valor = max(0.0, 100.0 - gap)
+                    categoria_valores[categoria].append(valor)
 
 
 
@@ -3173,28 +3171,29 @@ with tab3:
                             estrelas = int(respondente['respostas'][codigo])
                             estrelas_questao.append(estrelas)
                     
-                    if estrelas_questao:
+                   if estrelas_questao:
                         media_estrelas = np.mean(estrelas_questao)
                         media_arredondada = round(media_estrelas)
+                        percentual_corrigido = round((media_estrelas / 6) * 100, 2)
                         
-                        # Buscar % tendência
+                        # Buscar apenas o TEXTO da tendência na tabela
                         chave = f"{arquétipo}{media_arredondada}{codigo}"
                         linha_tendencia = matriz_arq[matriz_arq['CHAVE'] == chave]
                         
                         if not linha_tendencia.empty:
-                            tendencia_percentual = linha_tendencia['% Tendência'].iloc[0] * 100
                             tendencia_info = linha_tendencia['Tendência'].iloc[0]
                             
-                            # Converter para score positivo
+                            # Converter para score usando percentual corrigido
                             if 'DESFAVORÁVEL' in tendencia_info:
-                                score = max(0, 100 - tendencia_percentual)
+                                score = max(0, 100 - percentual_corrigido)
                             else:
-                                score = tendencia_percentual
+                                score = percentual_corrigido
                             
                             tendencias_gerais.append(score)
             
             if tendencias_gerais:
                 score_arquetipos = np.mean(tendencias_gerais)
+
         
         # Score Microambiente (baseado no gap médio)
         if afirmacoes_micro and 'gaps' in locals() and gaps:
