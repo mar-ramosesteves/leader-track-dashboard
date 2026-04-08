@@ -202,17 +202,24 @@ def calcular_saude_emocional_lider(
         if dim_se not in scores_dim:
             continue
 
-        q_form = REVERSO.get(q_can, q_can)
+        # O CSV SE usa códigos canônicos (ex: Q48)
+        # As respostas no JSON também usam Q48 diretamente
+        # MAS a chave na matriz usa o canônico (Q48→Q43 na matriz)
+        # Então: buscar Q48C/Q48k nas respostas, mas usar Q43 na chave
+        q_form_se = q_can  # Q48 → buscar Q48C/Q48k nas respostas
+        q_can_matriz = MAPEAMENTO.get(q_can, q_can)  # Q48 → Q43 na matriz
         soma_real = soma_ideal = count = 0
-
         for av in equipe_micro:
-            qR, qI = f"{q_form}C", f"{q_form}k"
+            qR, qI = f"{q_form_se}C", f"{q_form_se}k"
             if qR in av and qI in av:
                 try:
                     r, i = int(av[qR]), int(av[qI])
                 except:
                     continue
-                chave = f"{q_can}_I{i}_R{r}"
+                chave = f"{q_can_matriz}_I{i}_R{r}"
+
+
+                
                 linha = matriz_micro[matriz_micro['CHAVE'] == chave]
                 if not linha.empty:
                     soma_real  += float(linha['PONTUACAO_REAL'].iloc[0])
@@ -558,10 +565,14 @@ def calcular_gaps_microambiente(consolidado_micro, matriz_micro):
         if not equipe: continue
         gaps_por_questao = {}
         for q_can in matriz_micro['COD'].unique():
+
+            
             q_form = REVERSO.get(q_can, q_can)
             soma_real = soma_ideal = count = 0
             for av in equipe:
                 qR, qI = f"{q_form}C", f"{q_form}k"
+
+                
                 if qR in av and qI in av:
                     try: r, i = int(av[qR]), int(av[qI])
                     except: continue
