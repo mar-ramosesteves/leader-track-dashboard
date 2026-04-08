@@ -691,7 +691,7 @@ with c6:
 st.markdown("---")
 
 # ==================== TABELA ÚNICA COMPLETA ====================
-st.subheader("📋 Tabela Consolidada — Uma linha por Líder")
+st.subheader("📋 Liderança PROSPERA")
 
 cols_exibir = [c for c in df.columns if not c.startswith('_')]
 df_show = df[cols_exibir].copy()
