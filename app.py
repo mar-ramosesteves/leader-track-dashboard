@@ -3171,7 +3171,7 @@ with tab3:
                             estrelas = int(respondente['respostas'][codigo])
                             estrelas_questao.append(estrelas)
                     
-                   if estrelas_questao:
+                    if estrelas_questao:
                         media_estrelas = np.mean(estrelas_questao)
                         media_arredondada = round(media_estrelas)
                         percentual_corrigido = round((media_estrelas / 6) * 100, 2)
