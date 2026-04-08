@@ -150,7 +150,7 @@ def calcular_saude_emocional_lider(
 
     # ── Arquétipos ──
     arquetipos_lista = ['Imperativo','Resoluto','Cuidativo','Consultivo','Prescritivo','Formador']
-    questoes_arq = matriz_arq['COD_AFIRMACAO'].unique()
+    questoes_arq = matriz_arq[matriz_arq['PONTOS_MAXIMOS'] == 200]['COD_AFIRMACAO'].unique()
 
     for q in questoes_arq:
         chave_se = f"arq_{q}"
