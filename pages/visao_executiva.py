@@ -149,7 +149,7 @@ def calcular_saude_emocional_lider(
                     'area': membro.get('area', ''),
                     'departamento': str(membro.get('departamento', '')).lower(),
                     'tipo': 'Avaliação Equipe',
-                    'respostas': membro,
+                    'respostas': membro.get('respostas', membro),
                     'holding': str(membro.get('holding', '')).upper(),
                 })
 
