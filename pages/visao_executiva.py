@@ -103,60 +103,55 @@ def calcular_saude_emocional_lider(
         if not isinstance(item, dict) or 'dados_json' not in item:
             continue
 
-        df_micro_rows = []
-for item in consolidado_micro:
-    if not isinstance(item, dict) or 'dados_json' not in item:
-        continue
+        dados = item['dados_json']
 
-    dados = item['dados_json']
+        if 'avaliacoesEquipe' in dados:
+            for membro in dados['avaliacoesEquipe']:
+                if 'respostas' in membro:
+                    df_arquetipos_rows.append({
+                        'empresa': str(membro.get('empresa', '')).lower(),
+                        'codrodada': str(membro.get('codrodada', '')).lower(),
+                        'emailLider': str(membro.get('emailLider', '')).lower(),
+                        'nome': membro.get('nome', ''),
+                        'email': membro.get('email', ''),
+                        'sexo': str(membro.get('sexo', '')).lower(),
+                        'etnia': str(membro.get('etnia', '')).lower(),
+                        'estado': str(membro.get('estado', '')).lower(),
+                        'cidade': membro.get('cidade', ''),
+                        'cargo': str(membro.get('cargo', '')).lower(),
+                        'area': membro.get('area', ''),
+                        'departamento': str(membro.get('departamento', '')).lower(),
+                        'tipo': 'Avaliação Equipe',
+                        'respostas': membro['respostas'],
+                        'holding': str(membro.get('holding', '')).upper(),
+                    })
 
-    if 'autoavaliacao' in dados:
-        auto = dados['autoavaliacao']
-        df_micro_rows.append({
-            'empresa': str(auto.get('empresa', '')).lower(),
-            'codrodada': str(auto.get('codrodada', '')).lower(),
-            'emailLider': str(auto.get('emailLider', '')).lower(),
-            'nome': auto.get('nome', ''),
-            'email': auto.get('email', ''),
-            'sexo': str(auto.get('sexo', '')).lower(),
-            'etnia': str(auto.get('etnia', '')).lower(),
-            'estado': str(auto.get('estado', '')).lower(),
-            'cidade': auto.get('cidade', ''),
-            'cargo': str(auto.get('cargo', '')).lower(),
-            'area': auto.get('area', ''),
-            'departamento': str(auto.get('departamento', '')).lower(),
-            'tipo': 'Autoavaliação',
-            'respostas': auto,
-            'holding': str(auto.get('holding', '')).upper(),
-        })
-
-    if 'avaliacoesEquipe' in dados:
-        for membro in dados['avaliacoesEquipe']:
-            df_micro_rows.append({
-                'empresa': str(membro.get('empresa', '')).lower(),
-                'codrodada': str(membro.get('codrodada', '')).lower(),
-                'emailLider': str(membro.get('emailLider', '')).lower(),
-                'nome': membro.get('nome', ''),
-                'email': membro.get('email', ''),
-                'sexo': str(membro.get('sexo', '')).lower(),
-                'etnia': str(membro.get('etnia', '')).lower(),
-                'estado': str(membro.get('estado', '')).lower(),
-                'cidade': membro.get('cidade', ''),
-                'cargo': str(membro.get('cargo', '')).lower(),
-                'area': membro.get('area', ''),
-                'departamento': str(membro.get('departamento', '')).lower(),
-                'tipo': 'Avaliação Equipe',
-                'respostas': membro.get('respostas', membro),
-                'holding': str(membro.get('holding', '')).upper(),
-            })
-
-    
     df_micro_rows = []
     for item in consolidado_micro:
         if not isinstance(item, dict) or 'dados_json' not in item:
             continue
 
         dados = item['dados_json']
+
+        if 'autoavaliacao' in dados:
+            auto = dados['autoavaliacao']
+            df_micro_rows.append({
+                'empresa': str(auto.get('empresa', '')).lower(),
+                'codrodada': str(auto.get('codrodada', '')).lower(),
+                'emailLider': str(auto.get('emailLider', '')).lower(),
+                'nome': auto.get('nome', ''),
+                'email': auto.get('email', ''),
+                'sexo': str(auto.get('sexo', '')).lower(),
+                'etnia': str(auto.get('etnia', '')).lower(),
+                'estado': str(auto.get('estado', '')).lower(),
+                'cidade': auto.get('cidade', ''),
+                'cargo': str(auto.get('cargo', '')).lower(),
+                'area': auto.get('area', ''),
+                'departamento': str(auto.get('departamento', '')).lower(),
+                'tipo': 'Autoavaliação',
+                'respostas': auto,
+                'holding': str(auto.get('holding', '')).upper(),
+            })
 
         if 'avaliacoesEquipe' in dados:
             for membro in dados['avaliacoesEquipe']:
@@ -191,7 +186,6 @@ for item in consolidado_micro:
         df_microambiente,
         filtros
     )
-
 
 # ==================== TABELA HTML ====================
 
