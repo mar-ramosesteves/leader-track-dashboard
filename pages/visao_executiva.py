@@ -90,50 +90,63 @@ def calcular_saude_emocional_lider(
     df_se
 ):
     """
-    Calcula Score Geral e por Dimensão de Saúde Emocional para um líder.
-    CORRIGIDO v4: Replica EXATAMENTE a lógica do app.py
-    - Calcula média dos percentuais PRIMEIRO
-    - Depois decide se inverte baseado na tendência da MÉDIA
+    Versão alinhada com a lógica do app.py:
+    - calcula por respondente primeiro
+    - depois tira a média
+    - arquétipos: só inverte no fim, com base na tendência da média
+    - microambiente: calcula gap médio por questão e converte em score
     """
-    if df_se is None:
+    if df_se is None or matriz_arq is None or matriz_micro is None:
         return {d: '—' for d in DIMENSOES_SE}, '—'
 
-    # Montar dicionário: código → dimensão SE
+    # 1) Mapa código -> dimensão de saúde emocional
     cod_to_dim = {}
     for _, row in df_se.iterrows():
-        tipo = str(row['TIPO']).upper()
-        cod  = str(row['COD_AFIRMACAO']).strip()
-        dim  = row['DIMENSAO_SAUDE_EMOCIONAL']
+        tipo = str(row['TIPO']).strip().upper()
+        cod = str(row['COD_AFIRMACAO']).strip()
+        dim = str(row['DIMENSAO_SAUDE_EMOCIONAL']).strip()
+        dim = dim.replace('Equilíbrio Vida- Trabalho', 'Equilíbrio Vida-Trabalho')
+
         if tipo.startswith('ARQ'):
             cod_to_dim[f"arq_{cod}"] = dim
         elif tipo.startswith('MICRO'):
             cod_to_dim[f"micro_{cod}"] = dim
 
-    # Acumular TODOS os respondentes
-    equipe_arq  = []
-    equipe_micro = []
-
+    # 2) Junta somente as avaliações da equipe do líder/rodada
+    equipe_arq = []
     for item in consolidado_arq:
         if not isinstance(item, dict) or 'dados_json' not in item:
             continue
-        if item.get('emaillider','').lower().strip() != email_lider:
+        if str(item.get('emaillider', '')).lower().strip() != str(email_lider).lower().strip():
             continue
-        if item.get('codrodada','') != codrodada:
+        if str(item.get('codrodada', '')).strip() != str(codrodada).strip():
             continue
-        membros = item['dados_json'].get('avaliacoesEquipe', [])
-        equipe_arq.extend(membros)
 
+        membros = item.get('dados_json', {}).get('avaliacoesEquipe', [])
+        for membro in membros:
+            respostas = membro.get('respostas', {})
+            if isinstance(respostas, dict):
+                equipe_arq.append({
+                    'respostas': respostas
+                })
+
+    equipe_micro = []
     for item in consolidado_micro:
         if not isinstance(item, dict) or 'dados_json' not in item:
             continue
-        if item.get('emaillider','').lower().strip() != email_lider:
+        if str(item.get('emaillider', '')).lower().strip() != str(email_lider).lower().strip():
             continue
-        if item.get('codrodada','') != codrodada:
+        if str(item.get('codrodada', '')).strip() != str(codrodada).strip():
             continue
-        membros = item['dados_json'].get('avaliacoesEquipe', [])
-        equipe_micro.extend(membros)
 
-    MAPEAMENTO = {
+        membros = item.get('dados_json', {}).get('avaliacoesEquipe', [])
+        for membro in membros:
+            # No microambiente as respostas podem vir planas
+            if isinstance(membro, dict):
+                equipe_micro.append(membro)
+
+    # 3) Mesmo mapeamento usado no app.py
+    MAP_FORM_TO_MATRIZ = {
         'Q01':'Q01','Q02':'Q12','Q03':'Q23','Q04':'Q34','Q05':'Q44','Q06':'Q45',
         'Q07':'Q46','Q08':'Q47','Q09':'Q48','Q10':'Q02','Q11':'Q03','Q12':'Q04',
         'Q13':'Q05','Q14':'Q06','Q15':'Q07','Q16':'Q08','Q17':'Q09','Q18':'Q10',
@@ -143,120 +156,141 @@ def calcular_saude_emocional_lider(
         'Q37':'Q31','Q38':'Q32','Q39':'Q33','Q40':'Q35','Q41':'Q36','Q42':'Q37',
         'Q43':'Q38','Q44':'Q39','Q45':'Q40','Q46':'Q41','Q47':'Q42','Q48':'Q43'
     }
-    MAP_CAN_TO_FORM = {v: k for k, v in MAPEAMENTO.items()}
+    MAP_MATRIZ_TO_FORM = {v: k for k, v in MAP_FORM_TO_MATRIZ.items()}
 
     categoria_valores = {d: [] for d in DIMENSOES_SE}
 
-    # ── Arquétipos (EXATAMENTE igual app.py) ──
-    matriz_arq_unicos = matriz_arq[['COD_AFIRMACAO','AFIRMACAO','ARQUETIPO']].drop_duplicates(subset=['COD_AFIRMACAO'])
+    # -------------------------
+    # ARQUÉTIPOS
+    # app.py: calcula por respondente -> média -> decide se inverte
+    # -------------------------
+    matriz_arq_unicos = (
+        matriz_arq[['COD_AFIRMACAO', 'AFIRMACAO', 'ARQUETIPO']]
+        .drop_duplicates(subset=['COD_AFIRMACAO'])
+    )
 
     for _, af_row in matriz_arq_unicos.iterrows():
-        q = str(af_row['COD_AFIRMACAO']).strip()
-        arq_questao = str(af_row['ARQUETIPO']).strip()
-        chave_se = f"arq_{q}"
-        if chave_se not in cod_to_dim:
+        codigo = str(af_row['COD_AFIRMACAO']).strip()
+        arquetipo = str(af_row['ARQUETIPO']).strip()
+        chave_dim = f"arq_{codigo}"
+
+        if chave_dim not in cod_to_dim:
             continue
-        dim_se = cod_to_dim[chave_se]
-        dim_se = dim_se.replace('Vida- Trabalho', 'Vida-Trabalho').strip()
+
+        dim_se = cod_to_dim[chave_dim].replace('Vida- Trabalho', 'Vida-Trabalho').strip()
         if dim_se not in categoria_valores:
             continue
 
-        # IGUAL app.py: Calcular percentuais SEM INVERTER
-        percentuais_ind = []
+        percentuais_individuais = []
         soma_notas = 0
         count_notas = 0
-        
-        for membro in equipe_arq:
-            respostas = membro.get('respostas', membro)
-            if q not in respostas:
+
+        for respondente in equipe_arq:
+            respostas = respondente.get('respostas', {})
+            if codigo not in respostas:
                 continue
+
             try:
-                nota = int(respostas[q])
+                estrelas = int(respostas[codigo])
             except:
                 continue
-            chave = f"{arq_questao}{nota}{q}"
+
+            chave = f"{arquetipo}{estrelas}{codigo}"
             linha = matriz_arq[matriz_arq['CHAVE'] == chave]
-            if not linha.empty:
-                # NÃO INVERTE AQUI - igual app.py
-                pct = float(linha['% Tendência'].iloc[0]) * 100
-                percentuais_ind.append(pct)
-                soma_notas += nota
-                count_notas += 1
+            if linha.empty:
+                continue
 
-        if percentuais_ind:
-            # IGUAL app.py: Calcula média PRIMEIRO
-            percentual_medio = np.mean(percentuais_ind)
-            
-            # IGUAL app.py: Calcula tendência usando MÉDIA das estrelas
+            pct = float(linha['% Tendência'].iloc[0]) * 100
+            percentuais_individuais.append(pct)
+            soma_notas += estrelas
+            count_notas += 1
+
+        if percentuais_individuais and count_notas > 0:
+            percentual_medio = round(sum(percentuais_individuais) / len(percentuais_individuais), 2)
+
             media_arredondada = round(soma_notas / count_notas)
-            chave_tendencia = f"{arq_questao}{media_arredondada}{q}"
+            chave_tendencia = f"{arquetipo}{media_arredondada}{codigo}"
             linha_tend = matriz_arq[matriz_arq['CHAVE'] == chave_tendencia]
+
             tendencia_info = str(linha_tend['Tendência'].iloc[0]) if not linha_tend.empty else 'N/A'
-            
-            # IGUAL app.py: Só DEPOIS decide se inverte
+
             if 'DESFAVORÁVEL' in tendencia_info:
-                valor = max(0, 100 - percentual_medio)
+                valor_final = max(0, 100 - percentual_medio)
             else:
-                valor = percentual_medio
-            
-            categoria_valores[dim_se].append(valor)
+                valor_final = percentual_medio
 
-    # ── Microambiente (igual app.py) ──
-    questoes_micro_se = [k.replace('micro_','') for k in cod_to_dim if k.startswith('micro_')]
+            categoria_valores[dim_se].append(valor_final)
 
-    for q_can in questoes_micro_se:
-        chave_se = f"micro_{q_can}"
-        dim_se = cod_to_dim.get(chave_se, '')
-        dim_se = dim_se.replace('Vida- Trabalho', 'Vida-Trabalho').strip()
-        if not dim_se or dim_se not in categoria_valores:
+    # -------------------------
+    # MICROAMBIENTE
+    # app.py: calcula real/ideal por respondente -> média -> gap -> score
+    # -------------------------
+    questoes_micro_se = [k.replace('micro_', '') for k in cod_to_dim if k.startswith('micro_')]
+
+    for codigo_matriz in questoes_micro_se:
+        chave_dim = f"micro_{codigo_matriz}"
+        dim_se = cod_to_dim.get(chave_dim, '').replace('Vida- Trabalho', 'Vida-Trabalho').strip()
+
+        if dim_se not in categoria_valores:
             continue
 
-        q_form = MAP_CAN_TO_FORM.get(q_can, q_can)
+        codigo_form = MAP_MATRIZ_TO_FORM.get(codigo_matriz, codigo_matriz)
 
-        soma_real = soma_ideal = count = 0
-        for av in equipe_micro:
-            qR, qI = f"{q_form}C", f"{q_form}k"
-            if qR in av and qI in av:
-                try:
-                    r, i = int(av[qR]), int(av[qI])
-                except:
-                    continue
-                chave = f"{q_can}_I{i}_R{r}"
-                linha = matriz_micro[matriz_micro['CHAVE'] == chave]
-                if not linha.empty:
-                    soma_real  += float(linha['PONTUACAO_REAL'].iloc[0])
-                    soma_ideal += float(linha['PONTUACAO_IDEAL'].iloc[0])
-                    count += 1
+        soma_real = 0.0
+        soma_ideal = 0.0
+        count = 0
+
+        for respondente in equipe_micro:
+            respostas = respondente.get('respostas', respondente)
+            if not isinstance(respostas, dict):
+                continue
+
+            qR = f"{codigo_form}C"
+            qI = f"{codigo_form}k"
+
+            if qR not in respostas or qI not in respostas:
+                continue
+
+            try:
+                r = int(respostas[qR])
+                i = int(respostas[qI])
+            except:
+                continue
+
+            chave = f"{codigo_matriz}_I{i}_R{r}"
+            linha = matriz_micro[matriz_micro['CHAVE'] == chave]
+            if linha.empty:
+                continue
+
+            soma_real += float(linha['PONTUACAO_REAL'].iloc[0])
+            soma_ideal += float(linha['PONTUACAO_IDEAL'].iloc[0])
+            count += 1
 
         if count > 0:
-            real_pct  = round(soma_real / count, 2)
+            real_pct = round(soma_real / count, 2)
             ideal_pct = round(soma_ideal / count, 2)
-            gap       = round(ideal_pct - real_pct, 2)
-            score     = min(100.0, max(0.0, 100.0 - gap))
+            gap = round(ideal_pct - real_pct, 2)
+            score = min(100.0, max(0.0, 100.0 - gap))
+
             categoria_valores[dim_se].append(score)
 
-    # IGUAL app.py: calcular média de cada categoria
+    # 4) Média por categoria
     categoria_medias = {}
-    for d in DIMENSOES_SE:
-        if categoria_valores[d]:
-            categoria_medias[d] = round(np.mean(categoria_valores[d]), 1)
+    for dim in DIMENSOES_SE:
+        if categoria_valores[dim]:
+            categoria_medias[dim] = round(float(np.mean(categoria_valores[dim])), 1)
         else:
-            categoria_medias[d] = 0
+            categoria_medias[dim] = 0
 
-    # Resultado por dimensão
     resultado_dim = {}
-    for d in DIMENSOES_SE:
-        if categoria_medias[d] > 0:
-            resultado_dim[d] = categoria_medias[d]
-        else:
-            resultado_dim[d] = '—'
+    for dim in DIMENSOES_SE:
+        resultado_dim[dim] = categoria_medias[dim] if categoria_medias[dim] > 0 else '—'
 
-    # IGUAL app.py: Score Final = média das 5 categorias
+    # 5) Score final = média das categorias válidas
     valores_categorias = [v for v in categoria_medias.values() if v > 0]
-    score_geral = round(np.mean(valores_categorias), 1) if valores_categorias else '—'
-    
-    return resultado_dim, score_geral
+    score_geral = round(float(np.mean(valores_categorias)), 1) if valores_categorias else '—'
 
+    return resultado_dim, score_geral
 
 def score_se_label(score):
     try:
