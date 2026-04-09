@@ -91,7 +91,7 @@ def calcular_saude_emocional_lider(
 ):
     """
     Calcula Score Geral e por Dimensão de Saúde Emocional para um líder.
-    Usa a mesma lógica do dashboard: busca individualmente na tabela.
+    CORRIGIDO: Usa média de todos os valores brutos (igual ao app.py)
     """
     if df_se is None:
         return {d: '—' for d in DIMENSOES_SE}, '—'
@@ -141,13 +141,12 @@ def calcular_saude_emocional_lider(
         'Q37':'Q31','Q38':'Q32','Q39':'Q33','Q40':'Q35','Q41':'Q36','Q42':'Q37',
         'Q43':'Q38','Q44':'Q39','Q45':'Q40','Q46':'Q41','Q47':'Q42','Q48':'Q43'
     }
-    # canônico → form
     MAP_CAN_TO_FORM = {v: k for k, v in MAPEAMENTO.items()}
 
-    scores_dim = {d: [] for d in DIMENSOES_SE}
+    # MUDANÇA PRINCIPAL: Agora guardamos TODOS os valores brutos por dimensão
+    valores_brutos_dim = {d: [] for d in DIMENSOES_SE}
 
     # ── Arquétipos ──
-    # Pega primeiro arquétipo por questão (igual ao dashboard)
     matriz_arq_unicos = matriz_arq[['COD_AFIRMACAO','AFIRMACAO','ARQUETIPO']].drop_duplicates(subset=['COD_AFIRMACAO'])
 
     for _, af_row in matriz_arq_unicos.iterrows():
@@ -158,14 +157,11 @@ def calcular_saude_emocional_lider(
             continue
         dim_se = cod_to_dim[chave_se]
         dim_se = dim_se.replace('Vida- Trabalho', 'Vida-Trabalho').strip()
-        if dim_se not in scores_dim:
+        if dim_se not in valores_brutos_dim:
             continue
 
-        # ✅ LÓGICA CORRETA: busca individualmente na tabela
-        # respostas estão na raiz do membro para arquétipos
-        percentuais_ind = []
         for membro in equipe_arq:
-            respostas = membro.get('respostas', membro)  # tenta 'respostas', senão usa raiz
+            respostas = membro.get('respostas', membro)
             if q not in respostas:
                 continue
             try:
@@ -179,10 +175,8 @@ def calcular_saude_emocional_lider(
                 tend = str(linha['Tendência'].iloc[0])
                 if 'DESFAVORÁVEL' in tend:
                     pct = max(0, 100 - pct)
-                percentuais_ind.append(pct)
-
-        if percentuais_ind:
-            scores_dim[dim_se].append(np.mean(percentuais_ind))
+                # MUDANÇA: Adiciona cada valor individual, não a média
+                valores_brutos_dim[dim_se].append(pct)
 
     # ── Microambiente ──
     questoes_micro_se = [k.replace('micro_','') for k in cod_to_dim if k.startswith('micro_')]
@@ -191,13 +185,11 @@ def calcular_saude_emocional_lider(
         chave_se = f"micro_{q_can}"
         dim_se = cod_to_dim.get(chave_se, '')
         dim_se = dim_se.replace('Vida- Trabalho', 'Vida-Trabalho').strip()
-        if not dim_se or dim_se not in scores_dim:
+        if not dim_se or dim_se not in valores_brutos_dim:
             continue
 
-        # ✅ Converte canônico → form para buscar nas respostas do JSON
         q_form = MAP_CAN_TO_FORM.get(q_can, q_can)
 
-        soma_real = soma_ideal = count = 0
         for av in equipe_micro:
             qR, qI = f"{q_form}C", f"{q_form}k"
             if qR in av and qI in av:
@@ -208,31 +200,29 @@ def calcular_saude_emocional_lider(
                 chave = f"{q_can}_I{i}_R{r}"
                 linha = matriz_micro[matriz_micro['CHAVE'] == chave]
                 if not linha.empty:
-                    soma_real  += float(linha['PONTUACAO_REAL'].iloc[0])
-                    soma_ideal += float(linha['PONTUACAO_IDEAL'].iloc[0])
-                    count += 1
+                    real_pct  = float(linha['PONTUACAO_REAL'].iloc[0])
+                    ideal_pct = float(linha['PONTUACAO_IDEAL'].iloc[0])
+                    gap       = ideal_pct - real_pct
+                    score     = min(100.0, max(0.0, 100.0 - gap))
+                    # MUDANÇA: Adiciona cada valor individual
+                    valores_brutos_dim[dim_se].append(score)
 
-        if count > 0:
-            real_pct  = round(soma_real  / count, 2)
-            ideal_pct = round(soma_ideal / count, 2)
-            gap       = round(ideal_pct - real_pct, 2)
-            score     = min(100.0, max(0.0, 100.0 - gap))
-            scores_dim[dim_se].append(score)
-
-    # Calcular médias por dimensão e score geral
+    # Calcular médias por dimensão (para exibição nas colunas)
     resultado_dim = {}
-    todos_scores = []
     for d in DIMENSOES_SE:
-        if scores_dim[d]:
-            media = round(np.mean(scores_dim[d]), 1)
-            resultado_dim[d] = media
-            todos_scores.append(media)
+        if valores_brutos_dim[d]:
+            resultado_dim[d] = round(np.mean(valores_brutos_dim[d]), 1)
         else:
             resultado_dim[d] = '—'
 
-    score_geral = round(np.mean(todos_scores), 1) if todos_scores else '—'
+    # MUDANÇA PRINCIPAL: Score geral = média de TODOS os valores brutos
+    todos_valores_brutos = []
+    for d in DIMENSOES_SE:
+        todos_valores_brutos.extend(valores_brutos_dim[d])
+    
+    score_geral = round(np.mean(todos_valores_brutos), 1) if todos_valores_brutos else '—'
+    
     return resultado_dim, score_geral
-
 
 def score_se_label(score):
     try:
