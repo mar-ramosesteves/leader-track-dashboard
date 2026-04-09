@@ -91,7 +91,7 @@ def calcular_saude_emocional_lider(
 ):
     """
     Calcula Score Geral e por Dimensão de Saúde Emocional para um líder.
-    Lógica idêntica ao dashboard.
+    Usa a mesma lógica do dashboard: busca individualmente na tabela.
     """
     if df_se is None:
         return {d: '—' for d in DIMENSOES_SE}, '—'
@@ -101,13 +101,13 @@ def calcular_saude_emocional_lider(
     for _, row in df_se.iterrows():
         tipo = str(row['TIPO']).upper()
         cod  = str(row['COD_AFIRMACAO']).strip()
-        dim  = str(row['DIMENSAO_SAUDE_EMOCIONAL']).strip().replace('Vida- Trabalho', 'Vida-Trabalho')
+        dim  = row['DIMENSAO_SAUDE_EMOCIONAL']
         if tipo.startswith('ARQ'):
             cod_to_dim[f"arq_{cod}"] = dim
         elif tipo.startswith('MICRO'):
             cod_to_dim[f"micro_{cod}"] = dim
 
-    # Buscar equipe do líder
+    # Buscar respostas da equipe (apenas avaliacoesEquipe, excluindo autoavaliação)
     equipe_arq  = []
     equipe_micro = []
 
@@ -131,7 +131,6 @@ def calcular_saude_emocional_lider(
         equipe_micro = item['dados_json'].get('avaliacoesEquipe', [])
         break
 
-    # Mapeamento form → canônico e inverso
     MAPEAMENTO = {
         'Q01':'Q01','Q02':'Q12','Q03':'Q23','Q04':'Q34','Q05':'Q44','Q06':'Q45',
         'Q07':'Q46','Q08':'Q47','Q09':'Q48','Q10':'Q02','Q11':'Q03','Q12':'Q04',
@@ -148,7 +147,7 @@ def calcular_saude_emocional_lider(
     scores_dim = {d: [] for d in DIMENSOES_SE}
 
     # ── Arquétipos ──
-    # Pega o primeiro arquétipo por questão (igual ao dashboard: drop_duplicates por COD_AFIRMACAO)
+    # Pega primeiro arquétipo por questão (igual ao dashboard)
     matriz_arq_unicos = matriz_arq[['COD_AFIRMACAO','AFIRMACAO','ARQUETIPO']].drop_duplicates(subset=['COD_AFIRMACAO'])
 
     for _, af_row in matriz_arq_unicos.iterrows():
@@ -158,18 +157,19 @@ def calcular_saude_emocional_lider(
         if chave_se not in cod_to_dim:
             continue
         dim_se = cod_to_dim[chave_se]
+        dim_se = dim_se.replace('Vida- Trabalho', 'Vida-Trabalho').strip()
         if dim_se not in scores_dim:
             continue
 
-        # ✅ Idêntico ao dashboard: calcular_tendencia_arquetipos_por_questao
-        # busca individualmente na tabela para cada membro da equipe
+        # ✅ LÓGICA CORRETA: busca individualmente na tabela
+        # respostas estão na raiz do membro para arquétipos
         percentuais_ind = []
         for membro in equipe_arq:
-            # respostas estão na raiz do membro (não dentro de 'respostas')
-            if q not in membro:
+            respostas = membro.get('respostas', membro)  # tenta 'respostas', senão usa raiz
+            if q not in respostas:
                 continue
             try:
-                nota = int(membro[q])
+                nota = int(respostas[q])
             except:
                 continue
             chave = f"{arq_questao}{nota}{q}"
@@ -185,18 +185,16 @@ def calcular_saude_emocional_lider(
             scores_dim[dim_se].append(np.mean(percentuais_ind))
 
     # ── Microambiente ──
-    # Usa código canônico da matriz para buscar na tabela
-    # mas converte para form para buscar nas respostas do JSON
     questoes_micro_se = [k.replace('micro_','') for k in cod_to_dim if k.startswith('micro_')]
 
     for q_can in questoes_micro_se:
         chave_se = f"micro_{q_can}"
-        dim_se = cod_to_dim.get(chave_se)
+        dim_se = cod_to_dim.get(chave_se, '')
+        dim_se = dim_se.replace('Vida- Trabalho', 'Vida-Trabalho').strip()
         if not dim_se or dim_se not in scores_dim:
             continue
 
-        # ✅ Idêntico ao dashboard: calcular_real_ideal_gap_por_questao
-        # converte canônico → form para buscar nas respostas
+        # ✅ Converte canônico → form para buscar nas respostas do JSON
         q_form = MAP_CAN_TO_FORM.get(q_can, q_can)
 
         soma_real = soma_ideal = count = 0
@@ -215,7 +213,6 @@ def calcular_saude_emocional_lider(
                     count += 1
 
         if count > 0:
-            # ✅ Mesmo arredondamento do dashboard
             real_pct  = round(soma_real  / count, 2)
             ideal_pct = round(soma_ideal / count, 2)
             gap       = round(ideal_pct - real_pct, 2)
