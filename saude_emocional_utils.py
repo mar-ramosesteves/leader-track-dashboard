@@ -122,3 +122,168 @@ def score_se_label(score):
             return "🔴 Não Adequado"
     except:
         return "—"
+
+
+
+def analisar_afirmacoes_saude_emocional_core(matriz_arq, matriz_micro, df_arquetipos, df_microambiente, filtros):
+    df_csv = carregar_tabela_saude_emocional()
+
+    df_arq_filtrado = df_arquetipos.copy()
+    df_micro_filtrado = df_microambiente.copy()
+
+    if filtros.get('empresa', "Todas") != "Todas":
+        df_arq_filtrado = df_arq_filtrado[df_arq_filtrado['empresa'] == filtros['empresa']]
+        df_micro_filtrado = df_micro_filtrado[df_micro_filtrado['empresa'] == filtros['empresa']]
+
+    if filtros.get('codrodada', "Todas") != "Todas":
+        df_arq_filtrado = df_arq_filtrado[df_arq_filtrado['codrodada'] == filtros['codrodada']]
+        df_micro_filtrado = df_micro_filtrado[df_micro_filtrado['codrodada'] == filtros['codrodada']]
+
+    if filtros.get('emaillider', "Todos") != "Todos":
+        df_arq_filtrado = df_arq_filtrado[df_arq_filtrado['emailLider'] == filtros['emaillider']]
+        df_micro_filtrado = df_micro_filtrado[df_micro_filtrado['emailLider'] == filtros['emaillider']]
+
+    if filtros.get('estado', "Todos") != "Todos":
+        df_arq_filtrado = df_arq_filtrado[df_arq_filtrado['estado'] == filtros['estado']]
+        df_micro_filtrado = df_micro_filtrado[df_micro_filtrado['estado'] == filtros['estado']]
+
+    if filtros.get('sexo', "Todos") != "Todos":
+        df_arq_filtrado = df_arq_filtrado[df_arq_filtrado['sexo'] == filtros['sexo']]
+        df_micro_filtrado = df_micro_filtrado[df_micro_filtrado['sexo'] == filtros['sexo']]
+
+    if filtros.get('etnia', "Todas") != "Todas":
+        df_arq_filtrado = df_arq_filtrado[df_arq_filtrado['etnia'] == filtros['etnia']]
+        df_micro_filtrado = df_micro_filtrado[df_micro_filtrado['etnia'] == filtros['etnia']]
+
+    if filtros.get('departamento', "Todos") != "Todos":
+        df_arq_filtrado = df_arq_filtrado[df_arq_filtrado['departamento'] == filtros['departamento']]
+        df_micro_filtrado = df_micro_filtrado[df_micro_filtrado['departamento'] == filtros['departamento']]
+
+    if filtros.get('cargo', "Todos") != "Todos":
+        df_arq_filtrado = df_arq_filtrado[df_arq_filtrado['cargo'] == filtros['cargo']]
+        df_micro_filtrado = df_micro_filtrado[df_micro_filtrado['cargo'] == filtros['cargo']]
+
+    if filtros.get('holding', "Todas") != "Todas":
+        if 'holding' in df_arq_filtrado.columns:
+            holding_filtro = str(filtros['holding']).upper().strip()
+            df_arq_filtrado = df_arq_filtrado[
+                df_arq_filtrado['holding'].astype(str).str.upper().str.strip() == holding_filtro
+            ]
+        if 'holding' in df_micro_filtrado.columns:
+            holding_filtro = str(filtros['holding']).upper().strip()
+            df_micro_filtrado = df_micro_filtrado[
+                df_micro_filtrado['holding'].astype(str).str.upper().str.strip() == holding_filtro
+            ]
+
+    csv_dict = {}
+    for _, row in df_csv.iterrows():
+        tipo = str(row['TIPO']).upper().strip()
+        codigo = str(row['COD_AFIRMACAO']).strip()
+        dimensao_se = row['DIMENSAO_SAUDE_EMOCIONAL']
+
+        if tipo.startswith('ARQ'):
+            tipo_codigo = f"arq_{codigo}"
+        elif tipo.startswith('MICRO'):
+            tipo_codigo = f"micro_{codigo}"
+        else:
+            continue
+
+        csv_dict[tipo_codigo] = dimensao_se
+
+    afirmacoes_saude_emocional = []
+    codigos_processados = set()
+
+    matriz_arq_unicos = matriz_arq[['COD_AFIRMACAO', 'AFIRMACAO', 'ARQUETIPO']].drop_duplicates(subset=['COD_AFIRMACAO'])
+    for _, row in matriz_arq_unicos.iterrows():
+        codigo = str(row['COD_AFIRMACAO']).strip()
+        tipo_codigo = f"arq_{codigo}"
+
+        if tipo_codigo in csv_dict and tipo_codigo not in codigos_processados:
+            afirmacoes_saude_emocional.append({
+                'tipo': 'Arquétipo',
+                'afirmacao': row['AFIRMACAO'],
+                'dimensao': row['ARQUETIPO'],
+                'subdimensao': 'N/A',
+                'chave': codigo,
+                'dimensao_saude_emocional': csv_dict[tipo_codigo]
+            })
+            codigos_processados.add(tipo_codigo)
+
+    matriz_micro_unicos = matriz_micro[['COD', 'AFIRMACAO', 'DIMENSAO', 'SUBDIMENSAO']].drop_duplicates(subset=['COD'])
+    for _, row in matriz_micro_unicos.iterrows():
+        codigo = str(row['COD']).strip()
+        tipo_codigo = f"micro_{codigo}"
+
+        if tipo_codigo in csv_dict and tipo_codigo not in codigos_processados:
+            afirmacoes_saude_emocional.append({
+                'tipo': 'Microambiente',
+                'afirmacao': row['AFIRMACAO'],
+                'dimensao': row['DIMENSAO'],
+                'subdimensao': row['SUBDIMENSAO'],
+                'chave': codigo,
+                'dimensao_saude_emocional': csv_dict[tipo_codigo]
+            })
+            codigos_processados.add(tipo_codigo)
+
+    return afirmacoes_saude_emocional, df_arq_filtrado, df_micro_filtrado
+
+
+def calcular_categoria_medias_app_like(matriz_arq, matriz_micro, df_arquetipos, df_microambiente, filtros):
+    afirmacoes_saude_emocional, df_arq_filtrado, df_micro_filtrado = analisar_afirmacoes_saude_emocional_core(
+        matriz_arq, matriz_micro, df_arquetipos, df_microambiente, filtros
+    )
+
+    categoria_valores = {
+        'Prevenção de Estresse': [],
+        'Ambiente Psicológico Seguro': [],
+        'Suporte Emocional': [],
+        'Comunicação Positiva': [],
+        'Equilíbrio Vida-Trabalho': []
+    }
+
+    for af in afirmacoes_saude_emocional:
+        codigo = af['chave']
+        categoria = af.get('dimensao_saude_emocional', 'Suporte Emocional')
+
+        if categoria not in categoria_valores:
+            categoria = 'Suporte Emocional'
+
+        if af['tipo'] == 'Arquétipo':
+            arquetipo = af['dimensao']
+            percentual_medio, tendencia_info, _ = calcular_tendencia_arquetipos_por_questao(
+                df_arq_filtrado[df_arq_filtrado['tipo'] == 'Avaliação Equipe'],
+                matriz_arq,
+                codigo,
+                arquetipo
+            )
+
+            if percentual_medio is not None and tendencia_info:
+                if 'DESFAVORÁVEL' in str(tendencia_info):
+                    valor = max(0, 100 - percentual_medio)
+                else:
+                    valor = percentual_medio
+                categoria_valores[categoria].append(valor)
+
+        else:
+            real_pct, ideal_pct, gap = calcular_real_ideal_gap_por_questao(
+                df_micro_filtrado,
+                matriz_micro,
+                codigo
+            )
+
+            if real_pct is not None and gap is not None:
+                valor = max(0.0, 100.0 - gap)
+                categoria_valores[categoria].append(valor)
+
+    categoria_medias = {}
+    for categoria, valores in categoria_valores.items():
+        categoria_medias[categoria] = round(float(np.mean(valores)), 1) if valores else 0
+
+    valores_validos = [v for v in categoria_medias.values() if v > 0]
+    score_final = round(float(np.mean(valores_validos)), 1) if valores_validos else '—'
+
+    resultado_dim = {}
+    for dim in DIMENSOES_SE:
+        resultado_dim[dim] = categoria_medias[dim] if categoria_medias[dim] > 0 else '—'
+
+    return resultado_dim, score_final
