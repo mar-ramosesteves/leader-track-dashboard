@@ -91,7 +91,7 @@ def calcular_saude_emocional_lider(
 ):
     """
     Calcula Score Geral e por Dimensão de Saúde Emocional para um líder.
-    Usa a mesma lógica do dashboard: busca individualmente na tabela.
+    Lógica idêntica ao dashboard.
     """
     if df_se is None:
         return {d: '—' for d in DIMENSOES_SE}, '—'
@@ -101,13 +101,13 @@ def calcular_saude_emocional_lider(
     for _, row in df_se.iterrows():
         tipo = str(row['TIPO']).upper()
         cod  = str(row['COD_AFIRMACAO']).strip()
-        dim  = row['DIMENSAO_SAUDE_EMOCIONAL']
+        dim  = str(row['DIMENSAO_SAUDE_EMOCIONAL']).strip().replace('Vida- Trabalho', 'Vida-Trabalho')
         if tipo.startswith('ARQ'):
             cod_to_dim[f"arq_{cod}"] = dim
         elif tipo.startswith('MICRO'):
             cod_to_dim[f"micro_{cod}"] = dim
 
-    # Buscar respostas da equipe (apenas avaliacoesEquipe, excluindo autoavaliação)
+    # Buscar equipe do líder
     equipe_arq  = []
     equipe_micro = []
 
@@ -118,8 +118,7 @@ def calcular_saude_emocional_lider(
             continue
         if item.get('codrodada','') != codrodada:
             continue
-        dados = item['dados_json']
-        equipe_arq = dados.get('avaliacoesEquipe', [])
+        equipe_arq = item['dados_json'].get('avaliacoesEquipe', [])
         break
 
     for item in consolidado_micro:
@@ -129,10 +128,10 @@ def calcular_saude_emocional_lider(
             continue
         if item.get('codrodada','') != codrodada:
             continue
-        dados = item['dados_json']
-        equipe_micro = dados.get('avaliacoesEquipe', [])
+        equipe_micro = item['dados_json'].get('avaliacoesEquipe', [])
         break
 
+    # Mapeamento form → canônico e inverso
     MAPEAMENTO = {
         'Q01':'Q01','Q02':'Q12','Q03':'Q23','Q04':'Q34','Q05':'Q44','Q06':'Q45',
         'Q07':'Q46','Q08':'Q47','Q09':'Q48','Q10':'Q02','Q11':'Q03','Q12':'Q04',
@@ -143,83 +142,72 @@ def calcular_saude_emocional_lider(
         'Q37':'Q31','Q38':'Q32','Q39':'Q33','Q40':'Q35','Q41':'Q36','Q42':'Q37',
         'Q43':'Q38','Q44':'Q39','Q45':'Q40','Q46':'Q41','Q47':'Q42','Q48':'Q43'
     }
-    REVERSO = {v: k for k, v in MAPEAMENTO.items()}
+    # canônico → form
+    MAP_CAN_TO_FORM = {v: k for k, v in MAPEAMENTO.items()}
 
-    # Scores por dimensão SE
     scores_dim = {d: [] for d in DIMENSOES_SE}
 
     # ── Arquétipos ──
-    arquetipos_lista = ['Imperativo','Resoluto','Cuidativo','Consultivo','Prescritivo','Formador']
-    questoes_arq = matriz_arq[matriz_arq['PONTOS_MAXIMOS'] == 200]['COD_AFIRMACAO'].unique()
+    # Pega o primeiro arquétipo por questão (igual ao dashboard: drop_duplicates por COD_AFIRMACAO)
+    matriz_arq_unicos = matriz_arq[['COD_AFIRMACAO','AFIRMACAO','ARQUETIPO']].drop_duplicates(subset=['COD_AFIRMACAO'])
 
-    for q in questoes_arq:
+    for _, af_row in matriz_arq_unicos.iterrows():
+        q = str(af_row['COD_AFIRMACAO']).strip()
+        arq_questao = str(af_row['ARQUETIPO']).strip()
         chave_se = f"arq_{q}"
         if chave_se not in cod_to_dim:
             continue
         dim_se = cod_to_dim[chave_se]
-        dim_se = dim_se.replace('Vida- Trabalho', 'Vida-Trabalho').strip()
         if dim_se not in scores_dim:
             continue
 
-        # Calcular individualmente para cada membro da equipe
-        # usando TODOS os arquétipos (mesma lógica do dashboard)
+        # ✅ Idêntico ao dashboard: calcular_tendencia_arquetipos_por_questao
+        # busca individualmente na tabela para cada membro da equipe
         percentuais_ind = []
         for membro in equipe_arq:
-            respostas = membro.get('respostas', {})
-            if q not in respostas:
+            # respostas estão na raiz do membro (não dentro de 'respostas')
+            if q not in membro:
                 continue
             try:
-                nota = int(respostas[q])
+                nota = int(membro[q])
             except:
                 continue
-            # Média dos 6 arquétipos para este respondente/questão
-            pcts_arq = []
-            for arq_nome in ['Imperativo','Resoluto','Cuidativo','Consultivo','Prescritivo','Formador']:
-                chave = f"{arq_nome}{nota}{q}"
-                linha = matriz_arq[matriz_arq['CHAVE'] == chave]
-                if not linha.empty:
-                    pct = float(linha['% Tendência'].iloc[0]) * 100
-                    tend = str(linha['Tendência'].iloc[0])
-                    if 'DESFAVORÁVEL' in tend:
-                        pct = max(0, 100 - pct)
-                    pcts_arq.append(pct)
-            if pcts_arq:
-                percentuais_ind.append(np.mean(pcts_arq))
+            chave = f"{arq_questao}{nota}{q}"
+            linha = matriz_arq[matriz_arq['CHAVE'] == chave]
+            if not linha.empty:
+                pct = float(linha['% Tendência'].iloc[0]) * 100
+                tend = str(linha['Tendência'].iloc[0])
+                if 'DESFAVORÁVEL' in tend:
+                    pct = max(0, 100 - pct)
+                percentuais_ind.append(pct)
 
-        
         if percentuais_ind:
             scores_dim[dim_se].append(np.mean(percentuais_ind))
 
     # ── Microambiente ──
-    questoes_micro = matriz_micro['COD'].unique()
+    # Usa código canônico da matriz para buscar na tabela
+    # mas converte para form para buscar nas respostas do JSON
+    questoes_micro_se = [k.replace('micro_','') for k in cod_to_dim if k.startswith('micro_')]
 
-    for q_can in questoes_micro:
+    for q_can in questoes_micro_se:
         chave_se = f"micro_{q_can}"
-        if chave_se not in cod_to_dim:
-            continue
-        dim_se = cod_to_dim[chave_se]
-        dim_se = dim_se.replace('Vida- Trabalho', 'Vida-Trabalho').strip()
-        if dim_se not in scores_dim:
+        dim_se = cod_to_dim.get(chave_se)
+        if not dim_se or dim_se not in scores_dim:
             continue
 
-        # O CSV SE usa códigos canônicos (ex: Q48)
-        # As respostas no JSON também usam Q48 diretamente
-        # MAS a chave na matriz usa o canônico (Q48→Q43 na matriz)
-        # Então: buscar Q48C/Q48k nas respostas, mas usar Q43 na chave
-        q_form_se = q_can  # Q48 → buscar Q48C/Q48k nas respostas
-        q_can_matriz = MAPEAMENTO.get(q_can, q_can)  # Q48 → Q43 na matriz
+        # ✅ Idêntico ao dashboard: calcular_real_ideal_gap_por_questao
+        # converte canônico → form para buscar nas respostas
+        q_form = MAP_CAN_TO_FORM.get(q_can, q_can)
+
         soma_real = soma_ideal = count = 0
         for av in equipe_micro:
-            qR, qI = f"{q_form_se}C", f"{q_form_se}k"
+            qR, qI = f"{q_form}C", f"{q_form}k"
             if qR in av and qI in av:
                 try:
                     r, i = int(av[qR]), int(av[qI])
                 except:
                     continue
-                chave = f"{q_can_matriz}_I{i}_R{r}"
-
-
-                
+                chave = f"{q_can}_I{i}_R{r}"
                 linha = matriz_micro[matriz_micro['CHAVE'] == chave]
                 if not linha.empty:
                     soma_real  += float(linha['PONTUACAO_REAL'].iloc[0])
@@ -227,10 +215,11 @@ def calcular_saude_emocional_lider(
                     count += 1
 
         if count > 0:
-            real_pct  = soma_real  / count
-            ideal_pct = soma_ideal / count
-            gap = ideal_pct - real_pct
-            score = max(0.0, 100.0 - gap)
+            # ✅ Mesmo arredondamento do dashboard
+            real_pct  = round(soma_real  / count, 2)
+            ideal_pct = round(soma_ideal / count, 2)
+            gap       = round(ideal_pct - real_pct, 2)
+            score     = max(0.0, 100.0 - gap)
             scores_dim[dim_se].append(score)
 
     # Calcular médias por dimensão e score geral
