@@ -91,7 +91,7 @@ def calcular_saude_emocional_lider(
 ):
     """
     Calcula Score Geral e por Dimensão de Saúde Emocional para um líder.
-    CORRIGIDO: Usa média de todos os valores brutos (igual ao app.py)
+    CORRIGIDO v2: Replica EXATAMENTE a lógica do app.py
     """
     if df_se is None:
         return {d: '—' for d in DIMENSOES_SE}, '—'
@@ -107,7 +107,7 @@ def calcular_saude_emocional_lider(
         elif tipo.startswith('MICRO'):
             cod_to_dim[f"micro_{cod}"] = dim
 
-    # Buscar respostas da equipe (apenas avaliacoesEquipe, excluindo autoavaliação)
+    # Buscar respostas da equipe
     equipe_arq  = []
     equipe_micro = []
 
@@ -143,10 +143,10 @@ def calcular_saude_emocional_lider(
     }
     MAP_CAN_TO_FORM = {v: k for k, v in MAPEAMENTO.items()}
 
-    # MUDANÇA PRINCIPAL: Agora guardamos TODOS os valores brutos por dimensão
-    valores_brutos_dim = {d: [] for d in DIMENSOES_SE}
+    # Estrutura igual ao app.py: categoria_valores
+    categoria_valores = {d: [] for d in DIMENSOES_SE}
 
-    # ── Arquétipos ──
+    # ── Arquétipos (igual app.py) ──
     matriz_arq_unicos = matriz_arq[['COD_AFIRMACAO','AFIRMACAO','ARQUETIPO']].drop_duplicates(subset=['COD_AFIRMACAO'])
 
     for _, af_row in matriz_arq_unicos.iterrows():
@@ -157,9 +157,11 @@ def calcular_saude_emocional_lider(
             continue
         dim_se = cod_to_dim[chave_se]
         dim_se = dim_se.replace('Vida- Trabalho', 'Vida-Trabalho').strip()
-        if dim_se not in valores_brutos_dim:
+        if dim_se not in categoria_valores:
             continue
 
+        # Calcular média dos respondentes para esta questão (igual app.py)
+        percentuais_ind = []
         for membro in equipe_arq:
             respostas = membro.get('respostas', membro)
             if q not in respostas:
@@ -175,21 +177,25 @@ def calcular_saude_emocional_lider(
                 tend = str(linha['Tendência'].iloc[0])
                 if 'DESFAVORÁVEL' in tend:
                     pct = max(0, 100 - pct)
-                # MUDANÇA: Adiciona cada valor individual, não a média
-                valores_brutos_dim[dim_se].append(pct)
+                percentuais_ind.append(pct)
 
-    # ── Microambiente ──
+        # IGUAL app.py: adiciona a MÉDIA da questão (não valores individuais)
+        if percentuais_ind:
+            categoria_valores[dim_se].append(np.mean(percentuais_ind))
+
+    # ── Microambiente (igual app.py) ──
     questoes_micro_se = [k.replace('micro_','') for k in cod_to_dim if k.startswith('micro_')]
 
     for q_can in questoes_micro_se:
         chave_se = f"micro_{q_can}"
         dim_se = cod_to_dim.get(chave_se, '')
         dim_se = dim_se.replace('Vida- Trabalho', 'Vida-Trabalho').strip()
-        if not dim_se or dim_se not in valores_brutos_dim:
+        if not dim_se or dim_se not in categoria_valores:
             continue
 
         q_form = MAP_CAN_TO_FORM.get(q_can, q_can)
 
+        soma_real = soma_ideal = count = 0
         for av in equipe_micro:
             qR, qI = f"{q_form}C", f"{q_form}k"
             if qR in av and qI in av:
@@ -200,30 +206,40 @@ def calcular_saude_emocional_lider(
                 chave = f"{q_can}_I{i}_R{r}"
                 linha = matriz_micro[matriz_micro['CHAVE'] == chave]
                 if not linha.empty:
-                    real_pct  = float(linha['PONTUACAO_REAL'].iloc[0])
-                    ideal_pct = float(linha['PONTUACAO_IDEAL'].iloc[0])
-                    gap       = ideal_pct - real_pct
-                    score     = min(100.0, max(0.0, 100.0 - gap))
-                    # MUDANÇA: Adiciona cada valor individual
-                    valores_brutos_dim[dim_se].append(score)
+                    soma_real  += float(linha['PONTUACAO_REAL'].iloc[0])
+                    soma_ideal += float(linha['PONTUACAO_IDEAL'].iloc[0])
+                    count += 1
 
-    # Calcular médias por dimensão (para exibição nas colunas)
+        # IGUAL app.py: calcula score da questão e adiciona
+        if count > 0:
+            real_pct  = round(soma_real / count, 2)
+            ideal_pct = round(soma_ideal / count, 2)
+            gap       = round(ideal_pct - real_pct, 2)
+            score     = min(100.0, max(0.0, 100.0 - gap))
+            categoria_valores[dim_se].append(score)
+
+    # IGUAL app.py: calcular média de cada categoria
+    categoria_medias = {}
+    for d in DIMENSOES_SE:
+        if categoria_valores[d]:
+            categoria_medias[d] = round(np.mean(categoria_valores[d]), 1)
+        else:
+            categoria_medias[d] = 0
+
+    # Resultado por dimensão (para exibição nas colunas)
     resultado_dim = {}
     for d in DIMENSOES_SE:
-        if valores_brutos_dim[d]:
-            resultado_dim[d] = round(np.mean(valores_brutos_dim[d]), 1)
+        if categoria_medias[d] > 0:
+            resultado_dim[d] = categoria_medias[d]
         else:
             resultado_dim[d] = '—'
 
-    # MUDANÇA PRINCIPAL: Score geral = média de TODOS os valores brutos
-    todos_valores_brutos = []
-    for d in DIMENSOES_SE:
-        todos_valores_brutos.extend(valores_brutos_dim[d])
-    
-    score_geral = round(np.mean(todos_valores_brutos), 1) if todos_valores_brutos else '—'
+    # IGUAL app.py: Score Final = média das 5 categorias
+    valores_categorias = [v for v in categoria_medias.values() if v > 0]
+    score_geral = round(np.mean(valores_categorias), 1) if valores_categorias else '—'
     
     return resultado_dim, score_geral
-
+    
 def score_se_label(score):
     try:
         v = float(score)
