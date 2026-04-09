@@ -8,6 +8,18 @@ from datetime import datetime
 import json
 import os
 
+from saude_emocional_utils import (
+    DIMENSOES_SE,
+    carregar_tabela_saude_emocional,
+    calcular_real_ideal_gap_por_questao,
+    calcular_tendencia_arquetipos_por_questao,
+    score_se_label,
+)
+
+
+
+
+
 st.set_page_config(page_title="📊 Visão Executiva", page_icon="📊", layout="wide")
 
 SUPABASE_URL = "https://xmsjjknpnowsswwrbvpc.supabase.co"
@@ -28,17 +40,7 @@ def carregar_matriz_microambiente():
     except: return None
 
 @st.cache_data(ttl=3600)
-def carregar_tabela_saude_emocional():
-    try:
-        df = pd.read_csv('TABELA_SAUDE_EMOCIONAL.csv', sep=';', encoding='utf-8-sig')
-        df['TIPO'] = df['TIPO'].astype(str).str.strip().str.upper()
-        df['COD_AFIRMACAO'] = df['COD_AFIRMACAO'].astype(str).str.strip()
-        df['DIMENSAO_SAUDE_EMOCIONAL'] = (
-            df['DIMENSAO_SAUDE_EMOCIONAL'].astype(str).str.strip()
-            .replace({'Equilíbrio Vida- Trabalho': 'Equilíbrio Vida-Trabalho'})
-        )
-        return df
-    except: return None
+
 
 @st.cache_data(ttl=300)
 def carregar_dados_supabase():
@@ -73,13 +75,7 @@ NINEBOX_CORES = {
     7:"rgba(255,200,0,0.4)", 8:"rgba(255,100,0,0.5)",  9:"rgba(255,0,0,0.7)"
 }
 
-DIMENSOES_SE = [
-    'Prevenção de Estresse',
-    'Ambiente Psicológico Seguro',
-    'Suporte Emocional',
-    'Comunicação Positiva',
-    'Equilíbrio Vida-Trabalho'
-]
+
 
 # ==================== SAÚDE EMOCIONAL ====================
 
@@ -89,31 +85,26 @@ def calcular_saude_emocional_lider(
     matriz_arq, matriz_micro,
     df_se
 ):
-    """
-    Versão alinhada com a lógica do app.py:
-    - calcula por respondente primeiro
-    - depois tira a média
-    - arquétipos: só inverte no fim, com base na tendência da média
-    - microambiente: calcula gap médio por questão e converte em score
-    """
-    if df_se is None or matriz_arq is None or matriz_micro is None:
+    if df_se is None:
         return {d: '—' for d in DIMENSOES_SE}, '—'
 
-    # 1) Mapa código -> dimensão de saúde emocional
+    # mapa código -> dimensão de saúde emocional
     cod_to_dim = {}
     for _, row in df_se.iterrows():
-        tipo = str(row['TIPO']).strip().upper()
-        cod = str(row['COD_AFIRMACAO']).strip()
-        dim = str(row['DIMENSAO_SAUDE_EMOCIONAL']).strip()
-        dim = dim.replace('Equilíbrio Vida- Trabalho', 'Equilíbrio Vida-Trabalho')
+        tipo = str(row['TIPO']).upper().strip()
+        codigo = str(row['COD_AFIRMACAO']).strip()
+        dimensao = str(row['DIMENSAO_SAUDE_EMOCIONAL']).strip().replace(
+            'Equilíbrio Vida- Trabalho',
+            'Equilíbrio Vida-Trabalho'
+        )
 
         if tipo.startswith('ARQ'):
-            cod_to_dim[f"arq_{cod}"] = dim
+            cod_to_dim[f'arq_{codigo}'] = dimensao
         elif tipo.startswith('MICRO'):
-            cod_to_dim[f"micro_{cod}"] = dim
+            cod_to_dim[f'micro_{codigo}'] = dimensao
 
-    # 2) Junta somente as avaliações da equipe do líder/rodada
-    equipe_arq = []
+    # mesma estrutura de "respondentes filtrados" do app.py
+    arq_rows = []
     for item in consolidado_arq:
         if not isinstance(item, dict) or 'dados_json' not in item:
             continue
@@ -126,11 +117,12 @@ def calcular_saude_emocional_lider(
         for membro in membros:
             respostas = membro.get('respostas', {})
             if isinstance(respostas, dict):
-                equipe_arq.append({
+                arq_rows.append({
+                    'tipo': 'Avaliação Equipe',
                     'respostas': respostas
                 })
 
-    equipe_micro = []
+    micro_rows = []
     for item in consolidado_micro:
         if not isinstance(item, dict) or 'dados_json' not in item:
             continue
@@ -141,140 +133,70 @@ def calcular_saude_emocional_lider(
 
         membros = item.get('dados_json', {}).get('avaliacoesEquipe', [])
         for membro in membros:
-            # No microambiente as respostas podem vir planas
             if isinstance(membro, dict):
-                equipe_micro.append(membro)
+                micro_rows.append({
+                    'tipo': 'Avaliação Equipe',
+                    'respostas': membro
+                })
 
-    # 3) Mesmo mapeamento usado no app.py
-    MAP_FORM_TO_MATRIZ = {
-        'Q01':'Q01','Q02':'Q12','Q03':'Q23','Q04':'Q34','Q05':'Q44','Q06':'Q45',
-        'Q07':'Q46','Q08':'Q47','Q09':'Q48','Q10':'Q02','Q11':'Q03','Q12':'Q04',
-        'Q13':'Q05','Q14':'Q06','Q15':'Q07','Q16':'Q08','Q17':'Q09','Q18':'Q10',
-        'Q19':'Q11','Q20':'Q13','Q21':'Q14','Q22':'Q15','Q23':'Q16','Q24':'Q17',
-        'Q25':'Q18','Q26':'Q19','Q27':'Q20','Q28':'Q21','Q29':'Q22','Q30':'Q24',
-        'Q31':'Q25','Q32':'Q26','Q33':'Q27','Q34':'Q28','Q35':'Q29','Q36':'Q30',
-        'Q37':'Q31','Q38':'Q32','Q39':'Q33','Q40':'Q35','Q41':'Q36','Q42':'Q37',
-        'Q43':'Q38','Q44':'Q39','Q45':'Q40','Q46':'Q41','Q47':'Q42','Q48':'Q43'
-    }
-    MAP_MATRIZ_TO_FORM = {v: k for k, v in MAP_FORM_TO_MATRIZ.items()}
+    df_arq_filtrado = pd.DataFrame(arq_rows)
+    df_micro_filtrado = pd.DataFrame(micro_rows)
 
     categoria_valores = {d: [] for d in DIMENSOES_SE}
 
-    # -------------------------
-    # ARQUÉTIPOS
-    # app.py: calcula por respondente -> média -> decide se inverte
-    # -------------------------
-    matriz_arq_unicos = (
-        matriz_arq[['COD_AFIRMACAO', 'AFIRMACAO', 'ARQUETIPO']]
-        .drop_duplicates(subset=['COD_AFIRMACAO'])
-    )
+    # ARQUÉTIPOS - mesma lógica-base do app.py
+    matriz_arq_unicos = matriz_arq[['COD_AFIRMACAO', 'AFIRMACAO', 'ARQUETIPO']].drop_duplicates(subset=['COD_AFIRMACAO'])
 
-    for _, af_row in matriz_arq_unicos.iterrows():
-        codigo = str(af_row['COD_AFIRMACAO']).strip()
-        arquetipo = str(af_row['ARQUETIPO']).strip()
-        chave_dim = f"arq_{codigo}"
+    for _, row in matriz_arq_unicos.iterrows():
+        codigo = str(row['COD_AFIRMACAO']).strip()
+        arquetipo = str(row['ARQUETIPO']).strip()
+        chave_dim = f'arq_{codigo}'
 
         if chave_dim not in cod_to_dim:
             continue
 
-        dim_se = cod_to_dim[chave_dim].replace('Vida- Trabalho', 'Vida-Trabalho').strip()
-        if dim_se not in categoria_valores:
+        dimensao_se = cod_to_dim[chave_dim]
+        dimensao_se = dimensao_se.replace('Vida- Trabalho', 'Vida-Trabalho').strip()
+
+        if dimensao_se not in categoria_valores:
             continue
 
-        percentuais_individuais = []
-        soma_notas = 0
-        count_notas = 0
+        percentual_medio, tendencia_info, _ = calcular_tendencia_arquetipos_por_questao(
+            df_arq_filtrado, matriz_arq, codigo, arquetipo
+        )
 
-        for respondente in equipe_arq:
-            respostas = respondente.get('respostas', {})
-            if codigo not in respostas:
-                continue
+        if percentual_medio is None:
+            continue
 
-            try:
-                estrelas = int(respostas[codigo])
-            except:
-                continue
+        if 'DESFAVORÁVEL' in str(tendencia_info):
+            valor = max(0, 100 - percentual_medio)
+        else:
+            valor = percentual_medio
 
-            chave = f"{arquetipo}{estrelas}{codigo}"
-            linha = matriz_arq[matriz_arq['CHAVE'] == chave]
-            if linha.empty:
-                continue
+        categoria_valores[dimensao_se].append(valor)
 
-            pct = float(linha['% Tendência'].iloc[0]) * 100
-            percentuais_individuais.append(pct)
-            soma_notas += estrelas
-            count_notas += 1
-
-        if percentuais_individuais and count_notas > 0:
-            percentual_medio = round(sum(percentuais_individuais) / len(percentuais_individuais), 2)
-
-            media_arredondada = round(soma_notas / count_notas)
-            chave_tendencia = f"{arquetipo}{media_arredondada}{codigo}"
-            linha_tend = matriz_arq[matriz_arq['CHAVE'] == chave_tendencia]
-
-            tendencia_info = str(linha_tend['Tendência'].iloc[0]) if not linha_tend.empty else 'N/A'
-
-            if 'DESFAVORÁVEL' in tendencia_info:
-                valor_final = max(0, 100 - percentual_medio)
-            else:
-                valor_final = percentual_medio
-
-            categoria_valores[dim_se].append(valor_final)
-
-    # -------------------------
-    # MICROAMBIENTE
-    # app.py: calcula real/ideal por respondente -> média -> gap -> score
-    # -------------------------
+    # MICROAMBIENTE - mesma lógica-base do app.py
     questoes_micro_se = [k.replace('micro_', '') for k in cod_to_dim if k.startswith('micro_')]
 
     for codigo_matriz in questoes_micro_se:
-        chave_dim = f"micro_{codigo_matriz}"
-        dim_se = cod_to_dim.get(chave_dim, '').replace('Vida- Trabalho', 'Vida-Trabalho').strip()
+        chave_dim = f'micro_{codigo_matriz}'
+        dimensao_se = cod_to_dim.get(chave_dim, '')
+        dimensao_se = dimensao_se.replace('Vida- Trabalho', 'Vida-Trabalho').strip()
 
-        if dim_se not in categoria_valores:
+        if not dimensao_se or dimensao_se not in categoria_valores:
             continue
 
-        codigo_form = MAP_MATRIZ_TO_FORM.get(codigo_matriz, codigo_matriz)
+        real_pct, ideal_pct, gap = calcular_real_ideal_gap_por_questao(
+            df_micro_filtrado, matriz_micro, codigo_matriz
+        )
 
-        soma_real = 0.0
-        soma_ideal = 0.0
-        count = 0
+        if gap is None:
+            continue
 
-        for respondente in equipe_micro:
-            respostas = respondente.get('respostas', respondente)
-            if not isinstance(respostas, dict):
-                continue
+        score = min(100.0, max(0.0, 100.0 - gap))
+        categoria_valores[dimensao_se].append(score)
 
-            qR = f"{codigo_form}C"
-            qI = f"{codigo_form}k"
-
-            if qR not in respostas or qI not in respostas:
-                continue
-
-            try:
-                r = int(respostas[qR])
-                i = int(respostas[qI])
-            except:
-                continue
-
-            chave = f"{codigo_matriz}_I{i}_R{r}"
-            linha = matriz_micro[matriz_micro['CHAVE'] == chave]
-            if linha.empty:
-                continue
-
-            soma_real += float(linha['PONTUACAO_REAL'].iloc[0])
-            soma_ideal += float(linha['PONTUACAO_IDEAL'].iloc[0])
-            count += 1
-
-        if count > 0:
-            real_pct = round(soma_real / count, 2)
-            ideal_pct = round(soma_ideal / count, 2)
-            gap = round(ideal_pct - real_pct, 2)
-            score = min(100.0, max(0.0, 100.0 - gap))
-
-            categoria_valores[dim_se].append(score)
-
-    # 4) Média por categoria
+    # média por dimensão
     categoria_medias = {}
     for dim in DIMENSOES_SE:
         if categoria_valores[dim]:
@@ -284,23 +206,16 @@ def calcular_saude_emocional_lider(
 
     resultado_dim = {}
     for dim in DIMENSOES_SE:
-        resultado_dim[dim] = categoria_medias[dim] if categoria_medias[dim] > 0 else '—'
+        if categoria_medias[dim] > 0:
+            resultado_dim[dim] = categoria_medias[dim]
+        else:
+            resultado_dim[dim] = '—'
 
-    # 5) Score final = média das categorias válidas
-    valores_categorias = [v for v in categoria_medias.values() if v > 0]
-    score_geral = round(float(np.mean(valores_categorias)), 1) if valores_categorias else '—'
+    valores_validos = [v for v in categoria_medias.values() if v > 0]
+    score_geral = round(float(np.mean(valores_validos)), 1) if valores_validos else '—'
 
     return resultado_dim, score_geral
 
-def score_se_label(score):
-    try:
-        v = float(score)
-        if v >= 80: return "🟢 Excelente"
-        elif v >= 75: return "🟢 Ótimo"
-        elif v >= 70: return "🟡 Bom"
-        elif v >= 60: return "🟠 Regular"
-        else: return "🔴 Não Adequado"
-    except: return "—"
 
 
 # ==================== TABELA HTML ====================
