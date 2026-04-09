@@ -13,6 +13,7 @@ from saude_emocional_utils import (
     carregar_tabela_saude_emocional,
     calcular_real_ideal_gap_por_questao,
     calcular_tendencia_arquetipos_por_questao,
+    calcular_categoria_medias_app_like,
     score_se_label,
 )
 
@@ -85,137 +86,86 @@ def calcular_saude_emocional_lider(
     matriz_arq, matriz_micro,
     df_se
 ):
-    if df_se is None:
-        return {d: '—' for d in DIMENSOES_SE}, '—'
+    filtros = {
+        'empresa': "Todas",
+        'codrodada': str(codrodada).lower(),
+        'emaillider': str(email_lider).lower(),
+        'estado': "Todos",
+        'sexo': "Todos",
+        'etnia': "Todas",
+        'departamento': "Todos",
+        'cargo': "Todos",
+        'holding': "Todas",
+    }
 
-    # mapa código -> dimensão de saúde emocional
-    cod_to_dim = {}
-    for _, row in df_se.iterrows():
-        tipo = str(row['TIPO']).upper().strip()
-        codigo = str(row['COD_AFIRMACAO']).strip()
-        dimensao = str(row['DIMENSAO_SAUDE_EMOCIONAL']).strip().replace(
-            'Equilíbrio Vida- Trabalho',
-            'Equilíbrio Vida-Trabalho'
-        )
-
-        if tipo.startswith('ARQ'):
-            cod_to_dim[f'arq_{codigo}'] = dimensao
-        elif tipo.startswith('MICRO'):
-            cod_to_dim[f'micro_{codigo}'] = dimensao
-
-    # mesma estrutura de "respondentes filtrados" do app.py
-    arq_rows = []
+    df_arquetipos_rows = []
     for item in consolidado_arq:
         if not isinstance(item, dict) or 'dados_json' not in item:
             continue
-        if str(item.get('emaillider', '')).lower().strip() != str(email_lider).lower().strip():
-            continue
-        if str(item.get('codrodada', '')).strip() != str(codrodada).strip():
-            continue
 
-        membros = item.get('dados_json', {}).get('avaliacoesEquipe', [])
-        for membro in membros:
-            respostas = membro.get('respostas', {})
-            if isinstance(respostas, dict):
-                arq_rows.append({
-                    'tipo': 'Avaliação Equipe',
-                    'respostas': respostas
-                })
+        dados = item['dados_json']
 
-    micro_rows = []
+        if 'avaliacoesEquipe' in dados:
+            for membro in dados['avaliacoesEquipe']:
+                if 'respostas' in membro:
+                    df_arquetipos_rows.append({
+                        'empresa': str(membro.get('empresa', '')).lower(),
+                        'codrodada': str(membro.get('codrodada', '')).lower(),
+                        'emailLider': str(membro.get('emailLider', '')).lower(),
+                        'nome': membro.get('nome', ''),
+                        'email': membro.get('email', ''),
+                        'sexo': str(membro.get('sexo', '')).lower(),
+                        'etnia': str(membro.get('etnia', '')).lower(),
+                        'estado': str(membro.get('estado', '')).lower(),
+                        'cidade': membro.get('cidade', ''),
+                        'cargo': str(membro.get('cargo', '')).lower(),
+                        'area': membro.get('area', ''),
+                        'departamento': str(membro.get('departamento', '')).lower(),
+                        'tipo': 'Avaliação Equipe',
+                        'respostas': membro['respostas'],
+                        'holding': str(membro.get('holding', '')).upper(),
+                    })
+
+    df_micro_rows = []
     for item in consolidado_micro:
         if not isinstance(item, dict) or 'dados_json' not in item:
             continue
-        if str(item.get('emaillider', '')).lower().strip() != str(email_lider).lower().strip():
-            continue
-        if str(item.get('codrodada', '')).strip() != str(codrodada).strip():
-            continue
 
-        membros = item.get('dados_json', {}).get('avaliacoesEquipe', [])
-        for membro in membros:
-            if isinstance(membro, dict):
-                micro_rows.append({
+        dados = item['dados_json']
+
+        if 'avaliacoesEquipe' in dados:
+            for membro in dados['avaliacoesEquipe']:
+                df_micro_rows.append({
+                    'empresa': str(membro.get('empresa', '')).lower(),
+                    'codrodada': str(membro.get('codrodada', '')).lower(),
+                    'emailLider': str(membro.get('emailLider', '')).lower(),
+                    'nome': membro.get('nome', ''),
+                    'email': membro.get('email', ''),
+                    'sexo': str(membro.get('sexo', '')).lower(),
+                    'etnia': str(membro.get('etnia', '')).lower(),
+                    'estado': str(membro.get('estado', '')).lower(),
+                    'cidade': membro.get('cidade', ''),
+                    'cargo': str(membro.get('cargo', '')).lower(),
+                    'area': membro.get('area', ''),
+                    'departamento': str(membro.get('departamento', '')).lower(),
                     'tipo': 'Avaliação Equipe',
-                    'respostas': membro
+                    'respostas': membro,
+                    'holding': str(membro.get('holding', '')).upper(),
                 })
 
-    df_arq_filtrado = pd.DataFrame(arq_rows)
-    df_micro_filtrado = pd.DataFrame(micro_rows)
+    df_arquetipos = pd.DataFrame(df_arquetipos_rows)
+    df_microambiente = pd.DataFrame(df_micro_rows)
 
-    categoria_valores = {d: [] for d in DIMENSOES_SE}
+    if df_arquetipos.empty and df_microambiente.empty:
+        return {d: '—' for d in DIMENSOES_SE}, '—'
 
-    # ARQUÉTIPOS - mesma lógica-base do app.py
-    matriz_arq_unicos = matriz_arq[['COD_AFIRMACAO', 'AFIRMACAO', 'ARQUETIPO']].drop_duplicates(subset=['COD_AFIRMACAO'])
-
-    for _, row in matriz_arq_unicos.iterrows():
-        codigo = str(row['COD_AFIRMACAO']).strip()
-        arquetipo = str(row['ARQUETIPO']).strip()
-        chave_dim = f'arq_{codigo}'
-
-        if chave_dim not in cod_to_dim:
-            continue
-
-        dimensao_se = cod_to_dim[chave_dim]
-        dimensao_se = dimensao_se.replace('Vida- Trabalho', 'Vida-Trabalho').strip()
-
-        if dimensao_se not in categoria_valores:
-            continue
-
-        percentual_medio, tendencia_info, _ = calcular_tendencia_arquetipos_por_questao(
-            df_arq_filtrado, matriz_arq, codigo, arquetipo
-        )
-
-        if percentual_medio is None:
-            continue
-
-        if 'DESFAVORÁVEL' in str(tendencia_info):
-            valor = max(0, 100 - percentual_medio)
-        else:
-            valor = percentual_medio
-
-        categoria_valores[dimensao_se].append(valor)
-
-    # MICROAMBIENTE - mesma lógica-base do app.py
-    questoes_micro_se = [k.replace('micro_', '') for k in cod_to_dim if k.startswith('micro_')]
-
-    for codigo_matriz in questoes_micro_se:
-        chave_dim = f'micro_{codigo_matriz}'
-        dimensao_se = cod_to_dim.get(chave_dim, '')
-        dimensao_se = dimensao_se.replace('Vida- Trabalho', 'Vida-Trabalho').strip()
-
-        if not dimensao_se or dimensao_se not in categoria_valores:
-            continue
-
-        real_pct, ideal_pct, gap = calcular_real_ideal_gap_por_questao(
-            df_micro_filtrado, matriz_micro, codigo_matriz
-        )
-
-        if gap is None:
-            continue
-
-        score = min(100.0, max(0.0, 100.0 - gap))
-        categoria_valores[dimensao_se].append(score)
-
-    # média por dimensão
-    categoria_medias = {}
-    for dim in DIMENSOES_SE:
-        if categoria_valores[dim]:
-            categoria_medias[dim] = round(float(np.mean(categoria_valores[dim])), 1)
-        else:
-            categoria_medias[dim] = 0
-
-    resultado_dim = {}
-    for dim in DIMENSOES_SE:
-        if categoria_medias[dim] > 0:
-            resultado_dim[dim] = categoria_medias[dim]
-        else:
-            resultado_dim[dim] = '—'
-
-    valores_validos = [v for v in categoria_medias.values() if v > 0]
-    score_geral = round(float(np.mean(valores_validos)), 1) if valores_validos else '—'
-
-    return resultado_dim, score_geral
-
+    return calcular_categoria_medias_app_like(
+        matriz_arq,
+        matriz_micro,
+        df_arquetipos,
+        df_microambiente,
+        filtros
+    )
 
 
 # ==================== TABELA HTML ====================
