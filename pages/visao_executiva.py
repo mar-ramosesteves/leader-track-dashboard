@@ -216,7 +216,7 @@ def calcular_saude_emocional_lider(
             real_pct  = round(soma_real  / count, 2)
             ideal_pct = round(soma_ideal / count, 2)
             gap       = round(ideal_pct - real_pct, 2)
-            score     = max(0.0, 100.0 - gap)
+            score     = min(100.0, max(0.0, 100.0 - gap))
             scores_dim[dim_se].append(score)
 
     # Calcular médias por dimensão e score geral
