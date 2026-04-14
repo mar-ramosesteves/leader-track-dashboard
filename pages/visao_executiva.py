@@ -680,11 +680,11 @@ st.sidebar.header("⚖️ Pesos do IGL")
 
 with st.sidebar.expander("📊 Pesos das 5 Dimensões", expanded=False):
     st.markdown("**Total deve somar 100%**")
-    peso_arq = st.slider("🎯 Arquétipos", 0, 100, 20, 1, key="peso_arq")
-    peso_micro = st.slider("🏢 Microambiente", 0, 100, 25, 1, key="peso_micro")
-    peso_desemp = st.slider("⭐ Desempenho", 0, 100, 20, 1, key="peso_desemp")
+    peso_arq = st.slider("🎯 Arquétipos", 0, 100, 15, 1, key="peso_arq")
+    peso_micro = st.slider("🏢 Microambiente", 0, 100, 15, 1, key="peso_micro")
+    peso_desemp = st.slider("⭐ Desempenho", 0, 100, 40, 1, key="peso_desemp")
     peso_9box = st.slider("🎲 9Box", 0, 100, 15, 1, key="peso_9box")
-    peso_se = st.slider("💚 Saúde Emocional", 0, 100, 20, 1, key="peso_se")
+    peso_se = st.slider("💚 Saúde Emocional", 0, 100, 15, 1, key="peso_se")
     soma_pesos = peso_arq + peso_micro + peso_desemp + peso_9box + peso_se
     if soma_pesos != 100:
         st.warning(f"⚠️ Soma: **{soma_pesos}%**")
