@@ -24,8 +24,109 @@ SUPABASE_URL = "https://xmsjjknpnowsswwrbvpc.supabase.co"
 SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhtc2pqa25wbm93c3N3d3JidnBjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI1MDg0NDUsImV4cCI6MjA2ODA4NDQ0NX0.OexXJX7lK_DefGb72VDWGLDcUXamoQIgYOv5Zo_e9L4"
 
 @st.cache_resource
+
 def init_supabase():
     return create_client(SUPABASE_URL, SUPABASE_KEY)
+
+def get_query_param(nome, default=None):
+    try:
+        val = st.query_params.get(nome, default)
+        if isinstance(val, list):
+            return val[0] if val else default
+        return val
+    except Exception:
+        try:
+            val = st.experimental_get_query_params().get(nome, [default])
+            return val[0] if isinstance(val, list) else val
+        except Exception:
+            return default
+
+
+def contexto_url():
+    return {
+        "nivel_contexto": str(get_query_param("nivel_contexto", "") or "").strip().lower(),
+        "holding_id": str(get_query_param("holding_id", "") or "").strip(),
+        "holding_nome": str(get_query_param("holding_nome", "") or "").strip(),
+        "empresa_id": str(get_query_param("empresa_id", "") or "").strip(),
+        "empresa_nome": str(get_query_param("empresa_nome", "") or "").strip(),
+        "filial_id": str(get_query_param("filial_id", "") or "").strip(),
+        "filial_nome": str(get_query_param("filial_nome", "") or "").strip(),
+        "contexto_nome": str(get_query_param("contexto_nome", "") or "").strip(),
+        "contexto_codigo": str(get_query_param("contexto_codigo", "") or "").strip(),
+        "wp_user_email": str(get_query_param("wp_user_email", "") or "").strip().lower(),
+    }
+
+
+def norm_txt(v):
+    return str(v or "").strip().upper()
+
+
+def filtrar_employees_por_contexto(df_emp, ctx):
+    if df_emp is None or df_emp.empty:
+        return df_emp
+
+    nivel = norm_txt(ctx.get("nivel_contexto"))
+
+    if not nivel:
+        return df_emp
+
+    df = df_emp.copy()
+
+    if nivel == "HOLDING":
+        holding_nome = ctx.get("holding_nome") or ctx.get("contexto_nome") or ctx.get("contexto_codigo")
+        if holding_nome and "holding" in df.columns:
+            return df[df["holding"].astype(str).str.upper().str.strip() == norm_txt(holding_nome)]
+        return df
+
+    if nivel == "EMPRESA":
+        empresa_id = ctx.get("empresa_id")
+        empresa_nome = ctx.get("empresa_nome") or ctx.get("contexto_nome") or ctx.get("contexto_codigo")
+
+        mask = pd.Series(False, index=df.index)
+
+        if empresa_id and "empresa_id" in df.columns:
+            mask = mask | (df["empresa_id"].astype(str) == str(empresa_id))
+
+        if empresa_nome:
+            if "empresa" in df.columns:
+                mask = mask | (df["empresa"].astype(str).str.upper().str.strip() == norm_txt(empresa_nome))
+            if "company_name" in df.columns:
+                mask = mask | (df["company_name"].astype(str).str.upper().str.strip() == norm_txt(empresa_nome))
+
+        return df[mask]
+
+    if nivel == "FILIAL":
+        empresa_id = ctx.get("empresa_id")
+        filial_id = ctx.get("filial_id")
+        empresa_nome = ctx.get("empresa_nome")
+        filial_nome = ctx.get("filial_nome") or ctx.get("contexto_nome") or ctx.get("contexto_codigo")
+
+        mask_empresa = pd.Series(True, index=df.index)
+        mask_filial = pd.Series(False, index=df.index)
+
+        if empresa_id and "empresa_id" in df.columns:
+            mask_empresa = df["empresa_id"].astype(str) == str(empresa_id)
+        elif empresa_nome:
+            mask_empresa = pd.Series(False, index=df.index)
+            if "empresa" in df.columns:
+                mask_empresa = mask_empresa | (df["empresa"].astype(str).str.upper().str.strip() == norm_txt(empresa_nome))
+            if "company_name" in df.columns:
+                mask_empresa = mask_empresa | (df["company_name"].astype(str).str.upper().str.strip() == norm_txt(empresa_nome))
+
+        if filial_id and "filial_id" in df.columns:
+            mask_filial = mask_filial | (df["filial_id"].astype(str) == str(filial_id))
+
+        if filial_nome:
+            if "branch_name" in df.columns:
+                mask_filial = mask_filial | (df["branch_name"].astype(str).str.upper().str.strip() == norm_txt(filial_nome))
+            if "filial_nome" in df.columns:
+                mask_filial = mask_filial | (df["filial_nome"].astype(str).str.upper().str.strip() == norm_txt(filial_nome))
+            if "filial_codigo" in df.columns:
+                mask_filial = mask_filial | (df["filial_codigo"].astype(str).str.upper().str.strip() == norm_txt(filial_nome))
+
+        return df[mask_empresa & mask_filial]
+
+    return df
 
 @st.cache_data(ttl=3600)
 def carregar_matriz_arquetipos():
@@ -43,10 +144,16 @@ def carregar_dados_supabase():
     try:
         arq  = supabase.table('consolidado_arquetipos').select('*').execute().data
         micro = supabase.table('consolidado_microambiente').select('*').execute().data
+
+        
         employees = supabase.table('employees').select(
             'id,nome,email,emailLider,manager_name,empresa,holding,company_name,'
+            'empresa_id,filial_id,branch_name,filial_nome,filial_codigo,'
             'department_name,cargo,nivel,genero,etnia,employment_status'
         ).execute().data
+
+
+        
         ninebox = supabase.table('v_ninebox_items').select('*').execute().data
         evaluations = supabase.table('evaluations').select(
             'employee_id,evaluation_year,round_code,final_rating,performance_rating,'
@@ -629,12 +736,28 @@ df_emp    = pd.DataFrame(employees)   if employees   else pd.DataFrame()
 df_ninebox = pd.DataFrame(ninebox)    if ninebox     else pd.DataFrame()
 df_eval   = pd.DataFrame(evaluations) if evaluations else pd.DataFrame()
 
+
+ctx = contexto_url()
+df_emp_original = df_emp.copy()
+
+if ctx.get("nivel_contexto"):
+    df_emp = filtrar_employees_por_contexto(df_emp, ctx)
+
+    contexto_label = ctx.get("contexto_nome") or ctx.get("empresa_nome") or ctx.get("filial_nome") or ctx.get("holding_nome")
+    st.info(
+        f"Contexto aplicado: {str(ctx.get('nivel_contexto')).upper()} · {contexto_label or '—'}"
+    )
+
+
+
 lideres_lt = set(v['emaillider'] for v in {**dados_arq, **dados_micro}.values())
 nome_to_email = {}
 if not df_emp.empty and 'nome' in df_emp.columns and 'email' in df_emp.columns:
     for _, row in df_emp.iterrows():
         if row.get('nome') and row.get('email'):
             nome_to_email[str(row['nome']).strip().upper()] = str(row['email']).lower().strip()
+
+
 lideres_manager = set()
 if not df_emp.empty and 'manager_name' in df_emp.columns:
     for mgr in df_emp['manager_name'].dropna().unique():
