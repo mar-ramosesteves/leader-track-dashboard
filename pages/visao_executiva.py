@@ -119,10 +119,7 @@ def filtrar_employees_por_contexto(df_emp, ctx):
         if filial_nome:
             if "branch_name" in df.columns:
                 mask_filial = mask_filial | (df["branch_name"].astype(str).str.upper().str.strip() == norm_txt(filial_nome))
-            if "filial_nome" in df.columns:
-                mask_filial = mask_filial | (df["filial_nome"].astype(str).str.upper().str.strip() == norm_txt(filial_nome))
-            if "filial_codigo" in df.columns:
-                mask_filial = mask_filial | (df["filial_codigo"].astype(str).str.upper().str.strip() == norm_txt(filial_nome))
+            
 
         return df[mask_empresa & mask_filial]
 
@@ -148,10 +145,9 @@ def carregar_dados_supabase():
         
         employees = supabase.table('employees').select(
             'id,nome,email,emailLider,manager_name,empresa,holding,company_name,'
-            'empresa_id,filial_id,branch_name,filial_nome,filial_codigo,'
+            'empresa_id,filial_id,branch_name,'
             'department_name,cargo,nivel,genero,etnia,employment_status'
         ).execute().data
-
 
         
         ninebox = supabase.table('v_ninebox_items').select('*').execute().data
