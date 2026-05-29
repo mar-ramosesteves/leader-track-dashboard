@@ -159,6 +159,102 @@ SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJ
 def init_supabase():
     return create_client(SUPABASE_URL, SUPABASE_KEY)
 
+def get_query_param(nome, default=None):
+    try:
+        val = st.query_params.get(nome, default)
+        if isinstance(val, list):
+            return val[0] if val else default
+        return val
+    except Exception:
+        try:
+            val = st.experimental_get_query_params().get(nome, [default])
+            return val[0] if isinstance(val, list) else val
+        except Exception:
+            return default
+
+
+def contexto_url():
+    return {
+        "nivel_contexto": str(get_query_param("nivel_contexto", "") or "").strip().lower(),
+        "holding_id": str(get_query_param("holding_id", "") or "").strip(),
+        "holding_nome": str(get_query_param("holding_nome", "") or "").strip(),
+        "empresa_id": str(get_query_param("empresa_id", "") or "").strip(),
+        "empresa_nome": str(get_query_param("empresa_nome", "") or "").strip(),
+        "filial_id": str(get_query_param("filial_id", "") or "").strip(),
+        "filial_nome": str(get_query_param("filial_nome", "") or "").strip(),
+        "contexto_nome": str(get_query_param("contexto_nome", "") or "").strip(),
+        "contexto_codigo": str(get_query_param("contexto_codigo", "") or "").strip(),
+        "wp_user_email": str(get_query_param("wp_user_email", "") or "").strip().lower(),
+    }
+
+
+def norm_txt(v):
+    return str(v or "").strip().upper()
+
+
+def filtrar_leadertrack_por_contexto(df, ctx):
+    if df is None or df.empty:
+        return df
+
+    nivel = norm_txt(ctx.get("nivel_contexto"))
+
+    if not nivel:
+        return df
+
+    df_filtrado = df.copy()
+
+    if nivel == "HOLDING":
+        holding_nome = ctx.get("holding_nome") or ctx.get("contexto_nome") or ctx.get("contexto_codigo")
+
+        if holding_nome and "holding" in df_filtrado.columns:
+            return df_filtrado[
+                df_filtrado["holding"].astype(str).str.upper().str.strip() == norm_txt(holding_nome)
+            ]
+
+        return df_filtrado
+
+    if nivel == "EMPRESA":
+        empresa_nome = ctx.get("empresa_nome") or ctx.get("contexto_nome") or ctx.get("contexto_codigo")
+
+        if empresa_nome and "empresa" in df_filtrado.columns:
+            return df_filtrado[
+                df_filtrado["empresa"].astype(str).str.upper().str.strip() == norm_txt(empresa_nome)
+            ]
+
+        return df_filtrado
+
+    if nivel == "FILIAL":
+        empresa_nome = ctx.get("empresa_nome")
+        filial_nome = ctx.get("filial_nome") or ctx.get("contexto_nome") or ctx.get("contexto_codigo")
+
+        mask = pd.Series(True, index=df_filtrado.index)
+
+        if empresa_nome and "empresa" in df_filtrado.columns:
+            mask = mask & (
+                df_filtrado["empresa"].astype(str).str.upper().str.strip() == norm_txt(empresa_nome)
+            )
+
+        # Neste app.py, os consolidados geralmente não têm filial_id.
+        # Então tentamos filtrar por campos textuais, se existirem.
+        mask_filial = pd.Series(True, index=df_filtrado.index)
+
+        campos_filial = ["filial", "branch_name", "filial_nome", "cidade", "estado"]
+
+        campos_existentes = [c for c in campos_filial if c in df_filtrado.columns]
+
+        if filial_nome and campos_existentes:
+            mask_filial = pd.Series(False, index=df_filtrado.index)
+
+            for campo in campos_existentes:
+                mask_filial = mask_filial | (
+                    df_filtrado[campo].astype(str).str.upper().str.strip() == norm_txt(filial_nome)
+                )
+
+        return df_filtrado[mask & mask_filial]
+
+    return df_filtrado
+
+
 @st.cache_data(ttl=3600)
 def carregar_classificacoes_saude_emocional():
     import os
@@ -803,6 +899,28 @@ if matriz_arq is not None and matriz_micro is not None:
             df_arquetipos['holding'] = df_arquetipos['holding'].astype(str).str.upper()
         if 'holding' in df_microambiente.columns:
             df_microambiente['holding'] = df_microambiente['holding'].astype(str).str.upper()
+
+
+        # ==================== CONTEXTO RECEBIDO DO WORDPRESS ====================
+        ctx = contexto_url()
+
+        if ctx.get("nivel_contexto"):
+            df_arquetipos = filtrar_leadertrack_por_contexto(df_arquetipos, ctx)
+            df_microambiente = filtrar_leadertrack_por_contexto(df_microambiente, ctx)
+
+            contexto_label = (
+                ctx.get("contexto_nome")
+                or ctx.get("filial_nome")
+                or ctx.get("empresa_nome")
+                or ctx.get("holding_nome")
+                or "—"
+            )
+
+            st.info(
+                f"Contexto aplicado: {str(ctx.get('nivel_contexto')).upper()} · {contexto_label}"
+            )        
+
+ 
 
         # Métricas
         col1, col2, col3, col4 = st.columns(4)
