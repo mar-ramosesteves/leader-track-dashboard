@@ -945,37 +945,214 @@ if matriz_arq is not None and matriz_micro is not None:
         # FILTROS
         st.sidebar.header("🎛️ Filtros Globais")
         st.sidebar.subheader("Filtros Principais")
-
+        
+        filtros_url = filtros_url_dashboard()
+        
+        def encontrar_index_opcao(opcoes, valor_url, default_index=0):
+            """
+            Procura uma opção ignorando maiúsculas/minúsculas.
+            Se não encontrar, mantém o índice padrão.
+            """
+            if not valor_url:
+                return default_index
+        
+            valor_url_norm = str(valor_url).strip().lower()
+        
+            for idx, opt in enumerate(opcoes):
+                if str(opt).strip().lower() == valor_url_norm:
+                    return idx
+        
+            return default_index
+        
+        
+        # =========================
+        # HOLDING
+        # =========================
         holdings_arq = set(df_arquetipos['holding'].dropna().unique()) if 'holding' in df_arquetipos.columns else set()
         holdings_micro = set(df_microambiente['holding'].dropna().unique()) if 'holding' in df_microambiente.columns else set()
-        todas_holdings = [h for h in sorted([str(h) for h in holdings_arq.union(holdings_micro)]) if h and str(h).strip() and str(h).upper() != 'N/A']
+        
+        todas_holdings = [
+            h for h in sorted([str(h) for h in holdings_arq.union(holdings_micro)])
+            if h and str(h).strip() and str(h).upper() != 'N/A'
+        ]
+        
         holdings = ["Todas"] + todas_holdings
-        holding_selecionada = st.sidebar.selectbox("🏢 Holding", holdings) if len(holdings) > 1 else "Todas"
-
-        todas_empresas = sorted([str(e) for e in set(df_arquetipos['empresa'].unique()).union(set(df_microambiente['empresa'].unique()))])
-        empresa_selecionada = st.sidebar.selectbox("Empresa", ["Todas"] + todas_empresas)
-
-        todas_codrodadas = sorted([str(c) for c in set(df_arquetipos['codrodada'].unique()).union(set(df_microambiente['codrodada'].unique()))])
-        codrodada_selecionada = st.sidebar.selectbox("Código da Rodada", ["Todas"] + todas_codrodadas)
-
-        todos_emailliders = sorted([str(e) for e in set(df_arquetipos['emailLider'].unique()).union(set(df_microambiente['emailLider'].unique()))])
-        emaillider_selecionado = st.sidebar.selectbox("👤 Email do Líder", ["Todos"] + todos_emailliders)
-
-        todos_estados = sorted([str(e) for e in set(df_arquetipos['estado'].unique()).union(set(df_microambiente['estado'].unique()))])
-        estado_selecionado = st.sidebar.selectbox("🗺️ Estado", ["Todos"] + todos_estados)
-
-        todos_generos = sorted([str(g) for g in set(df_arquetipos['sexo'].unique()).union(set(df_microambiente['sexo'].unique()))])
-        genero_selecionado = st.sidebar.selectbox("⚧ Gênero", ["Todos"] + todos_generos)
-
-        todas_etnias = sorted([str(e) for e in set(df_arquetipos['etnia'].unique()).union(set(df_microambiente['etnia'].unique()))])
-        etnia_selecionada = st.sidebar.selectbox("Etnia", ["Todas"] + todas_etnias)
-
-        todos_departamentos = sorted([str(d) for d in set(df_arquetipos['departamento'].unique()).union(set(df_microambiente['departamento'].unique()))])
-        departamento_selecionado = st.sidebar.selectbox("🏢 Departamento", ["Todos"] + todos_departamentos)
-
-        todos_cargos = sorted([str(c) for c in set(df_arquetipos['cargo'].unique()).union(set(df_microambiente['cargo'].unique()))])
-        cargo_selecionado = st.sidebar.selectbox("💼 Cargo", ["Todos"] + todos_cargos)
-
+        
+        holding_default_index = 0
+        if filtros_url.get("holding_nome"):
+            holding_default_index = encontrar_index_opcao(holdings, filtros_url.get("holding_nome"), 0)
+        
+        holding_selecionada = st.sidebar.selectbox(
+            "🏢 Holding",
+            holdings,
+            index=holding_default_index
+        ) if len(holdings) > 1 else "Todas"
+        
+        
+        # =========================
+        # EMPRESA
+        # =========================
+        todas_empresas = sorted([
+            str(e)
+            for e in set(df_arquetipos['empresa'].unique()).union(set(df_microambiente['empresa'].unique()))
+        ])
+        
+        empresa_options = ["Todas"] + todas_empresas
+        empresa_default_index = 0
+        
+        if filtros_url.get("company"):
+            empresa_default_index = encontrar_index_opcao(empresa_options, filtros_url.get("company"), 0)
+        
+        empresa_selecionada = st.sidebar.selectbox(
+            "Empresa",
+            empresa_options,
+            index=empresa_default_index
+        )
+        
+        
+        # =========================
+        # CÓDIGO DA RODADA
+        # =========================
+        todas_codrodadas = sorted([
+            str(c)
+            for c in set(df_arquetipos['codrodada'].unique()).union(set(df_microambiente['codrodada'].unique()))
+        ])
+        
+        codrodada_options = ["Todas"] + todas_codrodadas
+        codrodada_default_index = 0
+        
+        if filtros_url.get("codrodada"):
+            codrodada_default_index = encontrar_index_opcao(codrodada_options, filtros_url.get("codrodada"), 0)
+        
+        codrodada_selecionada = st.sidebar.selectbox(
+            "Código da Rodada",
+            codrodada_options,
+            index=codrodada_default_index
+        )
+        
+        
+        # =========================
+        # EMAIL DO LÍDER
+        # =========================
+        todos_emailliders = sorted([
+            str(e).strip().lower()
+            for e in set(df_arquetipos['emailLider'].unique()).union(set(df_microambiente['emailLider'].unique()))
+            if str(e).strip()
+        ])
+        
+        emaillider_url = filtros_url.get("emaillider")
+        pode_administrar_url = filtros_url.get("pode_administrar") == "true"
+        
+        if emaillider_url and not pode_administrar_url:
+            """
+            Usuário comum:
+            se a URL veio com emaillider, o dashboard fica travado nesse líder.
+            Não mostra 'Todos' e não permite escolher outros líderes.
+            """
+            emaillider_options = [emaillider_url]
+            emaillider_default_index = 0
+        
+        elif emaillider_url and pode_administrar_url:
+            """
+            Admin/RH/Master:
+            pode continuar vendo todos, mas se a URL trouxe um líder específico,
+            o dashboard já abre selecionado nele.
+            """
+            emaillider_options = ["Todos"] + todos_emailliders
+        
+            if emaillider_url not in emaillider_options:
+                emaillider_options.append(emaillider_url)
+        
+            emaillider_default_index = encontrar_index_opcao(emaillider_options, emaillider_url, 0)
+        
+        else:
+            """
+            Sem líder específico na URL:
+            mantém comportamento padrão.
+            """
+            emaillider_options = ["Todos"] + todos_emailliders
+            emaillider_default_index = 0
+        
+        emaillider_selecionado = st.sidebar.selectbox(
+            "👤 Email do Líder",
+            emaillider_options,
+            index=emaillider_default_index
+        )
+        
+        
+        # =========================
+        # ESTADO
+        # =========================
+        todos_estados = sorted([
+            str(e)
+            for e in set(df_arquetipos['estado'].unique()).union(set(df_microambiente['estado'].unique()))
+        ])
+        
+        estado_selecionado = st.sidebar.selectbox(
+            "🗺️ Estado",
+            ["Todos"] + todos_estados
+        )
+        
+        
+        # =========================
+        # GÊNERO
+        # =========================
+        todos_generos = sorted([
+            str(g)
+            for g in set(df_arquetipos['sexo'].unique()).union(set(df_microambiente['sexo'].unique()))
+        ])
+        
+        genero_selecionado = st.sidebar.selectbox(
+            "⚧ Gênero",
+            ["Todos"] + todos_generos
+        )
+        
+        
+        # =========================
+        # ETNIA
+        # =========================
+        todas_etnias = sorted([
+            str(e)
+            for e in set(df_arquetipos['etnia'].unique()).union(set(df_microambiente['etnia'].unique()))
+        ])
+        
+        etnia_selecionada = st.sidebar.selectbox(
+            "Etnia",
+            ["Todas"] + todas_etnias
+        )
+        
+        
+        # =========================
+        # DEPARTAMENTO
+        # =========================
+        todos_departamentos = sorted([
+            str(d)
+            for d in set(df_arquetipos['departamento'].unique()).union(set(df_microambiente['departamento'].unique()))
+        ])
+        
+        departamento_selecionado = st.sidebar.selectbox(
+            "🏢 Departamento",
+            ["Todos"] + todos_departamentos
+        )
+        
+        
+        # =========================
+        # CARGO
+        # =========================
+        todos_cargos = sorted([
+            str(c)
+            for c in set(df_arquetipos['cargo'].unique()).union(set(df_microambiente['cargo'].unique()))
+        ])
+        
+        cargo_selecionado = st.sidebar.selectbox(
+            "💼 Cargo",
+            ["Todos"] + todos_cargos
+        )
+        
+        
+        # =========================
+        # DICIONÁRIO FINAL DE FILTROS
+        # =========================
         filtros = {
             'empresa': empresa_selecionada.lower() if empresa_selecionada != "Todas" else empresa_selecionada,
             'codrodada': codrodada_selecionada.lower() if codrodada_selecionada != "Todas" else codrodada_selecionada,
@@ -987,7 +1164,6 @@ if matriz_arq is not None and matriz_micro is not None:
             'cargo': cargo_selecionado.lower() if cargo_selecionado != "Todos" else cargo_selecionado,
             'holding': holding_selecionada.upper() if holding_selecionada != "Todas" else holding_selecionada,
         }
-
         tab1, tab2, tab3 = st.tabs(["📊 Arquétipos", "🏢 Microambiente", "💚 Saúde Emocional"])
 
         # ==================== TAB ARQUÉTIPOS ====================
