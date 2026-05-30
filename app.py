@@ -188,6 +188,15 @@ def contexto_url():
     }
 
 
+def filtros_url_dashboard():
+    return {
+        "company": str(get_query_param("company", "") or "").strip().lower(),
+        "codrodada": str(get_query_param("codrodada", "") or "").strip().lower(),
+        "emaillider": str(get_query_param("emaillider", "") or "").strip().lower(),
+        "pode_administrar": str(get_query_param("pode_administrar", "") or "").strip().lower(),
+    }
+
+
 def norm_txt(v):
     return str(v or "").strip().upper()
 
