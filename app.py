@@ -1016,8 +1016,20 @@ if matriz_arq is not None and matriz_micro is not None:
         empresa_options = ["Todas"] + todas_empresas
         empresa_default_index = 0
         
-        if filtros_url.get("company"):
-            empresa_default_index = encontrar_index_opcao(empresa_options, filtros_url.get("company"), 0)
+        nivel_contexto_url = str(filtros_url.get("nivel_contexto") or "").strip().lower()
+        
+        """
+        Regra:
+        - Se o contexto vindo da URL for HOLDING, a empresa deve ficar em "Todas".
+          Assim o dashboard consolida todas as empresas daquela holding.
+        - Se o contexto for EMPRESA, aí sim aplicamos a empresa da URL.
+        """
+        
+        if nivel_contexto_url != "holding":
+            if filtros_url.get("company"):
+                empresa_default_index = encontrar_index_opcao(empresa_options, filtros_url.get("company"), 0)
+            elif filtros_url.get("empresa_nome"):
+                empresa_default_index = encontrar_index_opcao(empresa_options, filtros_url.get("empresa_nome"), 0)
         
         empresa_selecionada = st.sidebar.selectbox(
             "Empresa",
