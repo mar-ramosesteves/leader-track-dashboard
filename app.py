@@ -190,9 +190,25 @@ def contexto_url():
 
 def filtros_url_dashboard():
     return {
+        "nivel_contexto": str(get_query_param("nivel_contexto", "") or "").strip().lower(),
+
+        "holding_id": str(get_query_param("holding_id", "") or "").strip(),
+        "holding_nome": str(get_query_param("holding_nome", "") or "").strip(),
+
+        "empresa_id": str(get_query_param("empresa_id", "") or "").strip(),
+        "empresa_nome": str(get_query_param("empresa_nome", "") or "").strip(),
+
+        "filial_id": str(get_query_param("filial_id", "") or "").strip(),
+        "filial_nome": str(get_query_param("filial_nome", "") or "").strip(),
+
+        "contexto_nome": str(get_query_param("contexto_nome", "") or "").strip(),
+        "contexto_codigo": str(get_query_param("contexto_codigo", "") or "").strip(),
+
         "company": str(get_query_param("company", "") or "").strip().lower(),
         "codrodada": str(get_query_param("codrodada", "") or "").strip().lower(),
         "emaillider": str(get_query_param("emaillider", "") or "").strip().lower(),
+
+        "wp_user_email": str(get_query_param("wp_user_email", "") or "").strip().lower(),
         "pode_administrar": str(get_query_param("pode_administrar", "") or "").strip().lower(),
     }
 
