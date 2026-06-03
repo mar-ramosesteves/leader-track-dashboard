@@ -812,11 +812,35 @@ if not df_emp.empty and 'holding' in df_emp.columns:
     holdings += sorted([str(h).upper() for h in df_emp['holding'].dropna().unique() if h])
 holding_sel = st.sidebar.selectbox("🏢 Holding", holdings)
 
-empresas_list = ["Todas"]
-if not df_emp.empty and 'empresa' in df_emp.columns:
-    empresas_list += sorted([str(e) for e in df_emp['empresa'].dropna().unique() if e])
-empresa_sel = st.sidebar.selectbox("🏭 Empresa", empresas_list)
+# ====================
+# FILTRO EMPRESA
+# ====================
+# Se o usuário veio com contexto EMPRESA pela URL, o menu deve mostrar
+# somente a empresa autorizada. Isso evita confusão visual no filtro lateral.
 
+empresas_list = ["Todas"]
+
+nivel_ctx_empresa = norm_txt(ctx.get("nivel_contexto"))
+
+if nivel_ctx_empresa == "EMPRESA":
+    empresa_ctx_menu = (
+        ctx.get("empresa_nome")
+        or ctx.get("contexto_nome")
+        or ctx.get("contexto_codigo")
+        or ""
+    )
+
+    if empresa_ctx_menu:
+        empresas_list = [str(empresa_ctx_menu).strip().upper()]
+
+elif not df_emp.empty and 'empresa' in df_emp.columns:
+    empresas_list += sorted([
+        str(e)
+        for e in df_emp['empresa'].dropna().unique()
+        if e
+    ])
+
+empresa_sel = st.sidebar.selectbox("🏭 Empresa", empresas_list)
 rodadas_lt = sorted(set(v['codrodada'] for v in {**dados_arq, **dados_micro}.values()))
 rodada_lt_sel = st.sidebar.selectbox("📅 Rodada LeaderTrack", ["Todas"] + rodadas_lt)
 
