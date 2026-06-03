@@ -1074,6 +1074,60 @@ with st.expander("ℹ️ Pesos do IGL atualmente configurados"):
 cols_exibir = [c for c in df.columns if not c.startswith('_')]
 df_show = df[cols_exibir].copy()
 
+# ====================
+# TRAVA FINAL DE CONTEXTO NA TABELA
+# ====================
+# Segurança adicional: mesmo que alguma etapa anterior recoloque registros,
+# a tabela final respeita o contexto recebido pela URL.
+
+if ctx.get("nivel_contexto"):
+    nivel_ctx_final = norm_txt(ctx.get("nivel_contexto"))
+
+    if nivel_ctx_final == "EMPRESA":
+        empresa_ctx_final = (
+            ctx.get("empresa_nome")
+            or ctx.get("contexto_nome")
+            or ctx.get("contexto_codigo")
+            or ""
+        )
+
+        if empresa_ctx_final and "Empresa" in df_show.columns:
+            df_show = df_show[
+                df_show["Empresa"].astype(str).str.upper().str.strip() == norm_txt(empresa_ctx_final)
+            ]
+
+    elif nivel_ctx_final == "HOLDING":
+        holding_ctx_final = (
+            ctx.get("holding_nome")
+            or ctx.get("contexto_nome")
+            or ctx.get("contexto_codigo")
+            or ""
+        )
+
+        if holding_ctx_final and "Holding" in df_show.columns:
+            df_show = df_show[
+                df_show["Holding"].astype(str).str.upper().str.strip() == norm_txt(holding_ctx_final)
+            ]
+
+    elif nivel_ctx_final == "FILIAL":
+        empresa_ctx_final = ctx.get("empresa_nome") or ""
+        filial_ctx_final = (
+            ctx.get("filial_nome")
+            or ctx.get("contexto_nome")
+            or ctx.get("contexto_codigo")
+            or ""
+        )
+
+        if empresa_ctx_final and "Empresa" in df_show.columns:
+            df_show = df_show[
+                df_show["Empresa"].astype(str).str.upper().str.strip() == norm_txt(empresa_ctx_final)
+            ]
+
+        if filial_ctx_final and "Filial" in df_show.columns:
+            df_show = df_show[
+                df_show["Filial"].astype(str).str.upper().str.strip() == norm_txt(filial_ctx_final)
+            ]
+
 tabela_html = gerar_tabela_html(df_show)
 components.html(tabela_html, height=560, scrolling=True)
 
