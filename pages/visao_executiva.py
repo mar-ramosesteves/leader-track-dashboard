@@ -746,7 +746,42 @@ if ctx.get("nivel_contexto"):
 
 
 
-lideres_lt = set(v['emaillider'] for v in {**dados_arq, **dados_micro}.values())
+# ====================
+# FILTRO DE SEGURANÇA POR CONTEXTO
+# ====================
+# Se existe contexto aplicado, os dados de LeaderTrack também precisam
+# respeitar os líderes existentes no df_emp já filtrado.
+# Isso evita que um usuário com contexto FASTCO veja líderes de outras empresas.
+
+emails_permitidos_contexto = set()
+
+if not df_emp.empty and 'email' in df_emp.columns:
+    emails_permitidos_contexto = set(
+        df_emp['email']
+        .dropna()
+        .astype(str)
+        .str.strip()
+        .str.lower()
+    )
+
+if ctx.get("nivel_contexto") and emails_permitidos_contexto:
+    dados_arq = {
+        k: v for k, v in dados_arq.items()
+        if str(v.get('emaillider', '')).strip().lower() in emails_permitidos_contexto
+    }
+
+    dados_micro = {
+        k: v for k, v in dados_micro.items()
+        if str(v.get('emaillider', '')).strip().lower() in emails_permitidos_contexto
+    }
+
+lideres_lt = set(
+    str(v.get('emaillider', '')).strip().lower()
+    for v in {**dados_arq, **dados_micro}.values()
+    if v.get('emaillider')
+)
+
+
 nome_to_email = {}
 if not df_emp.empty and 'nome' in df_emp.columns and 'email' in df_emp.columns:
     for _, row in df_emp.iterrows():
