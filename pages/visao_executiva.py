@@ -138,6 +138,26 @@ def carregar_matriz_microambiente():
 @st.cache_data(ttl=300)
 def carregar_dados_supabase():
     supabase = init_supabase()
+    def carregar_tabela_em_blocos(nome_tabela, colunas, tamanho_bloco=1000, limite_blocos=20):
+        dados = []
+        inicio = 0
+        for _ in range(limite_blocos):
+            fim = inicio + tamanho_bloco - 1
+            bloco = (
+                supabase.table(nome_tabela)
+                .select(colunas)
+                .range(inicio, fim)
+                .execute()
+                .data
+            )
+            if not bloco:
+                break
+            dados.extend(bloco)
+            if len(bloco) < tamanho_bloco:
+                break
+            inicio += tamanho_bloco
+        return dados
+
     try:
         arq  = supabase.table('consolidado_arquetipos').select('*').execute().data
         micro = supabase.table('consolidado_microambiente').select('*').execute().data
@@ -158,9 +178,10 @@ def carregar_dados_supabase():
         ).execute().data
 
         try:
-            evaluation_responses = supabase.table('v_evaluation_responses_v2').select(
+            evaluation_responses = carregar_tabela_em_blocos(
+                'v_evaluation_responses_v2',
                 'evaluation_id,employee_id,round_code,criteria_id,rating'
-            ).limit(10000).execute().data
+            )
         except Exception:
             evaluation_responses = []
 
@@ -172,9 +193,10 @@ def carregar_dados_supabase():
             evaluation_criteria = []
 
         try:
-            metas_contexto = supabase.table('v_metas_contexto').select(
+            metas_contexto = carregar_tabela_em_blocos(
+                'v_metas_contexto',
                 'evaluation_id,employee_id,round_code,rating,weight'
-            ).limit(10000).execute().data
+            )
         except Exception:
             metas_contexto = []
 
