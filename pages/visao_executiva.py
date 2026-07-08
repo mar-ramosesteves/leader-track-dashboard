@@ -769,6 +769,22 @@ df_metas = pd.DataFrame(metas_contexto) if metas_contexto else pd.DataFrame()
 
 def montar_medias_dimensoes(df_resp, df_criteria, df_metas):
     medias = {}
+    medias_emp_round = {}
+
+    def chave_avaliacao(valor):
+        if valor is None or pd.isna(valor):
+            return None
+        texto = str(valor).strip()
+        if texto.endswith(".0"):
+            texto = texto[:-2]
+        return texto or None
+
+    def chave_emp_round(employee_id, round_code):
+        emp = chave_avaliacao(employee_id)
+        rodada = str(round_code or "").strip()
+        if not emp or not rodada:
+            return None
+        return (emp, rodada)
 
     if not df_resp.empty and not df_criteria.empty:
         criteria_dim = {}
@@ -784,9 +800,22 @@ def montar_medias_dimensoes(df_resp, df_criteria, df_metas):
         df['rating_num'] = pd.to_numeric(df['rating'], errors='coerce')
         df = df[df['dimension'].isin(['INSTITUCIONAL', 'FUNCIONAL', 'INDIVIDUAL'])]
         df = df.dropna(subset=['rating_num'])
+        df['evaluation_key'] = df['evaluation_id'].apply(chave_avaliacao)
+        df['emp_round_key'] = df.apply(lambda row: chave_emp_round(row.get('employee_id'), row.get('round_code')), axis=1)
 
-        for evaluation_id, grp in df.groupby('evaluation_id'):
+        for evaluation_id, grp in df.dropna(subset=['evaluation_key']).groupby('evaluation_key'):
             item = medias.setdefault(evaluation_id, {})
+            for dim, dim_grp in grp.groupby('dimension'):
+                chave = {
+                    'INSTITUCIONAL': 'institucional_avg',
+                    'FUNCIONAL': 'funcional_avg',
+                    'INDIVIDUAL': 'individual_avg',
+                }.get(dim)
+                if chave:
+                    item[chave] = round(float(dim_grp['rating_num'].mean()), 2)
+
+        for emp_round, grp in df.dropna(subset=['emp_round_key']).groupby('emp_round_key'):
+            item = medias_emp_round.setdefault(emp_round, {})
             for dim, dim_grp in grp.groupby('dimension'):
                 chave = {
                     'INSTITUCIONAL': 'institucional_avg',
@@ -801,8 +830,10 @@ def montar_medias_dimensoes(df_resp, df_criteria, df_metas):
         df['rating_num'] = pd.to_numeric(df['rating'], errors='coerce')
         df['weight_num'] = pd.to_numeric(df.get('weight', 0), errors='coerce').fillna(0)
         df = df.dropna(subset=['rating_num'])
+        df['evaluation_key'] = df['evaluation_id'].apply(chave_avaliacao)
+        df['emp_round_key'] = df.apply(lambda row: chave_emp_round(row.get('employee_id'), row.get('round_code')), axis=1)
 
-        for evaluation_id, grp in df.groupby('evaluation_id'):
+        for evaluation_id, grp in df.dropna(subset=['evaluation_key']).groupby('evaluation_key'):
             if grp.empty:
                 continue
             total_weight = float(grp['weight_num'].sum())
@@ -812,10 +843,22 @@ def montar_medias_dimensoes(df_resp, df_criteria, df_metas):
                 metas_avg = float(grp['rating_num'].mean())
             medias.setdefault(evaluation_id, {})['metas_avg'] = round(metas_avg, 2)
 
-    return medias
+        for emp_round, grp in df.dropna(subset=['emp_round_key']).groupby('emp_round_key'):
+            if grp.empty:
+                continue
+            total_weight = float(grp['weight_num'].sum())
+            if total_weight > 0:
+                metas_avg = float((grp['rating_num'] * grp['weight_num']).sum() / total_weight)
+            else:
+                metas_avg = float(grp['rating_num'].mean())
+            medias_emp_round.setdefault(emp_round, {})['metas_avg'] = round(metas_avg, 2)
+
+    return medias, medias_emp_round
 
 
-medias_dimensoes_por_avaliacao = montar_medias_dimensoes(df_eval_resp, df_eval_criteria, df_metas)
+medias_dimensoes_por_avaliacao, medias_dimensoes_por_emp_round = montar_medias_dimensoes(
+    df_eval_resp, df_eval_criteria, df_metas
+)
 
 
 ctx = contexto_url()
@@ -1062,8 +1105,17 @@ for email in todos_lideres_emails:
         round_aval   = ninebox_data.get('round_code') or eval_data.get('round_code','—')
         medias_dim = {}
         evaluation_id_atual = ninebox_data.get('evaluation_id') or eval_data.get('evaluation_id')
-        if evaluation_id_atual in medias_dimensoes_por_avaliacao:
-            medias_dim = medias_dimensoes_por_avaliacao.get(evaluation_id_atual, {})
+        evaluation_key = str(evaluation_id_atual or '').strip()
+        if evaluation_key.endswith(".0"):
+            evaluation_key = evaluation_key[:-2]
+        if evaluation_key in medias_dimensoes_por_avaliacao:
+            medias_dim = medias_dimensoes_por_avaliacao.get(evaluation_key, {})
+        if not medias_dim:
+            emp_key = str(emp_id or '').strip()
+            if emp_key.endswith(".0"):
+                emp_key = emp_key[:-2]
+            emp_round_key = (emp_key, str(round_aval or '').strip())
+            medias_dim = medias_dimensoes_por_emp_round.get(emp_round_key, {})
 
         # Saúde Emocional
         se_por_dim = {d: '—' for d in DIMENSOES_SE}
