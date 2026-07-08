@@ -846,7 +846,18 @@ rodada_lt_sel = st.sidebar.selectbox("📅 Rodada LeaderTrack", ["Todas"] + roda
 
 rounds_disp = ["Todos"]
 if not df_eval.empty and 'round_code' in df_eval.columns:
-    rounds_disp += sorted(df_eval['round_code'].dropna().unique().tolist(), reverse=True)
+    rounds_disp += [
+        str(r)
+        for r in df_eval['round_code'].dropna().unique().tolist()
+        if str(r).strip()
+    ]
+if not df_ninebox.empty and 'round_code' in df_ninebox.columns:
+    rounds_disp += [
+        str(r)
+        for r in df_ninebox['round_code'].dropna().unique().tolist()
+        if str(r).strip()
+    ]
+rounds_disp = ["Todos"] + sorted(set(rounds_disp) - {"Todos"}, reverse=True)
 round_eval_sel = st.sidebar.selectbox("📆 Round Avaliação", rounds_disp)
 
 lider_sel = st.sidebar.multiselect("👤 Líder(es)", sorted(todos_lideres_emails))
@@ -945,16 +956,17 @@ for email in todos_lideres_emails:
         emp_id = emp.get('id') if emp else None
         eval_data, ninebox_data = {}, {}
         if emp_id:
+            emp_id_norm = str(emp_id).strip()
             if not df_eval.empty and 'employee_id' in df_eval.columns:
-                evals = df_eval[df_eval['employee_id'] == emp_id]
+                evals = df_eval[df_eval['employee_id'].astype(str).str.strip() == emp_id_norm]
                 if round_eval_sel != "Todos" and 'round_code' in evals.columns:
-                    evals = evals[evals['round_code'] == round_eval_sel]
+                    evals = evals[evals['round_code'].astype(str).str.strip() == str(round_eval_sel).strip()]
                 if not evals.empty:
                     eval_data = evals.sort_values('evaluation_year', ascending=False).iloc[0].to_dict()
             if not df_ninebox.empty and 'employee_id' in df_ninebox.columns:
-                nb = df_ninebox[df_ninebox['employee_id'] == emp_id]
+                nb = df_ninebox[df_ninebox['employee_id'].astype(str).str.strip() == emp_id_norm]
                 if round_eval_sel != "Todos" and 'round_code' in nb.columns:
-                    nb = nb[nb['round_code'] == round_eval_sel]
+                    nb = nb[nb['round_code'].astype(str).str.strip() == str(round_eval_sel).strip()]
                 if not nb.empty:
                     ninebox_data = nb.iloc[0].to_dict()
 
