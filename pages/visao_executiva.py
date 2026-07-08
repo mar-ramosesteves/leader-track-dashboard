@@ -156,10 +156,32 @@ def carregar_dados_supabase():
             'potential_rating,nine_box_position,institucional_avg,funcional_avg,'
             'individual_avg,metas_avg'
         ).execute().data
-        return arq, micro, employees, ninebox, evaluations
+
+        try:
+            evaluation_responses = supabase.table('v_evaluation_responses_v2').select(
+                'evaluation_id,employee_id,round_code,criteria_id,rating'
+            ).limit(10000).execute().data
+        except Exception:
+            evaluation_responses = []
+
+        try:
+            evaluation_criteria = supabase.table('evaluation_criteria').select(
+                'id,dimension'
+            ).limit(10000).execute().data
+        except Exception:
+            evaluation_criteria = []
+
+        try:
+            metas_contexto = supabase.table('v_metas_contexto').select(
+                'evaluation_id,employee_id,round_code,rating,weight'
+            ).limit(10000).execute().data
+        except Exception:
+            metas_contexto = []
+
+        return arq, micro, employees, ninebox, evaluations, evaluation_responses, evaluation_criteria, metas_contexto
     except Exception as e:
         st.error(f"Erro ao carregar dados: {e}")
-        return [], [], [], [], []
+        return [], [], [], [], [], [], [], []
 
 # ==================== LABELS ====================
 NINEBOX_LABELS = {
@@ -722,7 +744,16 @@ with st.spinner("Carregando dados..."):
     matriz_arq  = carregar_matriz_arquetipos()
     matriz_micro = carregar_matriz_microambiente()
     df_se = carregar_tabela_saude_emocional()
-    consolidado_arq, consolidado_micro, employees, ninebox, evaluations = carregar_dados_supabase()
+    (
+        consolidado_arq,
+        consolidado_micro,
+        employees,
+        ninebox,
+        evaluations,
+        evaluation_responses,
+        evaluation_criteria,
+        metas_contexto,
+    ) = carregar_dados_supabase()
 
 with st.spinner("Calculando indicadores..."):
     dados_arq  = calcular_arquetipos_lider(consolidado_arq, matriz_arq)
@@ -731,6 +762,60 @@ with st.spinner("Calculando indicadores..."):
 df_emp    = pd.DataFrame(employees)   if employees   else pd.DataFrame()
 df_ninebox = pd.DataFrame(ninebox)    if ninebox     else pd.DataFrame()
 df_eval   = pd.DataFrame(evaluations) if evaluations else pd.DataFrame()
+df_eval_resp = pd.DataFrame(evaluation_responses) if evaluation_responses else pd.DataFrame()
+df_eval_criteria = pd.DataFrame(evaluation_criteria) if evaluation_criteria else pd.DataFrame()
+df_metas = pd.DataFrame(metas_contexto) if metas_contexto else pd.DataFrame()
+
+
+def montar_medias_dimensoes(df_resp, df_criteria, df_metas):
+    medias = {}
+
+    if not df_resp.empty and not df_criteria.empty:
+        criteria_dim = {}
+        for _, row in df_criteria.iterrows():
+            cid = str(row.get('id')).strip()
+            dim = str(row.get('dimension') or '').strip().upper()
+            if cid and dim:
+                criteria_dim[cid] = dim
+
+        df = df_resp.copy()
+        df['criteria_key'] = df['criteria_id'].astype(str).str.strip()
+        df['dimension'] = df['criteria_key'].map(criteria_dim)
+        df['rating_num'] = pd.to_numeric(df['rating'], errors='coerce')
+        df = df[df['dimension'].isin(['INSTITUCIONAL', 'FUNCIONAL', 'INDIVIDUAL'])]
+        df = df.dropna(subset=['rating_num'])
+
+        for evaluation_id, grp in df.groupby('evaluation_id'):
+            item = medias.setdefault(evaluation_id, {})
+            for dim, dim_grp in grp.groupby('dimension'):
+                chave = {
+                    'INSTITUCIONAL': 'institucional_avg',
+                    'FUNCIONAL': 'funcional_avg',
+                    'INDIVIDUAL': 'individual_avg',
+                }.get(dim)
+                if chave:
+                    item[chave] = round(float(dim_grp['rating_num'].mean()), 2)
+
+    if not df_metas.empty:
+        df = df_metas.copy()
+        df['rating_num'] = pd.to_numeric(df['rating'], errors='coerce')
+        df['weight_num'] = pd.to_numeric(df.get('weight', 0), errors='coerce').fillna(0)
+        df = df.dropna(subset=['rating_num'])
+
+        for evaluation_id, grp in df.groupby('evaluation_id'):
+            if grp.empty:
+                continue
+            total_weight = float(grp['weight_num'].sum())
+            if total_weight > 0:
+                metas_avg = float((grp['rating_num'] * grp['weight_num']).sum() / total_weight)
+            else:
+                metas_avg = float(grp['rating_num'].mean())
+            medias.setdefault(evaluation_id, {})['metas_avg'] = round(metas_avg, 2)
+
+    return medias
+
+
+medias_dimensoes_por_avaliacao = montar_medias_dimensoes(df_eval_resp, df_eval_criteria, df_metas)
 
 
 ctx = contexto_url()
@@ -975,6 +1060,10 @@ for email in todos_lideres_emails:
         pot_rating   = ninebox_data.get('potential_rating') or eval_data.get('potential_rating')
         nb_pos       = calcular_ninebox(perf_rating, pot_rating)
         round_aval   = ninebox_data.get('round_code') or eval_data.get('round_code','—')
+        medias_dim = {}
+        evaluation_id_atual = ninebox_data.get('evaluation_id') or eval_data.get('evaluation_id')
+        if evaluation_id_atual in medias_dimensoes_por_avaliacao:
+            medias_dim = medias_dimensoes_por_avaliacao.get(evaluation_id_atual, {})
 
         # Saúde Emocional
         se_por_dim = {d: '—' for d in DIMENSOES_SE}
@@ -1035,10 +1124,10 @@ for email in todos_lideres_emails:
             'Classif.': rating_label(final_rating) if final_rating else '—',
             'Desempenho': fmt(perf_rating, 2) if perf_rating else '—',
             'Potencial': fmt(pot_rating, 2) if pot_rating else '—',
-            'Instit.': fmt(eval_data.get('institucional_avg'), 2) if eval_data.get('institucional_avg') else '—',
-            'Funcional': fmt(eval_data.get('funcional_avg'), 2) if eval_data.get('funcional_avg') else '—',
-            'Individual': fmt(eval_data.get('individual_avg'), 2) if eval_data.get('individual_avg') else '—',
-            'Metas': fmt(eval_data.get('metas_avg'), 2) if eval_data.get('metas_avg') else '—',
+            'Instit.': fmt(eval_data.get('institucional_avg') or medias_dim.get('institucional_avg'), 2) if (eval_data.get('institucional_avg') or medias_dim.get('institucional_avg')) else '—',
+            'Funcional': fmt(eval_data.get('funcional_avg') or medias_dim.get('funcional_avg'), 2) if (eval_data.get('funcional_avg') or medias_dim.get('funcional_avg')) else '—',
+            'Individual': fmt(eval_data.get('individual_avg') or medias_dim.get('individual_avg'), 2) if (eval_data.get('individual_avg') or medias_dim.get('individual_avg')) else '—',
+            'Metas': fmt(eval_data.get('metas_avg') or medias_dim.get('metas_avg'), 2) if (eval_data.get('metas_avg') or medias_dim.get('metas_avg')) else '—',
             'Score 9Box': f"{score_9box}" if score_9box is not None else '—',
             '9Box Pos': int(nb_pos) if nb_pos else '—',
             '9Box Label': NINEBOX_LABELS.get(int(nb_pos),'—') if nb_pos else '—',
