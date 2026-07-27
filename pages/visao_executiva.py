@@ -53,6 +53,10 @@ def contexto_url():
         "filial_nome": str(get_query_param("filial_nome", "") or "").strip(),
         "contexto_nome": str(get_query_param("contexto_nome", "") or "").strip(),
         "contexto_codigo": str(get_query_param("contexto_codigo", "") or "").strip(),
+        "company": str(get_query_param("company", "") or "").strip().lower(),
+        "codrodada": str(get_query_param("codrodada", "") or "").strip().lower(),
+        "emaillider": str(get_query_param("emaillider", "") or "").strip().lower(),
+        "pode_administrar": str(get_query_param("pode_administrar", "") or "").strip().lower(),
         "wp_user_email": str(get_query_param("wp_user_email", "") or "").strip().lower(),
     }
 
@@ -654,6 +658,18 @@ def norm_chave(v):
     return str(v or "").strip().upper()
 
 
+def inferir_holding_por_empresa(empresa):
+    empresa_norm = str(empresa or "").strip().lower()
+    if not empresa_norm:
+        return None
+    if (
+        empresa_norm in ['astro34', 'spectral_v', 'spectral_a', 'spectral_sales', 'fastco', 'futurex']
+        or any(x in empresa_norm for x in ['astro34', 'spectral', 'fastco', 'futurex'])
+    ):
+        return 'PROSPERA'
+    return empresa_norm.upper()
+
+
 def primeiro_valido(*valores):
     for valor in valores:
         if valor is None:
@@ -740,6 +756,7 @@ def info_contexto_leadertrack(item, dados=None):
         auto.get('holding') if isinstance(auto, dict) else None,
         primeiro_membro.get('holding') if isinstance(primeiro_membro, dict) else None,
     )
+    holding = holding or inferir_holding_por_empresa(empresa)
     filial = primeiro_valido(
         item.get('branch_name'),
         auto.get('branch_name') if isinstance(auto, dict) else None,
@@ -755,28 +772,33 @@ def info_contexto_leadertrack(item, dados=None):
 
 
 def item_respeita_contexto(info, ctx):
+    return valores_respeitam_contexto(
+        info.get('empresa'),
+        info.get('holding'),
+        info.get('filial'),
+        ctx,
+    )
+
+
+def valores_respeitam_contexto(empresa, holding, filial, ctx):
     nivel = norm_chave(ctx.get("nivel_contexto"))
     if not nivel:
         return True
 
-    empresa_info = norm_chave(info.get('empresa'))
-    holding_info = norm_chave(info.get('holding'))
-    filial_info = norm_chave(info.get('filial'))
+    empresa_info = norm_chave(empresa)
+    holding_info = norm_chave(holding) or norm_chave(inferir_holding_por_empresa(empresa))
+    filial_info = norm_chave(filial)
 
     contexto_nome = norm_chave(ctx.get("contexto_nome") or ctx.get("contexto_codigo"))
-    empresa_ctx = norm_chave(ctx.get("empresa_nome") or ctx.get("empresa_id") or contexto_nome)
-    holding_ctx = norm_chave(ctx.get("holding_nome") or ctx.get("holding_id") or contexto_nome)
-    filial_ctx = norm_chave(ctx.get("filial_nome") or ctx.get("filial_id") or contexto_nome)
+    empresa_ctx = norm_chave(ctx.get("empresa_nome") or ctx.get("company") or contexto_nome)
+    holding_ctx = norm_chave(ctx.get("holding_nome") or contexto_nome)
+    filial_ctx = norm_chave(ctx.get("filial_nome") or contexto_nome)
 
     if nivel == "EMPRESA":
         return bool(empresa_ctx and empresa_info and empresa_info == empresa_ctx)
 
     if nivel == "HOLDING":
-        if holding_ctx and holding_info:
-            return holding_info == holding_ctx
-        # Alguns consolidados antigos nao gravam holding. Nesses casos,
-        # usamos empresa como trava conservadora para nao vazar outro contexto.
-        return bool(holding_ctx and empresa_info and empresa_info == holding_ctx)
+        return bool(holding_ctx and holding_info and holding_info == holding_ctx)
 
     if nivel == "FILIAL":
         empresa_ok = True
@@ -1151,7 +1173,12 @@ holdings += sorted([
     if norm_chave(info.get('holding'))
 ])
 holdings = ["Todas"] + sorted(set(holdings) - {"Todas"})
-holding_sel = st.sidebar.selectbox("🏢 Holding", holdings)
+holding_default_index = 0
+if norm_chave(ctx.get("nivel_contexto")) == "HOLDING":
+    holding_ctx_menu = norm_chave(ctx.get("holding_nome") or ctx.get("contexto_nome") or ctx.get("contexto_codigo"))
+    if holding_ctx_menu in holdings:
+        holding_default_index = holdings.index(holding_ctx_menu)
+holding_sel = st.sidebar.selectbox("🏢 Holding", holdings, index=holding_default_index)
 
 # ====================
 # FILTRO EMPRESA
@@ -1188,7 +1215,13 @@ empresas_list += sorted([
 ])
 empresas_list = list(dict.fromkeys(empresas_list))
 
-empresa_sel = st.sidebar.selectbox("🏭 Empresa", empresas_list)
+empresa_default_index = 0
+if nivel_ctx_empresa != "HOLDING":
+    empresa_ctx_menu = norm_chave(ctx.get("empresa_nome") or ctx.get("company") or ctx.get("contexto_nome") or ctx.get("contexto_codigo"))
+    if empresa_ctx_menu in [norm_chave(e) for e in empresas_list]:
+        empresa_default_index = [norm_chave(e) for e in empresas_list].index(empresa_ctx_menu)
+
+empresa_sel = st.sidebar.selectbox("🏭 Empresa", empresas_list, index=empresa_default_index)
 rodadas_lt = sorted(set(v['codrodada'] for v in {**dados_arq, **dados_micro}.values()))
 rodada_lt_sel = st.sidebar.selectbox("📅 Rodada LeaderTrack", ["Todas"] + rodadas_lt)
 
@@ -1439,6 +1472,19 @@ for email in todos_lideres_emails:
 
 df = pd.DataFrame(linhas)
 
+if ctx.get("nivel_contexto") and not df.empty:
+    df = df[
+        df.apply(
+            lambda row: valores_respeitam_contexto(
+                row.get('Empresa'),
+                row.get('Holding'),
+                row.get('Filial'),
+                ctx,
+            ),
+            axis=1,
+        )
+    ]
+
 if df.empty:
     st.warning("⚠️ Nenhum dado encontrado com os filtros aplicados.")
     st.stop()
@@ -1495,52 +1541,17 @@ df_show = df[cols_exibir].copy()
 # a tabela final respeita o contexto recebido pela URL.
 
 if ctx.get("nivel_contexto"):
-    nivel_ctx_final = norm_txt(ctx.get("nivel_contexto"))
-
-    if nivel_ctx_final == "EMPRESA":
-        empresa_ctx_final = (
-            ctx.get("empresa_nome")
-            or ctx.get("contexto_nome")
-            or ctx.get("contexto_codigo")
-            or ""
+    df_show = df_show[
+        df_show.apply(
+            lambda row: valores_respeitam_contexto(
+                row.get('Empresa'),
+                row.get('Holding'),
+                row.get('Filial'),
+                ctx,
+            ),
+            axis=1,
         )
-
-        if empresa_ctx_final and "Empresa" in df_show.columns:
-            df_show = df_show[
-                df_show["Empresa"].astype(str).str.upper().str.strip() == norm_txt(empresa_ctx_final)
-            ]
-
-    elif nivel_ctx_final == "HOLDING":
-        holding_ctx_final = (
-            ctx.get("holding_nome")
-            or ctx.get("contexto_nome")
-            or ctx.get("contexto_codigo")
-            or ""
-        )
-
-        if holding_ctx_final and "Holding" in df_show.columns:
-            df_show = df_show[
-                df_show["Holding"].astype(str).str.upper().str.strip() == norm_txt(holding_ctx_final)
-            ]
-
-    elif nivel_ctx_final == "FILIAL":
-        empresa_ctx_final = ctx.get("empresa_nome") or ""
-        filial_ctx_final = (
-            ctx.get("filial_nome")
-            or ctx.get("contexto_nome")
-            or ctx.get("contexto_codigo")
-            or ""
-        )
-
-        if empresa_ctx_final and "Empresa" in df_show.columns:
-            df_show = df_show[
-                df_show["Empresa"].astype(str).str.upper().str.strip() == norm_txt(empresa_ctx_final)
-            ]
-
-        if filial_ctx_final and "Filial" in df_show.columns:
-            df_show = df_show[
-                df_show["Filial"].astype(str).str.upper().str.strip() == norm_txt(filial_ctx_final)
-            ]
+    ]
 
 tabela_html = gerar_tabela_html(df_show)
 components.html(tabela_html, height=560, scrolling=True)
