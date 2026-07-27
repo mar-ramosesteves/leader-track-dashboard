@@ -650,6 +650,10 @@ def norm_nome(v):
     return " ".join(str(v or "").upper().strip().split())
 
 
+def norm_chave(v):
+    return str(v or "").strip().upper()
+
+
 def primeiro_valido(*valores):
     for valor in valores:
         if valor is None:
@@ -713,6 +717,77 @@ def buscar_registro_avaliacao(df, emp_id=None, nome_lider=None, round_eval_sel="
     return candidatos.iloc[0].to_dict()
 
 
+def info_contexto_leadertrack(item, dados=None):
+    dados = dados or item.get('dados_json') or {}
+    auto = dados.get('autoavaliacao', {}) if isinstance(dados, dict) else {}
+    equipe = dados.get('avaliacoesEquipe', []) if isinstance(dados, dict) else []
+    primeiro_membro = equipe[0] if equipe else {}
+
+    nome_lider = primeiro_valido(
+        auto.get('nomeLider') if isinstance(auto, dict) else None,
+        primeiro_membro.get('nomeLider') if isinstance(primeiro_membro, dict) else None,
+    )
+    empresa = primeiro_valido(
+        item.get('empresa'),
+        auto.get('empresa') if isinstance(auto, dict) else None,
+        primeiro_membro.get('empresa') if isinstance(primeiro_membro, dict) else None,
+        item.get('company_name'),
+        auto.get('company_name') if isinstance(auto, dict) else None,
+        primeiro_membro.get('company_name') if isinstance(primeiro_membro, dict) else None,
+    )
+    holding = primeiro_valido(
+        item.get('holding'),
+        auto.get('holding') if isinstance(auto, dict) else None,
+        primeiro_membro.get('holding') if isinstance(primeiro_membro, dict) else None,
+    )
+    filial = primeiro_valido(
+        item.get('branch_name'),
+        auto.get('branch_name') if isinstance(auto, dict) else None,
+        primeiro_membro.get('branch_name') if isinstance(primeiro_membro, dict) else None,
+    )
+
+    return {
+        'nome_lider': nome_lider,
+        'empresa': empresa,
+        'holding': holding,
+        'filial': filial,
+    }
+
+
+def item_respeita_contexto(info, ctx):
+    nivel = norm_chave(ctx.get("nivel_contexto"))
+    if not nivel:
+        return True
+
+    empresa_info = norm_chave(info.get('empresa'))
+    holding_info = norm_chave(info.get('holding'))
+    filial_info = norm_chave(info.get('filial'))
+
+    contexto_nome = norm_chave(ctx.get("contexto_nome") or ctx.get("contexto_codigo"))
+    empresa_ctx = norm_chave(ctx.get("empresa_nome") or ctx.get("empresa_id") or contexto_nome)
+    holding_ctx = norm_chave(ctx.get("holding_nome") or ctx.get("holding_id") or contexto_nome)
+    filial_ctx = norm_chave(ctx.get("filial_nome") or ctx.get("filial_id") or contexto_nome)
+
+    if nivel == "EMPRESA":
+        return bool(empresa_ctx and empresa_info and empresa_info == empresa_ctx)
+
+    if nivel == "HOLDING":
+        if holding_ctx and holding_info:
+            return holding_info == holding_ctx
+        # Alguns consolidados antigos nao gravam holding. Nesses casos,
+        # usamos empresa como trava conservadora para nao vazar outro contexto.
+        return bool(holding_ctx and empresa_info and empresa_info == holding_ctx)
+
+    if nivel == "FILIAL":
+        empresa_ok = True
+        if empresa_ctx and empresa_info:
+            empresa_ok = empresa_info == empresa_ctx
+        filial_ok = bool(filial_ctx and filial_info and filial_info == filial_ctx)
+        return empresa_ok and filial_ok
+
+    return True
+
+
 # ==================== CÁLCULOS ARQUETIPOS ====================
 
 def calcular_arquetipos_lider(consolidado_arq, matriz):
@@ -723,14 +798,9 @@ def calcular_arquetipos_lider(consolidado_arq, matriz):
         dados = item['dados_json']
         email_lider = item.get('emaillider','').lower().strip()
         codrodada   = item.get('codrodada','')
-        auto = dados.get('autoavaliacao', {}) if isinstance(dados, dict) else {}
+        info_lt = info_contexto_leadertrack(item, dados)
         equipe = dados.get('avaliacoesEquipe', [])
         if not equipe: continue
-        primeiro_membro = equipe[0] if equipe else {}
-        nome_lider = primeiro_valido(
-            auto.get('nomeLider') if isinstance(auto, dict) else None,
-            primeiro_membro.get('nomeLider') if isinstance(primeiro_membro, dict) else None,
-        )
         soma   = {a: 0 for a in arquetipos_lista}
         maximo = {a: 0 for a in arquetipos_lista}
         for membro in equipe:
@@ -750,7 +820,10 @@ def calcular_arquetipos_lider(consolidado_arq, matriz):
         if key not in resultados:
             resultados[key] = {
                 'emaillider': email_lider, 'codrodada': codrodada,
-                'nome_lider': nome_lider,
+                'nome_lider': info_lt.get('nome_lider'),
+                'empresa': info_lt.get('empresa'),
+                'holding': info_lt.get('holding'),
+                'filial': info_lt.get('filial'),
                 'percentuais': percentuais,
                 'dominantes': [a for a,p in percentuais.items() if p >= 60],
                 'suporte':    [a for a,p in percentuais.items() if 50 <= p < 60],
@@ -779,14 +852,9 @@ def calcular_gaps_microambiente(consolidado_micro, matriz_micro):
         dados = item['dados_json']
         email_lider = item.get('emaillider','').lower().strip()
         codrodada   = item.get('codrodada','')
-        auto = dados.get('autoavaliacao', {}) if isinstance(dados, dict) else {}
+        info_lt = info_contexto_leadertrack(item, dados)
         equipe = dados.get('avaliacoesEquipe', [])
         if not equipe: continue
-        primeiro_membro = equipe[0] if equipe else {}
-        nome_lider = primeiro_valido(
-            auto.get('nomeLider') if isinstance(auto, dict) else None,
-            primeiro_membro.get('nomeLider') if isinstance(primeiro_membro, dict) else None,
-        )
         gaps_por_questao = {}
         for q_can in matriz_micro['COD'].unique():
             q_form = REVERSO.get(q_can, q_can)
@@ -826,7 +894,10 @@ def calcular_gaps_microambiente(consolidado_micro, matriz_micro):
         if key not in resultados:
             resultados[key] = {
                 'emaillider': email_lider, 'codrodada': codrodada,
-                'nome_lider': nome_lider,
+                'nome_lider': info_lt.get('nome_lider'),
+                'empresa': info_lt.get('empresa'),
+                'holding': info_lt.get('holding'),
+                'filial': info_lt.get('filial'),
                 'gap_geral': round(np.mean([d['gap'] for d in gaps_por_questao.values()]),1),
                 'qtd_gaps_criticos': len(afirmacoes_gap_critico),
                 'gap_por_dimensao':   {d: round(np.mean(v),1) for d,v in gaps_dim.items()},
@@ -1006,6 +1077,17 @@ if ctx.get("nivel_contexto") and emails_permitidos_contexto:
         if str(v.get('emaillider', '')).strip().lower() in emails_permitidos_contexto
     }
 
+if ctx.get("nivel_contexto"):
+    dados_arq = {
+        k: v for k, v in dados_arq.items()
+        if item_respeita_contexto(v, ctx)
+    }
+
+    dados_micro = {
+        k: v for k, v in dados_micro.items()
+        if item_respeita_contexto(v, ctx)
+    }
+
 lideres_lt = set(
     str(v.get('emaillider', '')).strip().lower()
     for v in {**dados_arq, **dados_micro}.values()
@@ -1035,8 +1117,20 @@ for item in {**dados_arq, **dados_micro}.values():
     if not email_lider:
         continue
     info = lider_info_por_email.setdefault(email_lider, {})
-    if item.get('nome_lider') and not info.get('nome_lider'):
-        info['nome_lider'] = item.get('nome_lider')
+    for campo in ['nome_lider', 'empresa', 'holding', 'filial']:
+        if item.get(campo) and not info.get(campo):
+            info[campo] = item.get(campo)
+
+if not df_ninebox.empty and 'employee_name' in df_ninebox.columns:
+    for _, row in df_ninebox.iterrows():
+        nome_key = norm_nome(row.get('employee_name'))
+        if not nome_key:
+            continue
+        for info in lider_info_por_email.values():
+            if norm_nome(info.get('nome_lider')) == nome_key:
+                if row.get('empresa') and not info.get('empresa'):
+                    info['empresa'] = row.get('empresa')
+                break
 
 
 # ==================== SIDEBAR ====================
@@ -1051,6 +1145,12 @@ status_sel = st.sidebar.selectbox("👔 Status", status_opcoes,
 holdings = ["Todas"]
 if not df_emp.empty and 'holding' in df_emp.columns:
     holdings += sorted([str(h).upper() for h in df_emp['holding'].dropna().unique() if h])
+holdings += sorted([
+    norm_chave(info.get('holding'))
+    for info in lider_info_por_email.values()
+    if norm_chave(info.get('holding'))
+])
+holdings = ["Todas"] + sorted(set(holdings) - {"Todas"})
 holding_sel = st.sidebar.selectbox("🏢 Holding", holdings)
 
 # ====================
@@ -1080,6 +1180,13 @@ elif not df_emp.empty and 'empresa' in df_emp.columns:
         for e in df_emp['empresa'].dropna().unique()
         if e
     ])
+
+empresas_list += sorted([
+    norm_chave(info.get('empresa'))
+    for info in lider_info_por_email.values()
+    if norm_chave(info.get('empresa'))
+])
+empresas_list = list(dict.fromkeys(empresas_list))
 
 empresa_sel = st.sidebar.selectbox("🏭 Empresa", empresas_list)
 rodadas_lt = sorted(set(v['codrodada'] for v in {**dados_arq, **dados_micro}.values()))
@@ -1170,13 +1277,27 @@ for email in todos_lideres_emails:
         lider_info.get('nome_lider'),
     )
 
+    empresa_lookup = primeiro_valido(
+        emp.get('empresa') if emp else None,
+        emp.get('company_name') if emp else None,
+        lider_info.get('empresa'),
+    )
+    holding_lookup = primeiro_valido(
+        emp.get('holding') if emp else None,
+        lider_info.get('holding'),
+    )
+    filial_lookup = primeiro_valido(
+        emp.get('branch_name') if emp else None,
+        lider_info.get('filial'),
+    )
+
     emp_status  = str(emp.get('employment_status','')).strip().upper() if emp else ''
-    emp_holding = str(emp.get('holding','')).upper().strip() if emp else ''
-    emp_empresa = str(emp.get('empresa','')).lower().strip() if emp else ''
+    emp_holding = norm_chave(holding_lookup)
+    emp_empresa = norm_chave(empresa_lookup)
 
     if status_sel  != "Todos"  and emp_status  != status_sel:          continue
-    if holding_sel != "Todas"  and emp_holding != holding_sel.upper():  continue
-    if empresa_sel != "Todas"  and emp_empresa != empresa_sel.lower():  continue
+    if holding_sel != "Todas"  and emp_holding != norm_chave(holding_sel):  continue
+    if empresa_sel != "Todas"  and emp_empresa != norm_chave(empresa_sel):  continue
 
     keys_lider = [k for k in {**dados_arq, **dados_micro}.keys() if k.startswith(f"{email}|")]
     if rodada_lt_sel != "Todas":
@@ -1262,8 +1383,9 @@ for email in todos_lideres_emails:
             'Nome': nome_lider_lookup or email,
             'Email': email,
             'Cargo': emp.get('cargo','—') if emp else '—',
-            'Empresa': emp.get('empresa','—') if emp else '—',
-            'Holding': emp.get('holding','—') if emp else '—',
+            'Empresa': empresa_lookup or '—',
+            'Holding': holding_lookup or '—',
+            'Filial': filial_lookup or '—',
             'Dept': emp.get('department_name','—') if emp else '—',
             'Status': emp_status or '—',
             'Rodada LT': rodada,
