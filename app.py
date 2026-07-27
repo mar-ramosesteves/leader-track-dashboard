@@ -930,6 +930,8 @@ if matriz_arq is not None and matriz_micro is not None:
         ctx = contexto_url()
 
         if ctx.get("nivel_contexto"):
+            st.session_state["hrkey_contexto"] = ctx
+
             df_arquetipos = filtrar_leadertrack_por_contexto(df_arquetipos, ctx)
             df_microambiente = filtrar_leadertrack_por_contexto(df_microambiente, ctx)
 
