@@ -43,7 +43,7 @@ def get_query_param(nome, default=None):
 
 
 def contexto_url():
-    return {
+    ctx = {
         "nivel_contexto": str(get_query_param("nivel_contexto", "") or "").strip().lower(),
         "holding_id": str(get_query_param("holding_id", "") or "").strip(),
         "holding_nome": str(get_query_param("holding_nome", "") or "").strip(),
@@ -59,6 +59,15 @@ def contexto_url():
         "pode_administrar": str(get_query_param("pode_administrar", "") or "").strip().lower(),
         "wp_user_email": str(get_query_param("wp_user_email", "") or "").strip().lower(),
     }
+    if ctx.get("nivel_contexto"):
+        st.session_state["hrkey_contexto"] = ctx
+        return ctx
+
+    ctx_salvo = st.session_state.get("hrkey_contexto")
+    if isinstance(ctx_salvo, dict) and ctx_salvo.get("nivel_contexto"):
+        return ctx_salvo
+
+    return ctx
 
 
 def norm_txt(v):
@@ -810,6 +819,18 @@ def valores_respeitam_contexto(empresa, holding, filial, ctx):
     return True
 
 
+def contexto_label(ctx):
+    return (
+        ctx.get("contexto_nome")
+        or ctx.get("filial_nome")
+        or ctx.get("empresa_nome")
+        or ctx.get("holding_nome")
+        or ctx.get("company")
+        or ctx.get("contexto_codigo")
+        or "—"
+    )
+
+
 # ==================== CÁLCULOS ARQUETIPOS ====================
 
 def calcular_arquetipos_lider(consolidado_arq, matriz):
@@ -1063,10 +1084,15 @@ df_emp_original = df_emp.copy()
 if ctx.get("nivel_contexto"):
     df_emp = filtrar_employees_por_contexto(df_emp, ctx)
 
-    contexto_label = ctx.get("contexto_nome") or ctx.get("empresa_nome") or ctx.get("filial_nome") or ctx.get("holding_nome")
-    st.info(
-        f"Contexto aplicado: {str(ctx.get('nivel_contexto')).upper()} · {contexto_label or '—'}"
+    st.success(
+        f"Contexto ativo: {str(ctx.get('nivel_contexto')).upper()} · {contexto_label(ctx)}"
     )
+else:
+    st.error(
+        "Sem contexto recebido. Esta página está mostrando a visão geral porque a URL não trouxe "
+        "nivel_contexto/holding/empresa. Abra pelo portal The HR Key com o contexto selecionado."
+    )
+    st.stop()
 
 
 
@@ -1176,8 +1202,9 @@ holdings = ["Todas"] + sorted(set(holdings) - {"Todas"})
 holding_default_index = 0
 if norm_chave(ctx.get("nivel_contexto")) == "HOLDING":
     holding_ctx_menu = norm_chave(ctx.get("holding_nome") or ctx.get("contexto_nome") or ctx.get("contexto_codigo"))
-    if holding_ctx_menu in holdings:
-        holding_default_index = holdings.index(holding_ctx_menu)
+    if holding_ctx_menu:
+        holdings = [holding_ctx_menu]
+        holding_default_index = 0
 holding_sel = st.sidebar.selectbox("🏢 Holding", holdings, index=holding_default_index)
 
 # ====================
@@ -1193,6 +1220,7 @@ nivel_ctx_empresa = norm_txt(ctx.get("nivel_contexto"))
 if nivel_ctx_empresa == "EMPRESA":
     empresa_ctx_menu = (
         ctx.get("empresa_nome")
+        or ctx.get("company")
         or ctx.get("contexto_nome")
         or ctx.get("contexto_codigo")
         or ""
@@ -1218,7 +1246,10 @@ empresas_list = list(dict.fromkeys(empresas_list))
 empresa_default_index = 0
 if nivel_ctx_empresa != "HOLDING":
     empresa_ctx_menu = norm_chave(ctx.get("empresa_nome") or ctx.get("company") or ctx.get("contexto_nome") or ctx.get("contexto_codigo"))
-    if empresa_ctx_menu in [norm_chave(e) for e in empresas_list]:
+    if nivel_ctx_empresa == "EMPRESA" and empresa_ctx_menu:
+        empresas_list = [empresa_ctx_menu]
+        empresa_default_index = 0
+    elif empresa_ctx_menu in [norm_chave(e) for e in empresas_list]:
         empresa_default_index = [norm_chave(e) for e in empresas_list].index(empresa_ctx_menu)
 
 empresa_sel = st.sidebar.selectbox("🏭 Empresa", empresas_list, index=empresa_default_index)
@@ -1515,7 +1546,11 @@ with c8:
 st.markdown("---")
 
 # ==================== TABELA ====================
-st.subheader("📋 Liderança PROSPERA — Índice Geral de Liderança")
+st.subheader("📋 Índice Geral de Liderança")
+if ctx.get("nivel_contexto"):
+    st.caption(f"Visão filtrada por contexto: {str(ctx.get('nivel_contexto')).upper()} · {contexto_label(ctx)}")
+else:
+    st.caption("Visão geral sem contexto aplicado")
 
 with st.expander("ℹ️ Pesos do IGL atualmente configurados"):
     col1, col2 = st.columns(2)
