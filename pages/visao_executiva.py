@@ -646,6 +646,73 @@ def fmt(val, decimais=1):
     except: return "—"
 
 
+def norm_nome(v):
+    return " ".join(str(v or "").upper().strip().split())
+
+
+def primeiro_valido(*valores):
+    for valor in valores:
+        if valor is None:
+            continue
+        texto = str(valor).strip()
+        if texto and texto.lower() not in {"nan", "none", "—"}:
+            return valor
+    return None
+
+
+def ordenar_avaliacoes(df):
+    if df is None or df.empty:
+        return df
+    ordenado = df.copy()
+    sort_cols = []
+    ascending = []
+    if "evaluation_year" in ordenado.columns:
+        ordenado["_sort_year"] = pd.to_numeric(ordenado["evaluation_year"], errors="coerce")
+        sort_cols.append("_sort_year")
+        ascending.append(False)
+    if "evaluation_date" in ordenado.columns:
+        ordenado["_sort_date"] = pd.to_datetime(ordenado["evaluation_date"], errors="coerce")
+        sort_cols.append("_sort_date")
+        ascending.append(False)
+    if "created_at" in ordenado.columns:
+        ordenado["_sort_created"] = pd.to_datetime(ordenado["created_at"], errors="coerce")
+        sort_cols.append("_sort_created")
+        ascending.append(False)
+    if sort_cols:
+        ordenado = ordenado.sort_values(sort_cols, ascending=ascending, na_position="last")
+    return ordenado.drop(columns=[c for c in ["_sort_year", "_sort_date", "_sort_created"] if c in ordenado.columns])
+
+
+def filtrar_round_avaliacao(df, round_eval_sel):
+    if df is None or df.empty:
+        return df
+    if round_eval_sel != "Todos" and "round_code" in df.columns:
+        return df[df["round_code"].astype(str).str.strip() == str(round_eval_sel).strip()]
+    return df
+
+
+def buscar_registro_avaliacao(df, emp_id=None, nome_lider=None, round_eval_sel="Todos"):
+    if df is None or df.empty:
+        return {}
+
+    candidatos = pd.DataFrame()
+
+    if emp_id and "employee_id" in df.columns:
+        emp_id_norm = str(emp_id).strip()
+        candidatos = df[df["employee_id"].astype(str).str.strip() == emp_id_norm]
+
+    if candidatos.empty and nome_lider and "employee_name" in df.columns:
+        nome_norm = norm_nome(nome_lider)
+        candidatos = df[df["employee_name"].apply(norm_nome) == nome_norm]
+
+    candidatos = filtrar_round_avaliacao(candidatos, round_eval_sel)
+    candidatos = ordenar_avaliacoes(candidatos)
+
+    if candidatos is None or candidatos.empty:
+        return {}
+    return candidatos.iloc[0].to_dict()
+
+
 # ==================== CÁLCULOS ARQUETIPOS ====================
 
 def calcular_arquetipos_lider(consolidado_arq, matriz):
@@ -656,8 +723,14 @@ def calcular_arquetipos_lider(consolidado_arq, matriz):
         dados = item['dados_json']
         email_lider = item.get('emaillider','').lower().strip()
         codrodada   = item.get('codrodada','')
+        auto = dados.get('autoavaliacao', {}) if isinstance(dados, dict) else {}
         equipe = dados.get('avaliacoesEquipe', [])
         if not equipe: continue
+        primeiro_membro = equipe[0] if equipe else {}
+        nome_lider = primeiro_valido(
+            auto.get('nomeLider') if isinstance(auto, dict) else None,
+            primeiro_membro.get('nomeLider') if isinstance(primeiro_membro, dict) else None,
+        )
         soma   = {a: 0 for a in arquetipos_lista}
         maximo = {a: 0 for a in arquetipos_lista}
         for membro in equipe:
@@ -677,6 +750,7 @@ def calcular_arquetipos_lider(consolidado_arq, matriz):
         if key not in resultados:
             resultados[key] = {
                 'emaillider': email_lider, 'codrodada': codrodada,
+                'nome_lider': nome_lider,
                 'percentuais': percentuais,
                 'dominantes': [a for a,p in percentuais.items() if p >= 60],
                 'suporte':    [a for a,p in percentuais.items() if 50 <= p < 60],
@@ -705,8 +779,14 @@ def calcular_gaps_microambiente(consolidado_micro, matriz_micro):
         dados = item['dados_json']
         email_lider = item.get('emaillider','').lower().strip()
         codrodada   = item.get('codrodada','')
+        auto = dados.get('autoavaliacao', {}) if isinstance(dados, dict) else {}
         equipe = dados.get('avaliacoesEquipe', [])
         if not equipe: continue
+        primeiro_membro = equipe[0] if equipe else {}
+        nome_lider = primeiro_valido(
+            auto.get('nomeLider') if isinstance(auto, dict) else None,
+            primeiro_membro.get('nomeLider') if isinstance(primeiro_membro, dict) else None,
+        )
         gaps_por_questao = {}
         for q_can in matriz_micro['COD'].unique():
             q_form = REVERSO.get(q_can, q_can)
@@ -746,6 +826,7 @@ def calcular_gaps_microambiente(consolidado_micro, matriz_micro):
         if key not in resultados:
             resultados[key] = {
                 'emaillider': email_lider, 'codrodada': codrodada,
+                'nome_lider': nome_lider,
                 'gap_geral': round(np.mean([d['gap'] for d in gaps_por_questao.values()]),1),
                 'qtd_gaps_criticos': len(afirmacoes_gap_critico),
                 'gap_por_dimensao':   {d: round(np.mean(v),1) for d,v in gaps_dim.items()},
@@ -948,6 +1029,16 @@ if not df_emp.empty and 'manager_name' in df_emp.columns:
 todos_lideres_emails = lideres_lt.union(lideres_manager)
 
 
+lider_info_por_email = {}
+for item in {**dados_arq, **dados_micro}.values():
+    email_lider = str(item.get('emaillider', '')).strip().lower()
+    if not email_lider:
+        continue
+    info = lider_info_por_email.setdefault(email_lider, {})
+    if item.get('nome_lider') and not info.get('nome_lider'):
+        info['nome_lider'] = item.get('nome_lider')
+
+
 # ==================== SIDEBAR ====================
 st.sidebar.header("🎛️ Filtros")
 
@@ -1073,6 +1164,11 @@ for email in todos_lideres_emails:
         emp_rows = df_emp[df_emp['email'].str.lower().str.strip() == email]
         if not emp_rows.empty:
             emp = emp_rows.iloc[0].to_dict()
+    lider_info = lider_info_por_email.get(email, {})
+    nome_lider_lookup = primeiro_valido(
+        emp.get('nome') if emp else None,
+        lider_info.get('nome_lider'),
+    )
 
     emp_status  = str(emp.get('employment_status','')).strip().upper() if emp else ''
     emp_holding = str(emp.get('holding','')).upper().strip() if emp else ''
@@ -1104,21 +1200,18 @@ for email in todos_lideres_emails:
         termo_label, termo_emoji = classificar_termometro(qtd_gaps)
 
         emp_id = emp.get('id') if emp else None
-        eval_data, ninebox_data = {}, {}
-        if emp_id:
-            emp_id_norm = str(emp_id).strip()
-            if not df_eval.empty and 'employee_id' in df_eval.columns:
-                evals = df_eval[df_eval['employee_id'].astype(str).str.strip() == emp_id_norm]
-                if round_eval_sel != "Todos" and 'round_code' in evals.columns:
-                    evals = evals[evals['round_code'].astype(str).str.strip() == str(round_eval_sel).strip()]
-                if not evals.empty:
-                    eval_data = evals.sort_values('evaluation_year', ascending=False).iloc[0].to_dict()
-            if not df_ninebox.empty and 'employee_id' in df_ninebox.columns:
-                nb = df_ninebox[df_ninebox['employee_id'].astype(str).str.strip() == emp_id_norm]
-                if round_eval_sel != "Todos" and 'round_code' in nb.columns:
-                    nb = nb[nb['round_code'].astype(str).str.strip() == str(round_eval_sel).strip()]
-                if not nb.empty:
-                    ninebox_data = nb.iloc[0].to_dict()
+        eval_data = buscar_registro_avaliacao(
+            df_eval,
+            emp_id=emp_id,
+            nome_lider=nome_lider_lookup,
+            round_eval_sel=round_eval_sel,
+        )
+        ninebox_data = buscar_registro_avaliacao(
+            df_ninebox,
+            emp_id=emp_id,
+            nome_lider=nome_lider_lookup,
+            round_eval_sel=round_eval_sel,
+        )
 
         final_rating = ninebox_data.get('final_rating') or eval_data.get('final_rating')
         perf_rating  = ninebox_data.get('performance_rating') or eval_data.get('performance_rating')
@@ -1166,7 +1259,7 @@ for email in todos_lideres_emails:
             'IGL': f"{igl_value}" if igl_value else '—',
             'IGL Class.': f"{igl_emoji} {igl_class}" if igl_value else '—',
             'Dims': f"{n_dims}/5" if n_dims > 0 else '—',
-            'Nome': emp.get('nome','—') if emp else email,
+            'Nome': nome_lider_lookup or email,
             'Email': email,
             'Cargo': emp.get('cargo','—') if emp else '—',
             'Empresa': emp.get('empresa','—') if emp else '—',
