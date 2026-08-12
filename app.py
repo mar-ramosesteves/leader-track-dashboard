@@ -217,6 +217,16 @@ def norm_txt(v):
     return str(v or "").strip().upper()
 
 
+def primeiro_valido(*valores):
+    for valor in valores:
+        if valor is None:
+            continue
+        texto = str(valor).strip()
+        if texto and texto.upper() not in {"N/A", "NONE", "NAN", "NULL"}:
+            return valor
+    return None
+
+
 def filtrar_leadertrack_por_contexto(df, ctx):
     if df is None or df.empty:
         return df
@@ -229,39 +239,76 @@ def filtrar_leadertrack_por_contexto(df, ctx):
     df_filtrado = df.copy()
 
     if nivel == "HOLDING":
+        holding_id = ctx.get("holding_id")
         holding_nome = ctx.get("holding_nome") or ctx.get("contexto_nome") or ctx.get("contexto_codigo")
 
-        if holding_nome and "holding" in df_filtrado.columns:
-            return df_filtrado[
-                df_filtrado["holding"].astype(str).str.upper().str.strip() == norm_txt(holding_nome)
-            ]
+        mask = pd.Series(False, index=df_filtrado.index)
 
-        return df_filtrado
+        if holding_id and "holding_id" in df_filtrado.columns:
+            mask = mask | (df_filtrado["holding_id"].astype(str).str.strip() == str(holding_id).strip())
+
+        if holding_nome and "holding" in df_filtrado.columns:
+            mask = mask | (
+                df_filtrado["holding"].astype(str).str.upper().str.strip() == norm_txt(holding_nome)
+            )
+
+        if mask.any():
+            return df_filtrado[mask]
+
+        return df_filtrado.iloc[0:0]
 
     if nivel == "EMPRESA":
+        empresa_id = ctx.get("empresa_id")
         empresa_nome = ctx.get("empresa_nome") or ctx.get("contexto_nome") or ctx.get("contexto_codigo")
 
-        if empresa_nome and "empresa" in df_filtrado.columns:
-            return df_filtrado[
-                df_filtrado["empresa"].astype(str).str.upper().str.strip() == norm_txt(empresa_nome)
-            ]
+        mask = pd.Series(False, index=df_filtrado.index)
 
-        return df_filtrado
+        if empresa_id and "empresa_id" in df_filtrado.columns:
+            mask = mask | (df_filtrado["empresa_id"].astype(str).str.strip() == str(empresa_id).strip())
+
+        if empresa_nome and "empresa" in df_filtrado.columns:
+            mask = mask | (
+                df_filtrado["empresa"].astype(str).str.upper().str.strip() == norm_txt(empresa_nome)
+            )
+
+        if empresa_nome and "company_name" in df_filtrado.columns:
+            mask = mask | (
+                df_filtrado["company_name"].astype(str).str.upper().str.strip() == norm_txt(empresa_nome)
+            )
+
+        if mask.any():
+            return df_filtrado[mask]
+
+        return df_filtrado.iloc[0:0]
 
     if nivel == "FILIAL":
+        empresa_id = ctx.get("empresa_id")
+        filial_id = ctx.get("filial_id")
         empresa_nome = ctx.get("empresa_nome")
         filial_nome = ctx.get("filial_nome") or ctx.get("contexto_nome") or ctx.get("contexto_codigo")
 
         mask = pd.Series(True, index=df_filtrado.index)
 
-        if empresa_nome and "empresa" in df_filtrado.columns:
-            mask = mask & (
-                df_filtrado["empresa"].astype(str).str.upper().str.strip() == norm_txt(empresa_nome)
-            )
+        if empresa_id and "empresa_id" in df_filtrado.columns:
+            mask = mask & (df_filtrado["empresa_id"].astype(str).str.strip() == str(empresa_id).strip())
+        elif empresa_nome:
+            mask_empresa = pd.Series(False, index=df_filtrado.index)
+            if "empresa" in df_filtrado.columns:
+                mask_empresa = mask_empresa | (
+                    df_filtrado["empresa"].astype(str).str.upper().str.strip() == norm_txt(empresa_nome)
+                )
+            if "company_name" in df_filtrado.columns:
+                mask_empresa = mask_empresa | (
+                    df_filtrado["company_name"].astype(str).str.upper().str.strip() == norm_txt(empresa_nome)
+                )
+            mask = mask & mask_empresa
 
         # Neste app.py, os consolidados geralmente não têm filial_id.
         # Então tentamos filtrar por campos textuais, se existirem.
-        mask_filial = pd.Series(True, index=df_filtrado.index)
+        mask_filial = pd.Series(False, index=df_filtrado.index)
+
+        if filial_id and "filial_id" in df_filtrado.columns:
+            mask_filial = mask_filial | (df_filtrado["filial_id"].astype(str).str.strip() == str(filial_id).strip())
 
         campos_filial = ["filial", "branch_name", "filial_nome", "cidade", "estado"]
 
@@ -275,7 +322,10 @@ def filtrar_leadertrack_por_contexto(df, ctx):
                     df_filtrado[campo].astype(str).str.upper().str.strip() == norm_txt(filial_nome)
                 )
 
-        return df_filtrado[mask & mask_filial]
+        if mask_filial.any():
+            mask = mask & mask_filial
+
+        return df_filtrado[mask]
 
     return df_filtrado
 
@@ -521,6 +571,17 @@ def calcular_tendencia_arquetipos_por_questao(df_arq_filtrado, matriz_arq, codig
 
 def processar_dados_arquetipos(consolidado_arq, matriz):
     respondentes_processados = []
+
+    def contexto_resposta(item, resposta):
+        return {
+            'holding': primeiro_valido(resposta.get('holding'), item.get('holding'), ''),
+            'holding_id': primeiro_valido(resposta.get('holding_id'), item.get('holding_id'), ''),
+            'empresa_id': primeiro_valido(resposta.get('empresa_id'), item.get('empresa_id'), ''),
+            'filial_id': primeiro_valido(resposta.get('filial_id'), item.get('filial_id'), ''),
+            'company_name': primeiro_valido(resposta.get('company_name'), item.get('company_name'), ''),
+            'branch_name': primeiro_valido(resposta.get('branch_name'), item.get('branch_name'), ''),
+        }
+
     for item in consolidado_arq:
         if isinstance(item, dict) and 'dados_json' in item:
             dados = item['dados_json']
@@ -542,7 +603,8 @@ def processar_dados_arquetipos(consolidado_arq, matriz):
                     'departamento': auto.get('departamento', 'N/A'),
                     'tipo': 'Autoavaliação',
                     'arquétipos': arquétipos_auto,
-                    'respostas': auto['respostas']
+                    'respostas': auto['respostas'],
+                    **contexto_resposta(item, auto)
                 })
             if 'avaliacoesEquipe' in dados:
                 for membro in dados['avaliacoesEquipe']:
@@ -563,13 +625,25 @@ def processar_dados_arquetipos(consolidado_arq, matriz):
                             'departamento': membro.get('departamento', 'N/A'),
                             'tipo': 'Avaliação Equipe',
                             'arquétipos': arquétipos_equipe,
-                            'respostas': membro['respostas']
+                            'respostas': membro['respostas'],
+                            **contexto_resposta(item, membro)
                         })
     return pd.DataFrame(respondentes_processados)
 
 
 def processar_dados_microambiente(consolidado_micro, matriz, pontos_max_dimensao, pontos_max_subdimensao):
     respondentes_processados = []
+
+    def contexto_resposta(item, resposta):
+        return {
+            'holding': primeiro_valido(resposta.get('holding'), item.get('holding'), ''),
+            'holding_id': primeiro_valido(resposta.get('holding_id'), item.get('holding_id'), ''),
+            'empresa_id': primeiro_valido(resposta.get('empresa_id'), item.get('empresa_id'), ''),
+            'filial_id': primeiro_valido(resposta.get('filial_id'), item.get('filial_id'), ''),
+            'company_name': primeiro_valido(resposta.get('company_name'), item.get('company_name'), ''),
+            'branch_name': primeiro_valido(resposta.get('branch_name'), item.get('branch_name'), ''),
+        }
+
     for item in consolidado_micro:
         if isinstance(item, dict) and 'dados_json' in item:
             dados = item['dados_json']
@@ -594,7 +668,8 @@ def processar_dados_microambiente(consolidado_micro, matriz, pontos_max_dimensao
                     'dimensoes_ideal': dimensoes_ideal,
                     'subdimensoes_real': subdimensoes_real,
                     'subdimensoes_ideal': subdimensoes_ideal,
-                    'respostas': auto
+                    'respostas': auto,
+                    **contexto_resposta(item, auto)
                 })
             if 'avaliacoesEquipe' in dados:
                 for membro in dados['avaliacoesEquipe']:
@@ -615,7 +690,8 @@ def processar_dados_microambiente(consolidado_micro, matriz, pontos_max_dimensao
                         'dimensoes_ideal': dimensoes_ideal,
                         'subdimensoes_real': subdimensoes_real,
                         'subdimensoes_ideal': subdimensoes_ideal,
-                        'respostas': membro
+                        'respostas': membro,
+                        **contexto_resposta(item, membro)
                     })
     return pd.DataFrame(respondentes_processados)
 
@@ -827,18 +903,26 @@ def gerar_drill_down_microambiente(dimensao_clicada, df_respondentes_filtrado, m
 
 # ==================== BUSCAR DADOS ====================
 
-def adicionar_holding_ao_dataframe(df, email_to_holding):
+def adicionar_holding_ao_dataframe(df, contexto_por_chave):
     holdings = []
+    holding_ids = []
+    empresa_ids = []
+    filial_ids = []
+    company_names = []
+    branch_names = []
     for _, row in df.iterrows():
         email = str(row.get('email', '')).lower()
+        email_lider = str(row.get('emailLider', '')).lower()
         empresa = str(row.get('empresa', '')).lower()
-        holding = email_to_holding.get(email, None)
+        contexto = (
+            contexto_por_chave.get(email)
+            or contexto_por_chave.get(email_lider)
+            or contexto_por_chave.get(empresa)
+            or {}
+        )
+        holding = primeiro_valido(row.get('holding'), contexto.get('holding'))
         if holding:
             holding = str(holding).upper().strip()
-        if not holding:
-            holding = email_to_holding.get(empresa, None)
-            if holding:
-                holding = str(holding).upper().strip()
         if not holding:
             if empresa in ['astro34', 'spectral_v', 'spectral_a', 'spectral_sales', 'fastco', 'futurex'] or \
                any(x in empresa for x in ['astro34', 'spectral', 'fastco', 'futurex']):
@@ -846,7 +930,17 @@ def adicionar_holding_ao_dataframe(df, email_to_holding):
             else:
                 holding = empresa.upper() if empresa else 'N/A'
         holdings.append(str(holding).upper().strip() if holding else 'N/A')
+        holding_ids.append(primeiro_valido(row.get('holding_id'), contexto.get('holding_id'), ''))
+        empresa_ids.append(primeiro_valido(row.get('empresa_id'), contexto.get('empresa_id'), ''))
+        filial_ids.append(primeiro_valido(row.get('filial_id'), contexto.get('filial_id'), ''))
+        company_names.append(primeiro_valido(row.get('company_name'), contexto.get('company_name'), ''))
+        branch_names.append(primeiro_valido(row.get('branch_name'), contexto.get('branch_name'), ''))
     df['holding'] = holdings
+    df['holding_id'] = holding_ids
+    df['empresa_id'] = empresa_ids
+    df['filial_id'] = filial_ids
+    df['company_name'] = company_names
+    df['branch_name'] = branch_names
     return df
 
 
@@ -883,38 +977,51 @@ if matriz_arq is not None and matriz_micro is not None:
                 supabase = init_supabase()
                 employees_data = None
                 try:
-                    employees_data = supabase.table('employees').select('email, holding, empresa').execute()
+                    employees_data = supabase.table('employees').select(
+                        'email,emailLider,holding,holding_id,empresa,empresa_id,company_name,filial_id,branch_name'
+                    ).execute()
                 except:
                     try:
-                        employees_data = supabase.table('employees').select('holding, empresa').execute()
+                        employees_data = supabase.table('employees').select('email, holding, empresa').execute()
                     except:
                         try:
                             employees_data = supabase.table('employees').select('holding').execute()
                         except:
                             employees_data = supabase.table('employees').select('*').execute()
-                email_to_holding = {}
+                contexto_por_chave = {}
                 if employees_data and employees_data.data:
                     for emp in employees_data.data:
                         email = emp.get('email', '').lower() if emp.get('email') else ''
+                        email_lider = emp.get('emailLider', '').lower() if emp.get('emailLider') else ''
                         holding = str(emp.get('holding', 'N/A')).upper().strip()
                         empresa = emp.get('empresa', '')
+                        contexto_emp = {
+                            'holding': holding,
+                            'holding_id': emp.get('holding_id', ''),
+                            'empresa_id': emp.get('empresa_id', ''),
+                            'company_name': emp.get('company_name', ''),
+                            'filial_id': emp.get('filial_id', ''),
+                            'branch_name': emp.get('branch_name', ''),
+                        }
                         if email:
-                            email_to_holding[email] = holding
+                            contexto_por_chave[email] = contexto_emp
+                        if email_lider:
+                            contexto_por_chave[email_lider] = contexto_emp
                         if empresa:
                             empresa_lower = empresa.lower()
-                            if empresa_lower not in email_to_holding:
-                                email_to_holding[empresa_lower] = holding
+                            if empresa_lower not in contexto_por_chave:
+                                contexto_por_chave[empresa_lower] = contexto_emp
             except Exception as e:
                 st.warning(f"⚠️ Aviso: Não foi possível carregar dados de holding: {str(e)}")
-                email_to_holding = {}
+                contexto_por_chave = {}
 
         with st.spinner("Calculando arquétipos individuais..."):
             df_arquetipos = processar_dados_arquetipos(consolidado_arq, matriz_arq)
-            df_arquetipos = adicionar_holding_ao_dataframe(df_arquetipos, email_to_holding)
+            df_arquetipos = adicionar_holding_ao_dataframe(df_arquetipos, contexto_por_chave)
 
         with st.spinner("Calculando microambiente individual..."):
             df_microambiente = processar_dados_microambiente(consolidado_micro, matriz_micro, pontos_max_dimensao, pontos_max_subdimensao)
-            df_microambiente = adicionar_holding_ao_dataframe(df_microambiente, email_to_holding)
+            df_microambiente = adicionar_holding_ao_dataframe(df_microambiente, contexto_por_chave)
 
         # Normalizar campos
         for col in ['empresa', 'codrodada', 'emailLider', 'estado', 'sexo', 'etnia', 'departamento', 'cargo']:

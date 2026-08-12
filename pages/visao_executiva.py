@@ -760,12 +760,27 @@ def info_contexto_leadertrack(item, dados=None):
         auto.get('company_name') if isinstance(auto, dict) else None,
         primeiro_membro.get('company_name') if isinstance(primeiro_membro, dict) else None,
     )
+    holding_id = primeiro_valido(
+        item.get('holding_id'),
+        auto.get('holding_id') if isinstance(auto, dict) else None,
+        primeiro_membro.get('holding_id') if isinstance(primeiro_membro, dict) else None,
+    )
+    empresa_id = primeiro_valido(
+        item.get('empresa_id'),
+        auto.get('empresa_id') if isinstance(auto, dict) else None,
+        primeiro_membro.get('empresa_id') if isinstance(primeiro_membro, dict) else None,
+    )
     holding = primeiro_valido(
         item.get('holding'),
         auto.get('holding') if isinstance(auto, dict) else None,
         primeiro_membro.get('holding') if isinstance(primeiro_membro, dict) else None,
     )
     holding = holding or inferir_holding_por_empresa(empresa)
+    filial_id = primeiro_valido(
+        item.get('filial_id'),
+        auto.get('filial_id') if isinstance(auto, dict) else None,
+        primeiro_membro.get('filial_id') if isinstance(primeiro_membro, dict) else None,
+    )
     filial = primeiro_valido(
         item.get('branch_name'),
         auto.get('branch_name') if isinstance(auto, dict) else None,
@@ -775,7 +790,10 @@ def info_contexto_leadertrack(item, dados=None):
     return {
         'nome_lider': nome_lider,
         'empresa': empresa,
+        'holding_id': holding_id,
+        'empresa_id': empresa_id,
         'holding': holding,
+        'filial_id': filial_id,
         'filial': filial,
     }
 
@@ -786,10 +804,13 @@ def item_respeita_contexto(info, ctx):
         info.get('holding'),
         info.get('filial'),
         ctx,
+        empresa_id=info.get('empresa_id'),
+        holding_id=info.get('holding_id'),
+        filial_id=info.get('filial_id'),
     )
 
 
-def valores_respeitam_contexto(empresa, holding, filial, ctx):
+def valores_respeitam_contexto(empresa, holding, filial, ctx, empresa_id=None, holding_id=None, filial_id=None):
     nivel = norm_chave(ctx.get("nivel_contexto"))
     if not nivel:
         return True
@@ -797,22 +818,36 @@ def valores_respeitam_contexto(empresa, holding, filial, ctx):
     empresa_info = norm_chave(empresa)
     holding_info = norm_chave(holding) or norm_chave(inferir_holding_por_empresa(empresa))
     filial_info = norm_chave(filial)
+    empresa_id_info = str(empresa_id or "").strip()
+    holding_id_info = str(holding_id or "").strip()
+    filial_id_info = str(filial_id or "").strip()
 
     contexto_nome = norm_chave(ctx.get("contexto_nome") or ctx.get("contexto_codigo"))
     empresa_ctx = norm_chave(ctx.get("empresa_nome") or ctx.get("company") or contexto_nome)
     holding_ctx = norm_chave(ctx.get("holding_nome") or contexto_nome)
     filial_ctx = norm_chave(ctx.get("filial_nome") or contexto_nome)
+    empresa_id_ctx = str(ctx.get("empresa_id") or "").strip()
+    holding_id_ctx = str(ctx.get("holding_id") or "").strip()
+    filial_id_ctx = str(ctx.get("filial_id") or "").strip()
 
     if nivel == "EMPRESA":
+        if empresa_id_ctx and empresa_id_info:
+            return empresa_id_info == empresa_id_ctx
         return bool(empresa_ctx and empresa_info and empresa_info == empresa_ctx)
 
     if nivel == "HOLDING":
+        if holding_id_ctx and holding_id_info:
+            return holding_id_info == holding_id_ctx
         return bool(holding_ctx and holding_info and holding_info == holding_ctx)
 
     if nivel == "FILIAL":
         empresa_ok = True
+        if empresa_id_ctx and empresa_id_info:
+            empresa_ok = empresa_id_info == empresa_id_ctx
         if empresa_ctx and empresa_info:
             empresa_ok = empresa_info == empresa_ctx
+        if filial_id_ctx and filial_id_info:
+            return empresa_ok and filial_id_info == filial_id_ctx
         filial_ok = bool(filial_ctx and filial_info and filial_info == filial_ctx)
         return empresa_ok and filial_ok
 
@@ -1114,7 +1149,9 @@ if not df_emp.empty and 'email' in df_emp.columns:
         .str.lower()
     )
 
-if ctx.get("nivel_contexto") and emails_permitidos_contexto:
+usar_trava_legacy_por_email = False
+
+if usar_trava_legacy_por_email and ctx.get("nivel_contexto") and emails_permitidos_contexto:
     dados_arq = {
         k: v for k, v in dados_arq.items()
         if str(v.get('emaillider', '')).strip().lower() in emails_permitidos_contexto
@@ -1165,7 +1202,7 @@ for item in {**dados_arq, **dados_micro}.values():
     if not email_lider:
         continue
     info = lider_info_por_email.setdefault(email_lider, {})
-    for campo in ['nome_lider', 'empresa', 'holding', 'filial']:
+    for campo in ['nome_lider', 'empresa', 'holding', 'filial', 'holding_id', 'empresa_id', 'filial_id']:
         if item.get(campo) and not info.get(campo):
             info[campo] = item.get(campo)
 
