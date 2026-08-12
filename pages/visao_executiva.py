@@ -679,6 +679,13 @@ def inferir_holding_por_empresa(empresa):
     return empresa_norm.upper()
 
 
+def inferir_holding_por_codrodada(codrodada):
+    cod = str(codrodada or "").strip().lower()
+    if "leven" in cod:
+        return "LEVEN"
+    return None
+
+
 def primeiro_valido(*valores):
     for valor in valores:
         if valor is None:
@@ -747,6 +754,11 @@ def info_contexto_leadertrack(item, dados=None):
     auto = dados.get('autoavaliacao', {}) if isinstance(dados, dict) else {}
     equipe = dados.get('avaliacoesEquipe', []) if isinstance(dados, dict) else []
     primeiro_membro = equipe[0] if equipe else {}
+    codrodada = primeiro_valido(
+        item.get('codrodada'),
+        auto.get('codrodada') if isinstance(auto, dict) else None,
+        primeiro_membro.get('codrodada') if isinstance(primeiro_membro, dict) else None,
+    )
 
     nome_lider = primeiro_valido(
         auto.get('nomeLider') if isinstance(auto, dict) else None,
@@ -775,7 +787,7 @@ def info_contexto_leadertrack(item, dados=None):
         auto.get('holding') if isinstance(auto, dict) else None,
         primeiro_membro.get('holding') if isinstance(primeiro_membro, dict) else None,
     )
-    holding = holding or inferir_holding_por_empresa(empresa)
+    holding = holding or inferir_holding_por_codrodada(codrodada) or inferir_holding_por_empresa(empresa)
     filial_id = primeiro_valido(
         item.get('filial_id'),
         auto.get('filial_id') if isinstance(auto, dict) else None,
@@ -790,6 +802,7 @@ def info_contexto_leadertrack(item, dados=None):
     return {
         'nome_lider': nome_lider,
         'empresa': empresa,
+        'codrodada': codrodada,
         'holding_id': holding_id,
         'empresa_id': empresa_id,
         'holding': holding,

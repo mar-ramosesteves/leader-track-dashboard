@@ -227,6 +227,17 @@ def primeiro_valido(*valores):
     return None
 
 
+def mask_por_codrodada_contexto(df, nome_contexto):
+    if df is None or df.empty or "codrodada" not in df.columns:
+        return pd.Series(False, index=df.index if df is not None else None)
+
+    contexto_norm = str(nome_contexto or "").strip().lower()
+    if not contexto_norm:
+        return pd.Series(False, index=df.index)
+
+    return df["codrodada"].astype(str).str.lower().str.contains(contexto_norm, na=False)
+
+
 def filtrar_leadertrack_por_contexto(df, ctx):
     if df is None or df.empty:
         return df
@@ -251,6 +262,10 @@ def filtrar_leadertrack_por_contexto(df, ctx):
             mask = mask | (
                 df_filtrado["holding"].astype(str).str.upper().str.strip() == norm_txt(holding_nome)
             )
+
+        # Fallback operacional para rodadas novas cuja resposta ainda nao traz holding_id/holding.
+        # Ex.: LEVEN consolidada como avleven0726.
+        mask = mask | mask_por_codrodada_contexto(df_filtrado, holding_nome)
 
         if mask.any():
             return df_filtrado[mask]
@@ -924,7 +939,10 @@ def adicionar_holding_ao_dataframe(df, contexto_por_chave):
         if holding:
             holding = str(holding).upper().strip()
         if not holding:
-            if empresa in ['astro34', 'spectral_v', 'spectral_a', 'spectral_sales', 'fastco', 'futurex'] or \
+            codrodada = str(row.get('codrodada', '')).lower()
+            if 'leven' in codrodada:
+                holding = 'LEVEN'
+            elif empresa in ['astro34', 'spectral_v', 'spectral_a', 'spectral_sales', 'fastco', 'futurex'] or \
                any(x in empresa for x in ['astro34', 'spectral', 'fastco', 'futurex']):
                 holding = 'PROSPERA'
             else:
