@@ -1895,11 +1895,11 @@ if matriz_arq is not None and matriz_micro is not None:
                 gap_medio = np.mean(gaps_se)
                 score_microambiente = max(0, 100 - gap_medio)
 
-            if score_final >= 80: interpretacao, cor_score = "🟢 EXCELENTE - acima de 80%", "green"
-            elif score_final >= 75: interpretacao, cor_score = "🟢 ÓTIMO - entre 75% e 79,99%", "darkgreen"
-            elif score_final >= 70: interpretacao, cor_score = "🟡 BOM - entre 70% e 74,99%", "orange"
-            elif score_final >= 60: interpretacao, cor_score = "🟠 REGULAR - entre 60% e 69,99%", "darkorange"
-            else: interpretacao, cor_score = "🔴 NÃO ADEQUADO - abaixo de 60%", "red"
+            if score_final >= 95: interpretacao, cor_score = "EXCELENTE - acima de 95%", "green"
+            elif score_final >= 85: interpretacao, cor_score = "ÓTIMO - entre 85% e 94,99%", "darkgreen"
+            elif score_final >= 75: interpretacao, cor_score = "BOM - entre 75% e 84,99%", "orange"
+            elif score_final >= 65: interpretacao, cor_score = "REGULAR - entre 65% e 74,99%", "darkorange"
+            else: interpretacao, cor_score = "NÃO ADEQUADO - abaixo de 65%", "red"
 
             col1, col2 = st.columns([1, 2])
             with col1:
@@ -1918,11 +1918,11 @@ if matriz_arq is not None and matriz_micro is not None:
                     <hr><h4>Legenda dos Níveis</h4>
                     <table style="width:100%; font-size: 13px; border-collapse: collapse;">
                     <tr><th style="text-align:left; padding: 4px; border-bottom: 1px solid #ccc;">Faixa</th><th style="text-align:left; padding: 4px; border-bottom: 1px solid #ccc;">Nível</th><th style="text-align:left; padding: 4px; border-bottom: 1px solid #ccc;">Descrição</th></tr>
-                    <tr><td style="padding: 4px;">≥ 80%</td><td style="padding: 4px;">Excelente</td><td style="padding: 4px;">Ambiente saudável de excelência</td></tr>
-                    <tr><td style="padding: 4px;">75% a 79,99%</td><td style="padding: 4px;">Ótimo</td><td style="padding: 4px;">Ambiente saudável</td></tr>
-                    <tr><td style="padding: 4px;">70% a 74,99%</td><td style="padding: 4px;">Bom</td><td style="padding: 4px;">Ambiente saudável com pontos a melhorar</td></tr>
-                    <tr><td style="padding: 4px;">60% a 69,99%</td><td style="padding: 4px;">Regular</td><td style="padding: 4px;">Ambiente necessita melhorias</td></tr>
-                    <tr><td style="padding: 4px;">&lt; 60%</td><td style="padding: 4px;">Não Adequado</td><td style="padding: 4px;">Ambiente necessita apoio em plano de ação (PDI)</td></tr>
+                    <tr><td style="padding: 4px;">≥ 95%</td><td style="padding: 4px;">Excelente</td><td style="padding: 4px;">Ambiente de referência, com padrão consistente de excelência</td></tr>
+                    <tr><td style="padding: 4px;">85% a 94,99%</td><td style="padding: 4px;">Ótimo</td><td style="padding: 4px;">Ambiente saudável e forte, com poucas oportunidades de ajuste</td></tr>
+                    <tr><td style="padding: 4px;">75% a 84,99%</td><td style="padding: 4px;">Bom</td><td style="padding: 4px;">Ambiente adequado, com pontos relevantes a desenvolver</td></tr>
+                    <tr><td style="padding: 4px;">65% a 74,99%</td><td style="padding: 4px;">Regular</td><td style="padding: 4px;">Ambiente em atenção, requer melhorias acompanhadas</td></tr>
+                    <tr><td style="padding: 4px;">&lt; 65%</td><td style="padding: 4px;">Não Adequado</td><td style="padding: 4px;">Ambiente requer intervenção e plano de ação (PDI)</td></tr>
                     </table></div>""", unsafe_allow_html=True)
 
             st.divider()

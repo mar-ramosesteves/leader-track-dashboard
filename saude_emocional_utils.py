@@ -110,13 +110,13 @@ def calcular_tendencia_arquetipos_por_questao(df_arq_filtrado, matriz_arq, codig
 def score_se_label(score):
     try:
         v = float(score)
-        if v >= 80:
+        if v >= 95:
             return "🟢 Excelente"
-        elif v >= 75:
+        elif v >= 85:
             return "🟢 Ótimo"
-        elif v >= 70:
+        elif v >= 75:
             return "🟡 Bom"
-        elif v >= 60:
+        elif v >= 65:
             return "🟠 Regular"
         else:
             return "🔴 Não Adequado"
