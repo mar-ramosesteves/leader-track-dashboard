@@ -1,4 +1,5 @@
 import streamlit as st
+import streamlit.components.v1 as components
 from supabase import create_client, Client
 import pandas as pd
 import json
@@ -186,6 +187,48 @@ def contexto_url():
         "contexto_codigo": str(get_query_param("contexto_codigo", "") or "").strip(),
         "wp_user_email": str(get_query_param("wp_user_email", "") or "").strip().lower(),
     }
+
+
+def persistir_contexto_no_navegador(ctx):
+    if not isinstance(ctx, dict) or not ctx.get("nivel_contexto"):
+        return
+
+    campos_contexto = [
+        "nivel_contexto",
+        "holding_id",
+        "holding_nome",
+        "empresa_id",
+        "empresa_nome",
+        "filial_id",
+        "filial_nome",
+        "contexto_nome",
+        "contexto_codigo",
+        "company",
+        "codrodada",
+        "emaillider",
+        "wp_user_email",
+        "pode_administrar",
+    ]
+    payload = {
+        campo: str(ctx.get(campo) or "").strip()
+        for campo in campos_contexto
+        if str(ctx.get(campo) or "").strip()
+    }
+
+    components.html(
+        f"""
+        <script>
+        try {{
+          window.parent.localStorage.setItem(
+            "hrkey_leadertrack_contexto",
+            {json.dumps(json.dumps(payload))}
+          );
+        }} catch (e) {{}}
+        </script>
+        """,
+        height=0,
+        width=0,
+    )
 
 
 def filtros_url_dashboard():
@@ -1056,6 +1099,7 @@ if matriz_arq is not None and matriz_micro is not None:
 
         if ctx.get("nivel_contexto"):
             st.session_state["hrkey_contexto"] = ctx
+            persistir_contexto_no_navegador(ctx)
 
             df_arquetipos = filtrar_leadertrack_por_contexto(df_arquetipos, ctx)
             df_microambiente = filtrar_leadertrack_por_contexto(df_microambiente, ctx)

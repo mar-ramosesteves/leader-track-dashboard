@@ -70,6 +70,80 @@ def contexto_url():
     return ctx
 
 
+def persistir_contexto_no_navegador(ctx):
+    if not isinstance(ctx, dict) or not ctx.get("nivel_contexto"):
+        return
+
+    campos_contexto = [
+        "nivel_contexto",
+        "holding_id",
+        "holding_nome",
+        "empresa_id",
+        "empresa_nome",
+        "filial_id",
+        "filial_nome",
+        "contexto_nome",
+        "contexto_codigo",
+        "company",
+        "codrodada",
+        "emaillider",
+        "wp_user_email",
+        "pode_administrar",
+    ]
+    payload = {
+        campo: str(ctx.get(campo) or "").strip()
+        for campo in campos_contexto
+        if str(ctx.get(campo) or "").strip()
+    }
+
+    components.html(
+        f"""
+        <script>
+        try {{
+          window.parent.localStorage.setItem(
+            "hrkey_leadertrack_contexto",
+            {json.dumps(json.dumps(payload))}
+          );
+        }} catch (e) {{}}
+        </script>
+        """,
+        height=0,
+        width=0,
+    )
+
+
+def tentar_restaurar_contexto_do_navegador():
+    components.html(
+        """
+        <script>
+        try {
+          const key = "hrkey_leadertrack_contexto";
+          const bruto = window.parent.localStorage.getItem(key);
+          const url = new URL(window.parent.location.href);
+
+          if (!url.searchParams.get("nivel_contexto") && bruto) {
+            const ctx = JSON.parse(bruto);
+            const params = new URLSearchParams(url.search);
+
+            Object.entries(ctx || {}).forEach(([campo, valor]) => {
+              if (valor !== undefined && valor !== null && String(valor).trim()) {
+                params.set(campo, String(valor).trim());
+              }
+            });
+
+            if (params.get("nivel_contexto")) {
+              url.search = params.toString();
+              window.parent.location.replace(url.toString());
+            }
+          }
+        } catch (e) {}
+        </script>
+        """,
+        height=0,
+        width=0,
+    )
+
+
 def norm_txt(v):
     return str(v or "").strip().upper()
 
@@ -1130,15 +1204,18 @@ ctx = contexto_url()
 df_emp_original = df_emp.copy()
 
 if ctx.get("nivel_contexto"):
+    persistir_contexto_no_navegador(ctx)
     df_emp = filtrar_employees_por_contexto(df_emp, ctx)
 
     st.success(
         f"Contexto ativo: {str(ctx.get('nivel_contexto')).upper()} · {contexto_label(ctx)}"
     )
 else:
-    st.error(
-        "Sem contexto recebido. Esta página está mostrando a visão geral porque a URL não trouxe "
-        "nivel_contexto/holding/empresa. Abra pelo portal The HR Key com o contexto selecionado."
+    tentar_restaurar_contexto_do_navegador()
+    st.warning(
+        "Sem contexto recebido na URL. Estou tentando recuperar o último contexto LeaderTrack "
+        "usado neste navegador. Se a página não recarregar automaticamente, abra pelo portal "
+        "The HR Key com o contexto selecionado."
     )
     st.stop()
 
