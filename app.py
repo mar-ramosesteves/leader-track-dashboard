@@ -8,6 +8,7 @@ import plotly.graph_objects as go
 from datetime import datetime
 import numpy as np
 import openpyxl
+from urllib.parse import quote
 
 # === Configuração global ===
 NORMALIZAR_POR_SUBDIMENSAO = False
@@ -224,6 +225,80 @@ def persistir_contexto_no_navegador(ctx):
             {json.dumps(json.dumps(payload))}
           );
         }} catch (e) {{}}
+        </script>
+        """,
+        height=0,
+        width=0,
+    )
+
+
+def corrigir_menu_streamlit_com_contexto(ctx):
+    if not isinstance(ctx, dict) or not ctx.get("nivel_contexto"):
+        return
+
+    campos_contexto = [
+        "nivel_contexto",
+        "holding_id",
+        "holding_nome",
+        "empresa_id",
+        "empresa_nome",
+        "filial_id",
+        "filial_nome",
+        "contexto_nome",
+        "contexto_codigo",
+        "company",
+        "codrodada",
+        "emaillider",
+        "wp_user_email",
+        "pode_administrar",
+    ]
+    payload = {
+        campo: str(ctx.get(campo) or "").strip()
+        for campo in campos_contexto
+        if str(ctx.get(campo) or "").strip()
+    }
+    query_string = "&".join(
+        f"{quote(str(campo))}={quote(str(valor))}"
+        for campo, valor in payload.items()
+    )
+
+    components.html(
+        f"""
+        <script>
+        (function () {{
+          const queryString = {json.dumps(query_string)};
+          if (!queryString) return;
+
+          const targetPath = "/visao_executiva?" + queryString;
+          const storageKey = "hrkey_leadertrack_contexto";
+
+          try {{
+            window.parent.localStorage.setItem(storageKey, {json.dumps(json.dumps(payload))});
+          }} catch (e) {{}}
+
+          function patchLinks() {{
+            const doc = window.parent.document;
+            const links = Array.from(doc.querySelectorAll("a"));
+
+            links.forEach(function (link) {{
+              const href = String(link.getAttribute("href") || "");
+              const text = String(link.textContent || "").trim().toLowerCase();
+
+              const isExecutive =
+                href.includes("visao_executiva") ||
+                text === "visao executiva" ||
+                text === "visão executiva";
+
+              if (isExecutive) {{
+                link.setAttribute("href", targetPath);
+              }}
+            }});
+          }}
+
+          patchLinks();
+          window.parent.addEventListener("focus", patchLinks);
+          setInterval(patchLinks, 1000);
+        }})();
         </script>
         """,
         height=0,
@@ -1100,6 +1175,7 @@ if matriz_arq is not None and matriz_micro is not None:
         if ctx.get("nivel_contexto"):
             st.session_state["hrkey_contexto"] = ctx
             persistir_contexto_no_navegador(ctx)
+            corrigir_menu_streamlit_com_contexto(ctx)
 
             df_arquetipos = filtrar_leadertrack_por_contexto(df_arquetipos, ctx)
             df_microambiente = filtrar_leadertrack_por_contexto(df_microambiente, ctx)

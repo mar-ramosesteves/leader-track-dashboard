@@ -161,9 +161,19 @@ def filtrar_employees_por_contexto(df_emp, ctx):
 
     if nivel == "HOLDING":
         holding_nome = ctx.get("holding_nome") or ctx.get("contexto_nome") or ctx.get("contexto_codigo")
+        holding_id = ctx.get("holding_id")
+        mask = pd.Series(False, index=df.index)
+
+        if holding_id and "holding_id" in df.columns:
+            mask = mask | (df["holding_id"].astype(str).str.strip() == str(holding_id).strip())
+
         if holding_nome and "holding" in df.columns:
-            return df[df["holding"].astype(str).str.upper().str.strip() == norm_txt(holding_nome)]
-        return df
+            mask = mask | (df["holding"].astype(str).str.upper().str.strip() == norm_txt(holding_nome))
+
+        if mask.any():
+            return df[mask]
+
+        return df.iloc[0:0]
 
     if nivel == "EMPRESA":
         empresa_id = ctx.get("empresa_id")
