@@ -167,6 +167,76 @@ def contexto_from_cache_key(ctx_key):
     return {campo: valor for campo, valor in (ctx_key or ()) if valor}
 
 
+def filtro_consulta_cache_key(filtros_consulta):
+    campos = ["holding", "empresa", "codrodada", "emaillider"]
+    pares = []
+    for campo in campos:
+        valor = (filtros_consulta or {}).get(campo)
+        if isinstance(valor, (list, tuple, set)):
+            valor = tuple(sorted(str(v).strip() for v in valor if str(v or "").strip()))
+        else:
+            valor = str(valor or "").strip()
+        pares.append((campo, valor))
+    return tuple(pares)
+
+
+def filtros_consulta_from_cache_key(filtro_key):
+    return {campo: valor for campo, valor in (filtro_key or ()) if valor}
+
+
+def valor_filtro_sidebar(nome, default=""):
+    valor = st.session_state.get(nome, default)
+    return valor
+
+
+def normalizar_filtro_consulta(valor, todos_label):
+    texto = str(valor or "").strip()
+    if not texto or texto == todos_label:
+        return todos_label
+    return texto
+
+
+def filtros_preconsulta_executiva(ctx):
+    nivel_contexto = str((ctx or {}).get("nivel_contexto") or "").strip().lower()
+
+    holding = normalizar_filtro_consulta(
+        valor_filtro_sidebar(
+            "exec_filtro_holding",
+            (ctx or {}).get("holding_nome") or (ctx or {}).get("contexto_nome") or "Todas",
+        ),
+        "Todas",
+    )
+
+    empresa_default = "Todas"
+    if nivel_contexto != "holding":
+        empresa_default = (
+            (ctx or {}).get("empresa_nome")
+            or (ctx or {}).get("company")
+            or (ctx or {}).get("contexto_nome")
+            or "Todas"
+        )
+    empresa = normalizar_filtro_consulta(
+        valor_filtro_sidebar("exec_filtro_empresa", empresa_default),
+        "Todas",
+    )
+
+    codrodada = normalizar_filtro_consulta(
+        valor_filtro_sidebar("exec_filtro_rodada_lt", "Todas"),
+        "Todas",
+    )
+    lideres = valor_filtro_sidebar("exec_filtro_lideres", [])
+    if isinstance(lideres, str):
+        lideres = [lideres] if lideres.strip() else []
+    lideres = [str(l).strip().lower() for l in (lideres or []) if str(l or "").strip()]
+
+    return {
+        "holding": holding.upper() if holding != "Todas" else "Todas",
+        "empresa": empresa.lower() if empresa != "Todas" else "Todas",
+        "codrodada": codrodada.lower() if codrodada != "Todas" else "Todas",
+        "emaillider": lideres,
+    }
+
+
 def aplicar_filtro_contexto_query(query, ctx, *, incluir_texto=True):
     nivel = norm_txt((ctx or {}).get("nivel_contexto"))
 
@@ -207,6 +277,34 @@ def aplicar_filtro_contexto_query(query, ctx, *, incluir_texto=True):
             return query.eq("filial_id", filial_id)
         if empresa_id:
             return query.eq("empresa_id", empresa_id)
+
+    return query
+
+
+def aplicar_filtros_dashboard_query(query, filtros_consulta):
+    filtros_consulta = filtros_consulta or {}
+
+    holding = norm_txt(filtros_consulta.get("holding"))
+    empresa = str(filtros_consulta.get("empresa") or "").strip()
+    codrodada = str(filtros_consulta.get("codrodada") or "").strip()
+    emaillider = filtros_consulta.get("emaillider")
+
+    if holding == "PROSPERA" and (not empresa or empresa == "Todas"):
+        query = query.in_("empresa", PROSPERA_EMPRESAS_LEADERTRACK)
+    if empresa and empresa != "Todas":
+        query = query.ilike("empresa", empresa)
+    if codrodada and codrodada != "Todas":
+        query = query.ilike("codrodada", codrodada)
+    if isinstance(emaillider, tuple):
+        emaillider = list(emaillider)
+    if isinstance(emaillider, list):
+        lideres = [str(v).strip().lower() for v in emaillider if str(v or "").strip()]
+        if lideres:
+            query = query.in_("emailLider", lideres)
+    else:
+        email = str(emaillider or "").strip().lower()
+        if email and email != "Todos":
+            query = query.ilike("emailLider", email)
 
     return query
 
@@ -295,9 +393,15 @@ def combinar_rows_unicas(*listas):
     return rows
 
 
-def consultar_consolidado_leadertrack(supabase, tabela, ctx):
+def consultar_consolidado_leadertrack(supabase, tabela, ctx, filtros_consulta=None):
+    def query_base():
+        return aplicar_filtros_dashboard_query(
+            supabase.table(tabela).select("*"),
+            filtros_consulta,
+        )
+
     if not (ctx or {}).get("nivel_contexto"):
-        return supabase.table(tabela).select("*").execute().data
+        return query_base().execute().data
 
     nivel = norm_txt((ctx or {}).get("nivel_contexto"))
     empresa_nome = str(
@@ -315,13 +419,12 @@ def consultar_consolidado_leadertrack(supabase, tabela, ctx):
 
     try:
         if nivel in {"EMPRESA", "FILIAL"} and empresa_nome:
-            return supabase.table(tabela).select("*").ilike("empresa", empresa_nome).execute().data
+            return query_base().ilike("empresa", empresa_nome).execute().data
 
         if nivel == "HOLDING":
             if holding_nome == "PROSPERA":
                 return (
-                    supabase.table(tabela)
-                    .select("*")
+                    query_base()
                     .in_("empresa", PROSPERA_EMPRESAS_LEADERTRACK)
                     .execute()
                     .data
@@ -329,15 +432,13 @@ def consultar_consolidado_leadertrack(supabase, tabela, ctx):
 
             if holding_nome == "LEVEN":
                 por_codrodada = (
-                    supabase.table(tabela)
-                    .select("*")
+                    query_base()
                     .ilike("codrodada", "%leven%")
                     .execute()
                     .data
                 )
                 por_empresa = (
-                    supabase.table(tabela)
-                    .select("*")
+                    query_base()
                     .ilike("empresa", "%leven%")
                     .execute()
                     .data
@@ -345,11 +446,11 @@ def consultar_consolidado_leadertrack(supabase, tabela, ctx):
                 return combinar_rows_unicas(por_codrodada, por_empresa)
 
             if holding_nome:
-                return supabase.table(tabela).select("*").ilike("empresa", holding_nome).execute().data
+                return query_base().ilike("empresa", holding_nome).execute().data
     except Exception:
         pass
 
-    return supabase.table(tabela).select("*").execute().data
+    return query_base().execute().data
 
 
 def filtrar_employees_por_contexto(df_emp, ctx):
@@ -437,9 +538,10 @@ def carregar_matriz_microambiente():
     except: return None
 
 @st.cache_data(ttl=300)
-def carregar_dados_supabase(ctx_key=()):
+def carregar_dados_supabase(ctx_key=(), filtro_key=()):
     supabase = init_supabase()
     ctx = contexto_from_cache_key(ctx_key)
+    filtros_consulta = filtros_consulta_from_cache_key(filtro_key)
 
     def carregar_tabela_em_blocos(nome_tabela, colunas, tamanho_bloco=1000, limite_blocos=20):
         dados = []
@@ -462,8 +564,18 @@ def carregar_dados_supabase(ctx_key=()):
         return dados
 
     try:
-        arq = consultar_consolidado_leadertrack(supabase, 'consolidado_arquetipos', ctx)
-        micro = consultar_consolidado_leadertrack(supabase, 'consolidado_microambiente', ctx)
+        arq = consultar_consolidado_leadertrack(
+            supabase,
+            'consolidado_arquetipos',
+            ctx,
+            filtros_consulta,
+        )
+        micro = consultar_consolidado_leadertrack(
+            supabase,
+            'consolidado_microambiente',
+            ctx,
+            filtros_consulta,
+        )
 
         employees = executar_query_com_fallback(
             supabase,
@@ -1352,6 +1464,7 @@ if not ctx.get("nivel_contexto"):
     st.stop()
 
 persistir_contexto_no_navegador(ctx)
+filtros_preconsulta = filtros_preconsulta_executiva(ctx)
 
 with st.spinner("Carregando dados..."):
     matriz_arq  = carregar_matriz_arquetipos()
@@ -1366,7 +1479,10 @@ with st.spinner("Carregando dados..."):
         evaluation_responses,
         evaluation_criteria,
         metas_contexto,
-    ) = carregar_dados_supabase(contexto_cache_key(ctx))
+    ) = carregar_dados_supabase(
+        contexto_cache_key(ctx),
+        filtro_consulta_cache_key(filtros_preconsulta),
+    )
 
 with st.spinner("Calculando indicadores..."):
     dados_arq  = calcular_arquetipos_lider(consolidado_arq, matriz_arq)
@@ -1595,7 +1711,15 @@ if norm_chave(ctx.get("nivel_contexto")) == "HOLDING":
     if holding_ctx_menu:
         holdings = [holding_ctx_menu]
         holding_default_index = 0
-holding_sel = st.sidebar.selectbox("🏢 Holding", holdings, index=holding_default_index)
+holding_preconsulta = filtros_preconsulta.get("holding")
+if holding_preconsulta and holding_preconsulta != "Todas" and holding_preconsulta not in holdings:
+    holdings.append(holding_preconsulta)
+holding_sel = st.sidebar.selectbox(
+    "🏢 Holding",
+    holdings,
+    index=holding_default_index,
+    key="exec_filtro_holding",
+)
 
 # ====================
 # FILTRO EMPRESA
@@ -1642,9 +1766,28 @@ if nivel_ctx_empresa != "HOLDING":
     elif empresa_ctx_menu in [norm_chave(e) for e in empresas_list]:
         empresa_default_index = [norm_chave(e) for e in empresas_list].index(empresa_ctx_menu)
 
-empresa_sel = st.sidebar.selectbox("🏭 Empresa", empresas_list, index=empresa_default_index)
+empresa_preconsulta = filtros_preconsulta.get("empresa")
+if empresa_preconsulta and empresa_preconsulta != "Todas":
+    empresa_preconsulta_menu = norm_chave(empresa_preconsulta)
+    if empresa_preconsulta_menu not in [norm_chave(e) for e in empresas_list]:
+        empresas_list.append(empresa_preconsulta_menu)
+
+empresa_sel = st.sidebar.selectbox(
+    "🏭 Empresa",
+    empresas_list,
+    index=empresa_default_index,
+    key="exec_filtro_empresa",
+)
 rodadas_lt = sorted(set(v['codrodada'] for v in {**dados_arq, **dados_micro}.values()))
-rodada_lt_sel = st.sidebar.selectbox("📅 Rodada LeaderTrack", ["Todas"] + rodadas_lt)
+rodadas_lt_options = ["Todas"] + rodadas_lt
+rodada_preconsulta = filtros_preconsulta.get("codrodada")
+if rodada_preconsulta and rodada_preconsulta != "Todas" and rodada_preconsulta not in rodadas_lt_options:
+    rodadas_lt_options.append(rodada_preconsulta)
+rodada_lt_sel = st.sidebar.selectbox(
+    "📅 Rodada LeaderTrack",
+    rodadas_lt_options,
+    key="exec_filtro_rodada_lt",
+)
 
 rounds_disp = ["Todos"]
 if not df_eval.empty and 'round_code' in df_eval.columns:
@@ -1660,9 +1803,13 @@ if not df_ninebox.empty and 'round_code' in df_ninebox.columns:
         if str(r).strip()
     ]
 rounds_disp = ["Todos"] + sorted(set(rounds_disp) - {"Todos"}, reverse=True)
-round_eval_sel = st.sidebar.selectbox("📆 Round Avaliação", rounds_disp)
+round_eval_sel = st.sidebar.selectbox("📆 Round Avaliação", rounds_disp, key="exec_filtro_round_eval")
 
-lider_sel = st.sidebar.multiselect("👤 Líder(es)", sorted(todos_lideres_emails))
+lider_options = sorted(todos_lideres_emails)
+for lider_preconsulta in filtros_preconsulta.get("emaillider") or []:
+    if lider_preconsulta not in lider_options:
+        lider_options.append(lider_preconsulta)
+lider_sel = st.sidebar.multiselect("👤 Líder(es)", sorted(lider_options), key="exec_filtro_lideres")
 
 
 # ==================== PAINEL DE PESOS IGL ====================
