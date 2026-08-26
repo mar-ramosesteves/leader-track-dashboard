@@ -592,6 +592,56 @@ def consultar_consolidado_leadertrack(supabase, tabela, ctx, filtros_consulta=No
     return query_base().execute().data
 
 
+def filtro_restrito(valor, todos_label):
+    if isinstance(valor, (list, tuple, set)):
+        return any(str(v or "").strip() for v in valor)
+    texto = str(valor or "").strip()
+    return bool(texto and texto != todos_label)
+
+
+def filtros_consulta_com_fallbacks(filtros_consulta):
+    filtros = dict(filtros_consulta or {})
+    yield filtros
+
+    if filtro_restrito(filtros.get("emaillider"), "Todos"):
+        sem_lider = dict(filtros)
+        sem_lider["emaillider"] = "Todos"
+        yield sem_lider
+        filtros = sem_lider
+
+    if filtro_restrito(filtros.get("codrodada"), "Todas"):
+        sem_rodada = dict(filtros)
+        sem_rodada["codrodada"] = "Todas"
+        yield sem_rodada
+        filtros = sem_rodada
+
+    if filtro_restrito(filtros.get("empresa"), "Todas"):
+        sem_empresa = dict(filtros)
+        sem_empresa["empresa"] = "Todas"
+        yield sem_empresa
+
+
+def consultar_consolidados_com_fallback(supabase, ctx, filtros_consulta):
+    ultimo_arq, ultimo_micro = [], []
+    for filtros_tentativa in filtros_consulta_com_fallbacks(filtros_consulta):
+        arq = consultar_consolidado_leadertrack(
+            supabase,
+            'consolidado_arquetipos',
+            ctx,
+            filtros_tentativa,
+        )
+        micro = consultar_consolidado_leadertrack(
+            supabase,
+            'consolidado_microambiente',
+            ctx,
+            filtros_tentativa,
+        )
+        ultimo_arq, ultimo_micro = arq, micro
+        if arq and micro:
+            return arq, micro
+    return ultimo_arq, ultimo_micro
+
+
 def primeiro_valido(*valores):
     for valor in valores:
         if valor is None:
@@ -1343,15 +1393,8 @@ def fetch_data(ctx_key=(), filtro_key=()):
         supabase = init_supabase()
         ctx = contexto_from_cache_key(ctx_key)
         filtros_consulta = filtros_consulta_from_cache_key(filtro_key)
-        consolidado_arq = consultar_consolidado_leadertrack(
+        consolidado_arq, consolidado_micro = consultar_consolidados_com_fallback(
             supabase,
-            'consolidado_arquetipos',
-            ctx,
-            filtros_consulta,
-        )
-        consolidado_micro = consultar_consolidado_leadertrack(
-            supabase,
-            'consolidado_microambiente',
             ctx,
             filtros_consulta,
         )
@@ -1379,6 +1422,18 @@ if matriz_arq is not None and matriz_micro is not None:
             contexto_cache_key(ctx),
             filtro_consulta_cache_key(filtros_preconsulta),
         )
+
+    if not (consolidado_arq and consolidado_micro):
+        qtd_arq = len(consolidado_arq or [])
+        qtd_micro = len(consolidado_micro or [])
+        st.error(
+            "Não encontrei dados suficientes para montar o dashboard com o contexto/filtro atual."
+        )
+        st.caption(
+            f"Registros encontrados: Arquétipos={qtd_arq}; Microambiente={qtd_micro}. "
+            "Abra pelo portal The HR Key com o contexto selecionado ou limpe os filtros do menu lateral."
+        )
+        st.stop()
 
     if consolidado_arq and consolidado_micro:
         st.success("✅ Conectado ao Supabase!")
