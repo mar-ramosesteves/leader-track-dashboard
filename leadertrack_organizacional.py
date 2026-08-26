@@ -615,6 +615,41 @@ def gerar_pacote_organizacional(
     }
 
 
+def pacote_organizacional_para_ia(pacote: dict[str, Any], limite_achados: int = 40) -> dict[str, Any]:
+    if not isinstance(pacote, dict):
+        return {}
+
+    achados = pacote.get("achados_relevantes") or []
+    if isinstance(achados, list):
+        achados = achados[:limite_achados]
+    else:
+        achados = []
+
+    distribuicoes_resumidas = {}
+    for campo, linhas in (pacote.get("distribuicoes") or {}).items():
+        if not isinstance(linhas, list):
+            continue
+        distribuicoes_resumidas[campo] = linhas[:12]
+
+    return {
+        "tipo": pacote.get("tipo"),
+        "gerado_em": pacote.get("gerado_em"),
+        "contexto": pacote.get("contexto") or {},
+        "filtros": pacote.get("filtros") or {},
+        "governanca": pacote.get("governanca") or {},
+        "amostra": pacote.get("amostra") or {},
+        "distribuicoes_resumidas": distribuicoes_resumidas,
+        "saude_emocional": pacote.get("saude_emocional") or {},
+        "microambiente": pacote.get("microambiente") or {},
+        "arquetipos": pacote.get("arquetipos") or {},
+        "achados_relevantes": achados,
+        "observacao_de_resumo": (
+            "Este pacote foi resumido para IA. O pacote completo permanece disponivel "
+            "no dashboard para download e auditoria."
+        ),
+    }
+
+
 def build_organizational_prompt(pacote: dict[str, Any]) -> str:
     return (
         "Voce e o Assistente Inteligente LeaderTrack em modo de devolutiva organizacional "

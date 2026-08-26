@@ -11,7 +11,11 @@ import openpyxl
 import urllib.error
 import urllib.request
 from urllib.parse import quote
-from leadertrack_organizacional import OrganizationalRules, gerar_pacote_organizacional
+from leadertrack_organizacional import (
+    OrganizationalRules,
+    gerar_pacote_organizacional,
+    pacote_organizacional_para_ia,
+)
 
 # === Configuração global ===
 NORMALIZAR_POR_SUBDIMENSAO = False
@@ -2607,8 +2611,13 @@ if matriz_arq is not None and matriz_micro is not None:
                     st.stop()
 
                 with st.spinner("Enviando pacote ao Leadertrackbot..."):
+                    pacote_para_bot = (
+                        pacote_organizacional_para_ia(pacote_org)
+                        if gerar_com_ia_org
+                        else pacote_org
+                    )
                     resposta_org, erro_org = chamar_parecer_organizacional(
-                        pacote_org,
+                        pacote_para_bot,
                         gerar_com_ia=gerar_com_ia_org,
                     )
 
@@ -2617,6 +2626,11 @@ if matriz_arq is not None and matriz_micro is not None:
                 else:
                     st.session_state["parecer_corporativo_resposta"] = resposta_org
                     st.success("Parecer corporativo gerado.")
+                    if gerar_com_ia_org:
+                        st.caption(
+                            "IA recebeu um pacote analítico resumido e priorizado; "
+                            "o pacote completo segue disponível abaixo para auditoria."
+                        )
 
             pacote_salvo = st.session_state.get("parecer_corporativo_pacote")
             if isinstance(pacote_salvo, dict):
