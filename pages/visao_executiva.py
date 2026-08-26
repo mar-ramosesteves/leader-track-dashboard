@@ -148,6 +148,210 @@ def norm_txt(v):
     return str(v or "").strip().upper()
 
 
+def contexto_cache_key(ctx):
+    campos = [
+        "nivel_contexto",
+        "holding_id",
+        "holding_nome",
+        "empresa_id",
+        "empresa_nome",
+        "filial_id",
+        "filial_nome",
+        "contexto_nome",
+        "contexto_codigo",
+    ]
+    return tuple((campo, str((ctx or {}).get(campo) or "").strip()) for campo in campos)
+
+
+def contexto_from_cache_key(ctx_key):
+    return {campo: valor for campo, valor in (ctx_key or ()) if valor}
+
+
+def aplicar_filtro_contexto_query(query, ctx, *, incluir_texto=True):
+    nivel = norm_txt((ctx or {}).get("nivel_contexto"))
+
+    if nivel == "HOLDING":
+        holding_id = str((ctx or {}).get("holding_id") or "").strip()
+        holding_nome = str(
+            (ctx or {}).get("holding_nome")
+            or (ctx or {}).get("contexto_nome")
+            or (ctx or {}).get("contexto_codigo")
+            or ""
+        ).strip()
+
+        if holding_id:
+            return query.eq("holding_id", holding_id)
+        if incluir_texto and holding_nome:
+            return query.eq("holding", holding_nome)
+
+    if nivel == "EMPRESA":
+        empresa_id = str((ctx or {}).get("empresa_id") or "").strip()
+        empresa_nome = str(
+            (ctx or {}).get("empresa_nome")
+            or (ctx or {}).get("company")
+            or (ctx or {}).get("contexto_nome")
+            or (ctx or {}).get("contexto_codigo")
+            or ""
+        ).strip()
+
+        if empresa_id:
+            return query.eq("empresa_id", empresa_id)
+        if incluir_texto and empresa_nome:
+            return query.eq("empresa", empresa_nome)
+
+    if nivel == "FILIAL":
+        filial_id = str((ctx or {}).get("filial_id") or "").strip()
+        empresa_id = str((ctx or {}).get("empresa_id") or "").strip()
+
+        if filial_id:
+            return query.eq("filial_id", filial_id)
+        if empresa_id:
+            return query.eq("empresa_id", empresa_id)
+
+    return query
+
+
+def executar_query_com_fallback(supabase, tabela, colunas, ctx, *, incluir_texto=True, limite=None):
+    base = supabase.table(tabela).select(colunas)
+    filtrada = aplicar_filtro_contexto_query(
+        supabase.table(tabela).select(colunas),
+        ctx,
+        incluir_texto=incluir_texto,
+    )
+
+    if limite:
+        base = base.limit(limite)
+        filtrada = filtrada.limit(limite)
+
+    if (ctx or {}).get("nivel_contexto"):
+        try:
+            return filtrada.execute().data
+        except Exception:
+            return base.execute().data
+
+    return base.execute().data
+
+
+def ids_colaboradores(rows):
+    ids = []
+    for row in rows or []:
+        valor = row.get("id") if isinstance(row, dict) else None
+        texto = str(valor or "").strip()
+        if texto:
+            ids.append(texto)
+    return sorted(set(ids))
+
+
+def carregar_tabela_por_employee_ids(supabase, nome_tabela, colunas, employee_ids, tamanho_lote=80):
+    ids = [str(item).strip() for item in (employee_ids or []) if str(item or "").strip()]
+    if not ids:
+        return []
+
+    dados = []
+    for inicio in range(0, len(ids), tamanho_lote):
+        lote = ids[inicio:inicio + tamanho_lote]
+        pagina_inicio = 0
+        while True:
+            pagina_fim = pagina_inicio + 999
+            bloco = (
+                supabase.table(nome_tabela)
+                .select(colunas)
+                .in_("employee_id", lote)
+                .range(pagina_inicio, pagina_fim)
+                .execute()
+                .data
+            )
+            if not bloco:
+                break
+            dados.extend(bloco)
+            if len(bloco) < 1000:
+                break
+            pagina_inicio += 1000
+    return dados
+
+
+PROSPERA_EMPRESAS_LEADERTRACK = [
+    "astro34",
+    "spectral_v",
+    "spectral_a",
+    "spectral_sales",
+    "fastco",
+    "futurex",
+]
+
+
+def combinar_rows_unicas(*listas):
+    rows = []
+    vistos = set()
+    for lista in listas:
+        for row in lista or []:
+            chave = row.get("id") if isinstance(row, dict) else None
+            if chave is None:
+                chave = json.dumps(row, sort_keys=True, default=str)
+            if chave in vistos:
+                continue
+            vistos.add(chave)
+            rows.append(row)
+    return rows
+
+
+def consultar_consolidado_leadertrack(supabase, tabela, ctx):
+    if not (ctx or {}).get("nivel_contexto"):
+        return supabase.table(tabela).select("*").execute().data
+
+    nivel = norm_txt((ctx or {}).get("nivel_contexto"))
+    empresa_nome = str(
+        (ctx or {}).get("empresa_nome")
+        or (ctx or {}).get("company")
+        or (ctx or {}).get("contexto_nome")
+        or (ctx or {}).get("contexto_codigo")
+        or ""
+    ).strip()
+    holding_nome = norm_txt(
+        (ctx or {}).get("holding_nome")
+        or (ctx or {}).get("contexto_nome")
+        or (ctx or {}).get("contexto_codigo")
+    )
+
+    try:
+        if nivel in {"EMPRESA", "FILIAL"} and empresa_nome:
+            return supabase.table(tabela).select("*").ilike("empresa", empresa_nome).execute().data
+
+        if nivel == "HOLDING":
+            if holding_nome == "PROSPERA":
+                return (
+                    supabase.table(tabela)
+                    .select("*")
+                    .in_("empresa", PROSPERA_EMPRESAS_LEADERTRACK)
+                    .execute()
+                    .data
+                )
+
+            if holding_nome == "LEVEN":
+                por_codrodada = (
+                    supabase.table(tabela)
+                    .select("*")
+                    .ilike("codrodada", "%leven%")
+                    .execute()
+                    .data
+                )
+                por_empresa = (
+                    supabase.table(tabela)
+                    .select("*")
+                    .ilike("empresa", "%leven%")
+                    .execute()
+                    .data
+                )
+                return combinar_rows_unicas(por_codrodada, por_empresa)
+
+            if holding_nome:
+                return supabase.table(tabela).select("*").ilike("empresa", holding_nome).execute().data
+    except Exception:
+        pass
+
+    return supabase.table(tabela).select("*").execute().data
+
+
 def filtrar_employees_por_contexto(df_emp, ctx):
     if df_emp is None or df_emp.empty:
         return df_emp
@@ -233,8 +437,10 @@ def carregar_matriz_microambiente():
     except: return None
 
 @st.cache_data(ttl=300)
-def carregar_dados_supabase():
+def carregar_dados_supabase(ctx_key=()):
     supabase = init_supabase()
+    ctx = contexto_from_cache_key(ctx_key)
+
     def carregar_tabela_em_blocos(nome_tabela, colunas, tamanho_bloco=1000, limite_blocos=20):
         dados = []
         inicio = 0
@@ -256,31 +462,68 @@ def carregar_dados_supabase():
         return dados
 
     try:
-        arq  = supabase.table('consolidado_arquetipos').select('*').execute().data
-        micro = supabase.table('consolidado_microambiente').select('*').execute().data
+        arq = consultar_consolidado_leadertrack(supabase, 'consolidado_arquetipos', ctx)
+        micro = consultar_consolidado_leadertrack(supabase, 'consolidado_microambiente', ctx)
 
-        
-        employees = supabase.table('employees').select(
+        employees = executar_query_com_fallback(
+            supabase,
+            'employees',
             'id,nome,email,emailLider,manager_name,empresa,holding,company_name,'
             'empresa_id,filial_id,branch_name,'
-            'department_name,cargo,nivel,genero,etnia,employment_status'
-        ).execute().data
-
-        
-        ninebox = supabase.table('v_ninebox_items').select('*').execute().data
-        evaluations = supabase.table('evaluations').select(
-            'employee_id,evaluation_year,round_code,final_rating,performance_rating,'
-            'potential_rating,nine_box_position,institucional_avg,funcional_avg,'
-            'individual_avg,metas_avg'
-        ).execute().data
+            'department_name,cargo,nivel,genero,etnia,employment_status',
+            ctx,
+        )
+        employee_ids = ids_colaboradores(employees)
 
         try:
-            evaluation_responses = carregar_tabela_em_blocos(
+            ninebox = carregar_tabela_por_employee_ids(
+                supabase,
+                'v_ninebox_items',
+                '*',
+                employee_ids,
+            ) if employee_ids else supabase.table('v_ninebox_items').select('*').execute().data
+        except Exception:
+            ninebox = executar_query_com_fallback(supabase, 'v_ninebox_items', '*', ctx)
+
+        try:
+            evaluations = carregar_tabela_por_employee_ids(
+                supabase,
+                'evaluations',
+                'employee_id,evaluation_year,round_code,final_rating,performance_rating,'
+                'potential_rating,nine_box_position,institucional_avg,funcional_avg,'
+                'individual_avg,metas_avg',
+                employee_ids,
+            ) if employee_ids else supabase.table('evaluations').select(
+                'employee_id,evaluation_year,round_code,final_rating,performance_rating,'
+                'potential_rating,nine_box_position,institucional_avg,funcional_avg,'
+                'individual_avg,metas_avg'
+            ).execute().data
+        except Exception:
+            evaluations = executar_query_com_fallback(
+                supabase,
+                'evaluations',
+                'employee_id,evaluation_year,round_code,final_rating,performance_rating,'
+                'potential_rating,nine_box_position,institucional_avg,funcional_avg,'
+                'individual_avg,metas_avg',
+                ctx,
+                incluir_texto=False,
+            )
+
+        try:
+            evaluation_responses = carregar_tabela_por_employee_ids(
+                supabase,
+                'v_evaluation_responses_v2',
+                'evaluation_id,employee_id,round_code,criteria_id,rating',
+                employee_ids,
+            ) if employee_ids else carregar_tabela_em_blocos(
                 'v_evaluation_responses_v2',
                 'evaluation_id,employee_id,round_code,criteria_id,rating'
             )
         except Exception:
-            evaluation_responses = []
+            evaluation_responses = carregar_tabela_em_blocos(
+                'v_evaluation_responses_v2',
+                'evaluation_id,employee_id,round_code,criteria_id,rating'
+            )
 
         try:
             evaluation_criteria = supabase.table('evaluation_criteria').select(
@@ -290,12 +533,20 @@ def carregar_dados_supabase():
             evaluation_criteria = []
 
         try:
-            metas_contexto = carregar_tabela_em_blocos(
+            metas_contexto = carregar_tabela_por_employee_ids(
+                supabase,
+                'v_metas_contexto',
+                'evaluation_id,employee_id,round_code,rating,weight',
+                employee_ids,
+            ) if employee_ids else carregar_tabela_em_blocos(
                 'v_metas_contexto',
                 'evaluation_id,employee_id,round_code,rating,weight'
             )
         except Exception:
-            metas_contexto = []
+            metas_contexto = carregar_tabela_em_blocos(
+                'v_metas_contexto',
+                'evaluation_id,employee_id,round_code,rating,weight'
+            )
 
         return arq, micro, employees, ninebox, evaluations, evaluation_responses, evaluation_criteria, metas_contexto
     except Exception as e:
@@ -1115,7 +1366,7 @@ with st.spinner("Carregando dados..."):
         evaluation_responses,
         evaluation_criteria,
         metas_contexto,
-    ) = carregar_dados_supabase()
+    ) = carregar_dados_supabase(contexto_cache_key(ctx))
 
 with st.spinner("Calculando indicadores..."):
     dados_arq  = calcular_arquetipos_lider(consolidado_arq, matriz_arq)

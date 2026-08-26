@@ -332,6 +332,172 @@ def norm_txt(v):
     return str(v or "").strip().upper()
 
 
+def contexto_cache_key(ctx):
+    campos = [
+        "nivel_contexto",
+        "holding_id",
+        "holding_nome",
+        "empresa_id",
+        "empresa_nome",
+        "filial_id",
+        "filial_nome",
+        "contexto_nome",
+        "contexto_codigo",
+    ]
+    return tuple((campo, str((ctx or {}).get(campo) or "").strip()) for campo in campos)
+
+
+def contexto_from_cache_key(ctx_key):
+    return {campo: valor for campo, valor in (ctx_key or ()) if valor}
+
+
+def aplicar_filtro_contexto_query(query, ctx, *, incluir_texto=True):
+    nivel = norm_txt((ctx or {}).get("nivel_contexto"))
+
+    if nivel == "HOLDING":
+        holding_id = str((ctx or {}).get("holding_id") or "").strip()
+        holding_nome = str(
+            (ctx or {}).get("holding_nome")
+            or (ctx or {}).get("contexto_nome")
+            or (ctx or {}).get("contexto_codigo")
+            or ""
+        ).strip()
+
+        if holding_id:
+            return query.eq("holding_id", holding_id)
+        if incluir_texto and holding_nome:
+            return query.eq("holding", holding_nome)
+
+    if nivel == "EMPRESA":
+        empresa_id = str((ctx or {}).get("empresa_id") or "").strip()
+        empresa_nome = str(
+            (ctx or {}).get("empresa_nome")
+            or (ctx or {}).get("company")
+            or (ctx or {}).get("contexto_nome")
+            or (ctx or {}).get("contexto_codigo")
+            or ""
+        ).strip()
+
+        if empresa_id:
+            return query.eq("empresa_id", empresa_id)
+        if incluir_texto and empresa_nome:
+            return query.eq("empresa", empresa_nome)
+
+    if nivel == "FILIAL":
+        filial_id = str((ctx or {}).get("filial_id") or "").strip()
+        empresa_id = str((ctx or {}).get("empresa_id") or "").strip()
+
+        if filial_id:
+            return query.eq("filial_id", filial_id)
+        if empresa_id:
+            return query.eq("empresa_id", empresa_id)
+
+    return query
+
+
+def executar_query_com_fallback(supabase, tabela, colunas, ctx, *, incluir_texto=True, limite=None):
+    base = supabase.table(tabela).select(colunas)
+    filtrada = aplicar_filtro_contexto_query(
+        supabase.table(tabela).select(colunas),
+        ctx,
+        incluir_texto=incluir_texto,
+    )
+
+    if limite:
+        base = base.limit(limite)
+        filtrada = filtrada.limit(limite)
+
+    if (ctx or {}).get("nivel_contexto"):
+        try:
+            return filtrada.execute().data
+        except Exception:
+            return base.execute().data
+
+    return base.execute().data
+
+
+PROSPERA_EMPRESAS_LEADERTRACK = [
+    "astro34",
+    "spectral_v",
+    "spectral_a",
+    "spectral_sales",
+    "fastco",
+    "futurex",
+]
+
+
+def combinar_rows_unicas(*listas):
+    rows = []
+    vistos = set()
+    for lista in listas:
+        for row in lista or []:
+            chave = row.get("id") if isinstance(row, dict) else None
+            if chave is None:
+                chave = json.dumps(row, sort_keys=True, default=str)
+            if chave in vistos:
+                continue
+            vistos.add(chave)
+            rows.append(row)
+    return rows
+
+
+def consultar_consolidado_leadertrack(supabase, tabela, ctx):
+    if not (ctx or {}).get("nivel_contexto"):
+        return supabase.table(tabela).select("*").execute().data
+
+    nivel = norm_txt((ctx or {}).get("nivel_contexto"))
+    empresa_nome = str(
+        (ctx or {}).get("empresa_nome")
+        or (ctx or {}).get("company")
+        or (ctx or {}).get("contexto_nome")
+        or (ctx or {}).get("contexto_codigo")
+        or ""
+    ).strip()
+    holding_nome = norm_txt(
+        (ctx or {}).get("holding_nome")
+        or (ctx or {}).get("contexto_nome")
+        or (ctx or {}).get("contexto_codigo")
+    )
+
+    try:
+        if nivel in {"EMPRESA", "FILIAL"} and empresa_nome:
+            return supabase.table(tabela).select("*").ilike("empresa", empresa_nome).execute().data
+
+        if nivel == "HOLDING":
+            if holding_nome == "PROSPERA":
+                return (
+                    supabase.table(tabela)
+                    .select("*")
+                    .in_("empresa", PROSPERA_EMPRESAS_LEADERTRACK)
+                    .execute()
+                    .data
+                )
+
+            if holding_nome == "LEVEN":
+                por_codrodada = (
+                    supabase.table(tabela)
+                    .select("*")
+                    .ilike("codrodada", "%leven%")
+                    .execute()
+                    .data
+                )
+                por_empresa = (
+                    supabase.table(tabela)
+                    .select("*")
+                    .ilike("empresa", "%leven%")
+                    .execute()
+                    .data
+                )
+                return combinar_rows_unicas(por_codrodada, por_empresa)
+
+            if holding_nome:
+                return supabase.table(tabela).select("*").ilike("empresa", holding_nome).execute().data
+    except Exception:
+        pass
+
+    return supabase.table(tabela).select("*").execute().data
+
+
 def primeiro_valido(*valores):
     for valor in valores:
         if valor is None:
@@ -1078,12 +1244,13 @@ def adicionar_holding_ao_dataframe(df, contexto_por_chave):
 
 
 @st.cache_data(ttl=300)
-def fetch_data():
+def fetch_data(ctx_key=()):
     try:
         supabase = init_supabase()
-        consolidado_arq = supabase.table('consolidado_arquetipos').select('*').execute()
-        consolidado_micro = supabase.table('consolidado_microambiente').select('*').execute()
-        return consolidado_arq.data, consolidado_micro.data
+        ctx = contexto_from_cache_key(ctx_key)
+        consolidado_arq = consultar_consolidado_leadertrack(supabase, 'consolidado_arquetipos', ctx)
+        consolidado_micro = consultar_consolidado_leadertrack(supabase, 'consolidado_microambiente', ctx)
+        return consolidado_arq, consolidado_micro
     except Exception as e:
         st.error(f"Erro ao conectar com Supabase: {str(e)}")
         return [], []
@@ -1094,13 +1261,15 @@ def fetch_data():
 st.title("🎯 LeaderTrack Dashboard")
 st.markdown("---")
 
+ctx = contexto_url()
+
 with st.spinner("Carregando matrizes..."):
     matriz_arq = carregar_matriz_arquetipos()
     matriz_micro, pontos_max_dimensao, pontos_max_subdimensao = carregar_matrizes_microambiente()
 
 if matriz_arq is not None and matriz_micro is not None:
     with st.spinner("Carregando dados dos respondentes..."):
-        consolidado_arq, consolidado_micro = fetch_data()
+        consolidado_arq, consolidado_micro = fetch_data(contexto_cache_key(ctx))
 
     if consolidado_arq and consolidado_micro:
         st.success("✅ Conectado ao Supabase!")
@@ -1108,22 +1277,25 @@ if matriz_arq is not None and matriz_micro is not None:
         with st.spinner("Carregando dados de holding..."):
             try:
                 supabase = init_supabase()
-                employees_data = None
+                employees_rows = []
                 try:
-                    employees_data = supabase.table('employees').select(
-                        'email,emailLider,holding,holding_id,empresa,empresa_id,company_name,filial_id,branch_name'
-                    ).execute()
+                    employees_rows = executar_query_com_fallback(
+                        supabase,
+                        'employees',
+                        'email,emailLider,holding,holding_id,empresa,empresa_id,company_name,filial_id,branch_name',
+                        ctx,
+                    )
                 except:
                     try:
-                        employees_data = supabase.table('employees').select('email, holding, empresa').execute()
+                        employees_rows = supabase.table('employees').select('email, holding, empresa').execute().data
                     except:
                         try:
-                            employees_data = supabase.table('employees').select('holding').execute()
+                            employees_rows = supabase.table('employees').select('holding').execute().data
                         except:
-                            employees_data = supabase.table('employees').select('*').execute()
+                            employees_rows = supabase.table('employees').select('*').execute().data
                 contexto_por_chave = {}
-                if employees_data and employees_data.data:
-                    for emp in employees_data.data:
+                if employees_rows:
+                    for emp in employees_rows:
                         email = emp.get('email', '').lower() if emp.get('email') else ''
                         email_lider = emp.get('emailLider', '').lower() if emp.get('emailLider') else ''
                         holding = str(emp.get('holding', 'N/A')).upper().strip()
@@ -1167,8 +1339,6 @@ if matriz_arq is not None and matriz_micro is not None:
 
 
         # ==================== CONTEXTO RECEBIDO DO WORDPRESS ====================
-        ctx = contexto_url()
-
         if ctx.get("nivel_contexto"):
             st.session_state["hrkey_contexto"] = ctx
             persistir_contexto_no_navegador(ctx)
