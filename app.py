@@ -234,12 +234,16 @@ def enviar_parecer_organizacional_para_wordpress(resposta, pacote):
         f"""
         <script>
         (function () {{
-          const payload = {json.dumps(payload, ensure_ascii=False, default=str)};
+          const message = {{
+            type: "hrkey:leadertrack:devolutiva-executiva",
+            payload: {json.dumps(payload, ensure_ascii=False, default=str)}
+          }};
+          const targetOrigin = "https://gestor.thehrkey.tech";
+          const targets = [window.parent, window.parent && window.parent.parent, window.top];
           try {{
-            window.parent.postMessage({{
-              type: "hrkey:leadertrack:devolutiva-executiva",
-              payload
-            }}, "https://gestor.thehrkey.tech");
+            targets.forEach(function (target) {{
+              if (target) target.postMessage(message, targetOrigin);
+            }});
           }} catch (e) {{}}
         }})();
         </script>
