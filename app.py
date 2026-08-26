@@ -207,16 +207,146 @@ def exibir_resposta_parecer_organizacional(resposta):
     for chave, valor in devolutiva.items():
         titulo = str(chave).replace("_", " ").title()
         st.subheader(titulo)
-        if isinstance(valor, str):
-            st.markdown(valor)
-        elif isinstance(valor, list):
-            for item in valor:
-                if isinstance(item, str):
-                    st.markdown(f"- {item}")
-                else:
-                    st.json(item, expanded=False)
-        else:
-            st.json(valor, expanded=False)
+        exibir_bloco_parecer_organizacional(valor)
+
+
+def exibir_bloco_parecer_organizacional(valor, nivel=0):
+    if valor is None:
+        st.caption("Sem informação suficiente no pacote analítico.")
+        return
+
+    if isinstance(valor, str):
+        st.markdown(valor)
+        return
+
+    if isinstance(valor, (int, float, bool)):
+        st.write(valor)
+        return
+
+    if isinstance(valor, list):
+        if not valor:
+            st.caption("Sem itens para exibir.")
+            return
+        if all(isinstance(item, dict) for item in valor):
+            for idx, item in enumerate(valor, start=1):
+                titulo_item = (
+                    item.get("titulo")
+                    or item.get("achado")
+                    or item.get("descricao")
+                    or item.get("horizonte")
+                    or item.get("nome")
+                    or f"Item {idx}"
+                )
+                with st.expander(str(titulo_item), expanded=idx <= 3):
+                    exibir_bloco_parecer_organizacional(item, nivel + 1)
+            return
+        for item in valor:
+            if isinstance(item, str):
+                st.markdown(f"- {item}")
+            else:
+                exibir_bloco_parecer_organizacional(item, nivel + 1)
+        return
+
+    if isinstance(valor, dict):
+        for chave, conteudo in valor.items():
+            rotulo = str(chave).replace("_", " ").capitalize()
+            if isinstance(conteudo, (dict, list)):
+                st.markdown(f"**{rotulo}**")
+                exibir_bloco_parecer_organizacional(conteudo, nivel + 1)
+            else:
+                st.markdown(f"**{rotulo}:** {conteudo}")
+        return
+
+    st.write(valor)
+
+
+def _primeira_coluna_texto(df):
+    for col in df.columns:
+        if df[col].dtype == "object":
+            return col
+    return df.columns[0] if len(df.columns) else None
+
+
+def _primeira_coluna_numerica(df, preferidas=None):
+    preferidas = preferidas or ["score", "score_final", "media", "percentual", "gap", "delta", "n"]
+    for col in preferidas:
+        if col in df.columns and pd.api.types.is_numeric_dtype(pd.to_numeric(df[col], errors="coerce")):
+            return col
+    for col in df.columns:
+        if pd.api.types.is_numeric_dtype(pd.to_numeric(df[col], errors="coerce")):
+            return col
+    return None
+
+
+def exibir_grafico_lista_organizacional(titulo, linhas, limite=12):
+    if not isinstance(linhas, list) or not linhas:
+        return
+    df = pd.DataFrame(linhas).head(limite)
+    if df.empty:
+        return
+    x_col = _primeira_coluna_texto(df)
+    y_col = _primeira_coluna_numerica(df)
+    if not x_col or not y_col:
+        st.dataframe(df, use_container_width=True, hide_index=True)
+        return
+    df[y_col] = pd.to_numeric(df[y_col], errors="coerce")
+    df = df.dropna(subset=[y_col])
+    if df.empty:
+        return
+    fig = px.bar(df, x=x_col, y=y_col, title=titulo, text=y_col)
+    fig.update_layout(height=360, margin=dict(l=20, r=20, t=55, b=20))
+    st.plotly_chart(fig, use_container_width=True)
+
+
+def exibir_visao_visual_parecer_organizacional(pacote):
+    if not isinstance(pacote, dict):
+        return
+
+    st.subheader("Painel visual do parecer")
+    col_v1, col_v2 = st.columns(2)
+    with col_v1:
+        micro = pacote.get("microambiente") or {}
+        for chave in ["dimensoes", "subdimensoes", "gaps_dimensoes", "gaps_subdimensoes"]:
+            if isinstance(micro.get(chave), list) and micro.get(chave):
+                exibir_grafico_lista_organizacional(
+                    f"Microambiente - {chave.replace('_', ' ')}",
+                    micro.get(chave),
+                )
+                break
+    with col_v2:
+        arquetipos = pacote.get("arquetipos") or {}
+        for chave in ["dominantes", "scores", "arquetipos"]:
+            if isinstance(arquetipos.get(chave), list) and arquetipos.get(chave):
+                exibir_grafico_lista_organizacional(
+                    f"Arquétipos - {chave.replace('_', ' ')}",
+                    arquetipos.get(chave),
+                )
+                break
+
+    saude = pacote.get("saude_emocional") or {}
+    for chave in ["recortes", "dimensoes", "cruzamentos"]:
+        if isinstance(saude.get(chave), list) and saude.get(chave):
+            exibir_grafico_lista_organizacional(
+                f"Saúde emocional - {chave.replace('_', ' ')}",
+                saude.get(chave),
+            )
+            break
+
+    distribuicoes = pacote.get("distribuicoes") or {}
+    if isinstance(distribuicoes, dict) and distribuicoes:
+        st.subheader("Distribuições da amostra")
+        cols_dist = st.columns(2)
+        idx = 0
+        for campo, linhas in distribuicoes.items():
+            if not isinstance(linhas, list) or not linhas:
+                continue
+            with cols_dist[idx % 2]:
+                exibir_grafico_lista_organizacional(
+                    f"Amostra por {str(campo).replace('_', ' ')}",
+                    linhas,
+                    limite=10,
+                )
+            idx += 1
 
 
 st.set_page_config(page_title="🎯 LeaderTrack Dashboard", page_icon="", layout="wide")
@@ -2649,6 +2779,8 @@ if matriz_arq is not None and matriz_micro is not None:
                 with col_m3:
                     score_se = saude_salva.get("score_final")
                     st.metric("Saúde Emocional", "—" if score_se is None else f"{float(score_se):.1f}%")
+
+                exibir_visao_visual_parecer_organizacional(pacote_salvo)
 
                 if achados_salvos:
                     st.subheader("Achados detectados pelo motor")
