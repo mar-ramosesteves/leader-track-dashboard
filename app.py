@@ -165,6 +165,8 @@ def chamar_parecer_organizacional(pacote_analitico, gerar_com_ia=True):
         "pacote_analitico": pacote_analitico,
         "gerarComIA": bool(gerar_com_ia),
         "persistir": False,
+        "maxTokens": 4000,
+        "timeout": 25,
     }
     body = json.dumps(payload, ensure_ascii=False, default=str).encode("utf-8")
     req = urllib.request.Request(
