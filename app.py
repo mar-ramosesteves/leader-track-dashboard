@@ -375,9 +375,13 @@ def valor_filtro_sidebar(nome, default=""):
 
 def normalizar_filtro_consulta(valor, todos_label):
     texto = str(valor or "").strip()
-    if not texto or texto == todos_label:
+    if not texto or texto.lower() == todos_label.lower():
         return todos_label
     return texto
+
+
+def filtro_todos(valor, todos_label):
+    return str(valor or "").strip().lower() == todos_label.lower()
 
 
 def filtros_preconsulta_dashboard(ctx):
@@ -466,11 +470,11 @@ def aplicar_filtros_dashboard_query(query, filtros_consulta):
     codrodada = str(filtros_consulta.get("codrodada") or "").strip()
     emaillider = filtros_consulta.get("emaillider")
 
-    if holding == "PROSPERA" and (not empresa or empresa == "Todas"):
+    if holding == "PROSPERA" and (not empresa or filtro_todos(empresa, "Todas")):
         query = query.in_("empresa", PROSPERA_EMPRESAS_LEADERTRACK)
-    if empresa and empresa != "Todas":
+    if empresa and not filtro_todos(empresa, "Todas"):
         query = query.ilike("empresa", empresa)
-    if codrodada and codrodada != "Todas":
+    if codrodada and not filtro_todos(codrodada, "Todas"):
         query = query.ilike("codrodada", codrodada)
     if isinstance(emaillider, tuple):
         emaillider = list(emaillider)
@@ -480,7 +484,7 @@ def aplicar_filtros_dashboard_query(query, filtros_consulta):
             query = query.in_("emaillider", lideres)
     else:
         email = str(emaillider or "").strip().lower()
-        if email and email != "Todos":
+        if email and not filtro_todos(email, "Todos"):
             query = query.ilike("emaillider", email)
 
     return query
@@ -596,7 +600,7 @@ def filtro_restrito(valor, todos_label):
     if isinstance(valor, (list, tuple, set)):
         return any(str(v or "").strip() for v in valor)
     texto = str(valor or "").strip()
-    return bool(texto and texto != todos_label)
+    return bool(texto and not filtro_todos(texto, todos_label))
 
 
 def filtros_consulta_com_fallbacks(filtros_consulta):
