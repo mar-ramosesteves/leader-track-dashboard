@@ -149,9 +149,6 @@ def mapear_compliance_nr1(afirmacoes_saude_emocional):
     return requisitos_nr1
 
 
-# Limpar cache
-st.cache_data.clear()
-
 st.set_page_config(page_title="🎯 LeaderTrack Dashboard", page_icon="", layout="wide")
 
 SUPABASE_URL = "https://xmsjjknpnowsswwrbvpc.supabase.co"

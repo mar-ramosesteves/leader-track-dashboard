@@ -1089,6 +1089,19 @@ st.title("📊 Visão Executiva Consolidada")
 st.markdown("**Análise completa de todos os líderes com Índice Geral de Liderança (IGL)**")
 st.markdown("---")
 
+ctx = contexto_url()
+
+if not ctx.get("nivel_contexto"):
+    tentar_restaurar_contexto_do_navegador()
+    st.warning(
+        "Sem contexto recebido na URL. Estou tentando recuperar o último contexto LeaderTrack "
+        "usado neste navegador. Se a página não recarregar automaticamente, abra pelo portal "
+        "The HR Key com o contexto selecionado."
+    )
+    st.stop()
+
+persistir_contexto_no_navegador(ctx)
+
 with st.spinner("Carregando dados..."):
     matriz_arq  = carregar_matriz_arquetipos()
     matriz_micro = carregar_matriz_microambiente()
@@ -1210,24 +1223,13 @@ medias_dimensoes_por_avaliacao, medias_dimensoes_por_emp_round = montar_medias_d
 )
 
 
-ctx = contexto_url()
 df_emp_original = df_emp.copy()
 
-if ctx.get("nivel_contexto"):
-    persistir_contexto_no_navegador(ctx)
-    df_emp = filtrar_employees_por_contexto(df_emp, ctx)
+df_emp = filtrar_employees_por_contexto(df_emp, ctx)
 
-    st.success(
-        f"Contexto ativo: {str(ctx.get('nivel_contexto')).upper()} · {contexto_label(ctx)}"
-    )
-else:
-    tentar_restaurar_contexto_do_navegador()
-    st.warning(
-        "Sem contexto recebido na URL. Estou tentando recuperar o último contexto LeaderTrack "
-        "usado neste navegador. Se a página não recarregar automaticamente, abra pelo portal "
-        "The HR Key com o contexto selecionado."
-    )
-    st.stop()
+st.success(
+    f"Contexto ativo: {str(ctx.get('nivel_contexto')).upper()} · {contexto_label(ctx)}"
+)
 
 
 
