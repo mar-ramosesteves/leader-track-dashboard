@@ -165,6 +165,7 @@ def chamar_parecer_organizacional(pacote_analitico, gerar_com_ia=True):
         "pacote_analitico": pacote_analitico,
         "gerarComIA": bool(gerar_com_ia),
         "persistir": False,
+        "modelo": "gpt-4o-mini",
         "maxTokens": 1800,
         "timeout": 15,
     }
