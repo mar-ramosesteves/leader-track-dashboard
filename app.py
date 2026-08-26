@@ -8,10 +8,17 @@ import plotly.graph_objects as go
 from datetime import datetime
 import numpy as np
 import openpyxl
+import urllib.error
+import urllib.request
 from urllib.parse import quote
+from leadertrack_organizacional import OrganizationalRules, gerar_pacote_organizacional
 
 # === Configuração global ===
 NORMALIZAR_POR_SUBDIMENSAO = False
+PARECER_INTELIGENTE_ORG_URL = (
+    "https://parecer-inteligente.onrender.com/"
+    "gerar-devolutiva-organizacional-leadertrack"
+)
 
 # ==================== FUNÇÕES SAÚDE EMOCIONAL ====================
 
@@ -147,6 +154,62 @@ def mapear_compliance_nr1(afirmacoes_saude_emocional):
         else:
             requisitos_nr1['Suporte Emocional'].append(afirmacao)
     return requisitos_nr1
+
+
+def chamar_parecer_organizacional(pacote_analitico, gerar_com_ia=True):
+    payload = {
+        "pacote_analitico": pacote_analitico,
+        "gerarComIA": bool(gerar_com_ia),
+        "persistir": False,
+    }
+    body = json.dumps(payload, ensure_ascii=False, default=str).encode("utf-8")
+    req = urllib.request.Request(
+        PARECER_INTELIGENTE_ORG_URL,
+        data=body,
+        method="POST",
+        headers={
+            "Content-Type": "application/json",
+            "Origin": "https://gestor.thehrkey.tech",
+        },
+    )
+
+    try:
+        with urllib.request.urlopen(req, timeout=120) as resp:
+            texto = resp.read().decode("utf-8")
+            return json.loads(texto), None
+    except urllib.error.HTTPError as e:
+        try:
+            detalhe = e.read().decode("utf-8")
+        except Exception:
+            detalhe = str(e)
+        return None, f"Erro HTTP {e.code} ao chamar o bot: {detalhe}"
+    except Exception as e:
+        return None, f"Erro ao chamar o bot: {str(e)}"
+
+
+def exibir_resposta_parecer_organizacional(resposta):
+    if not isinstance(resposta, dict):
+        st.write(resposta)
+        return
+
+    devolutiva = resposta.get("devolutiva")
+    if not isinstance(devolutiva, dict):
+        st.json(resposta)
+        return
+
+    for chave, valor in devolutiva.items():
+        titulo = str(chave).replace("_", " ").title()
+        st.subheader(titulo)
+        if isinstance(valor, str):
+            st.markdown(valor)
+        elif isinstance(valor, list):
+            for item in valor:
+                if isinstance(item, str):
+                    st.markdown(f"- {item}")
+                else:
+                    st.json(item, expanded=False)
+        else:
+            st.json(valor, expanded=False)
 
 
 st.set_page_config(page_title="🎯 LeaderTrack Dashboard", page_icon="", layout="wide")
@@ -1796,7 +1859,12 @@ if matriz_arq is not None and matriz_micro is not None:
             'cargo': cargo_selecionado.lower() if cargo_selecionado != "Todos" else cargo_selecionado,
             'holding': holding_selecionada.upper() if holding_selecionada != "Todas" else holding_selecionada,
         }
-        tab1, tab2, tab3 = st.tabs(["📊 Arquétipos", "🏢 Microambiente", "💚 Saúde Emocional"])
+        tab1, tab2, tab3, tab4 = st.tabs([
+            "📊 Arquétipos",
+            "🏢 Microambiente",
+            "💚 Saúde Emocional",
+            "🏛️ Parecer Corporativo",
+        ])
 
         # ==================== TAB ARQUÉTIPOS ====================
         with tab1:
@@ -2480,6 +2548,129 @@ if matriz_arq is not None and matriz_micro is not None:
                 df_micro_exibir.columns = ['Questão', 'Afirmação', 'Dimensão', 'Subdimensão', 'Real (%)', 'Ideal (%)', 'Gap']
                 st.dataframe(df_micro_exibir.style.map(color_gap_micro, subset=['Gap']), use_container_width=True)
                 st.download_button(label="📥 Download CSV - Microambiente SE", data=df_micro_exibir.to_csv(index=False), file_name="saude_emocional_microambiente.csv", mime="text/csv")
+
+        # ==================== TAB PARECER CORPORATIVO ====================
+        with tab4:
+            st.header("🏛️ Parecer Corporativo LeaderTrack")
+            st.warning(
+                "Saúde emocional é exibida aqui somente em nível organizacional/agregado "
+                "para RH, CEO, diretoria ou gestão autorizada. Não use este bloco como "
+                "devolutiva individual para líder."
+            )
+
+            col_cfg1, col_cfg2, col_cfg3 = st.columns(3)
+            with col_cfg1:
+                amostra_minima_org = st.number_input(
+                    "Amostra mínima",
+                    min_value=3,
+                    max_value=30,
+                    value=5,
+                    step=1,
+                    help="Recortes abaixo deste número são omitidos para proteger pessoas e evitar conclusão frágil.",
+                )
+            with col_cfg2:
+                diferenca_relevante_org = st.number_input(
+                    "Diferença relevante",
+                    min_value=3.0,
+                    max_value=20.0,
+                    value=5.0,
+                    step=0.5,
+                    help="Diferença mínima em pontos para virar achado.",
+                )
+            with col_cfg3:
+                gerar_com_ia_org = st.checkbox("Gerar texto com IA", value=True)
+
+            if st.button("Gerar parecer corporativo", type="primary", key="btn_parecer_corporativo"):
+                rules_org = OrganizationalRules(
+                    min_sample=int(amostra_minima_org),
+                    relevant_delta_points=float(diferenca_relevante_org),
+                )
+                with st.spinner("Montando pacote analítico organizacional..."):
+                    pacote_org = gerar_pacote_organizacional(
+                        matriz_arq=matriz_arq,
+                        matriz_micro=matriz_micro,
+                        df_arquetipos=df_arquetipos,
+                        df_microambiente=df_microambiente,
+                        filtros=filtros,
+                        contexto=ctx,
+                        rules=rules_org,
+                    )
+                    st.session_state["parecer_corporativo_pacote"] = pacote_org
+
+                amostra_org = pacote_org.get("amostra") or {}
+                respondentes_org = int(amostra_org.get("respondentes") or 0)
+                if respondentes_org < int(amostra_minima_org):
+                    st.error(
+                        "Amostra insuficiente para gerar parecer corporativo com segurança. "
+                        f"Foram encontrados {respondentes_org} respondentes no recorte atual."
+                    )
+                    st.stop()
+
+                with st.spinner("Enviando pacote ao Leadertrackbot..."):
+                    resposta_org, erro_org = chamar_parecer_organizacional(
+                        pacote_org,
+                        gerar_com_ia=gerar_com_ia_org,
+                    )
+
+                if erro_org:
+                    st.error(erro_org)
+                else:
+                    st.session_state["parecer_corporativo_resposta"] = resposta_org
+                    st.success("Parecer corporativo gerado.")
+
+            pacote_salvo = st.session_state.get("parecer_corporativo_pacote")
+            if isinstance(pacote_salvo, dict):
+                amostra_salva = pacote_salvo.get("amostra") or {}
+                saude_salva = pacote_salvo.get("saude_emocional") or {}
+                achados_salvos = pacote_salvo.get("achados_relevantes") or []
+
+                col_m1, col_m2, col_m3 = st.columns(3)
+                with col_m1:
+                    st.metric("Respondentes", amostra_salva.get("respondentes", 0))
+                with col_m2:
+                    st.metric("Líderes", amostra_salva.get("lideres", 0))
+                with col_m3:
+                    score_se = saude_salva.get("score_final")
+                    st.metric("Saúde Emocional", "—" if score_se is None else f"{float(score_se):.1f}%")
+
+                if achados_salvos:
+                    st.subheader("Achados detectados pelo motor")
+                    df_achados_org = pd.DataFrame(achados_salvos)
+                    colunas_achados = [
+                        col for col in [
+                            "tipo",
+                            "campo",
+                            "rotulo",
+                            "valor",
+                            "n",
+                            "dimensao",
+                            "score",
+                            "media_contexto",
+                            "delta",
+                            "real",
+                            "ideal",
+                            "gap",
+                            "severidade",
+                            "mensagem_base",
+                        ] if col in df_achados_org.columns
+                    ]
+                    st.dataframe(df_achados_org[colunas_achados], use_container_width=True, hide_index=True)
+                else:
+                    st.info("Nenhum achado relevante detectado com os critérios atuais.")
+
+                st.download_button(
+                    "Baixar pacote analítico JSON",
+                    data=json.dumps(pacote_salvo, ensure_ascii=False, indent=2, default=str),
+                    file_name="pacote_analitico_parecer_corporativo_leadertrack.json",
+                    mime="application/json",
+                    key="download_pacote_parecer_corporativo",
+                )
+
+            resposta_salva = st.session_state.get("parecer_corporativo_resposta")
+            if isinstance(resposta_salva, dict):
+                st.divider()
+                st.subheader("Parecer gerado pelo Leadertrackbot")
+                exibir_resposta_parecer_organizacional(resposta_salva)
 
         if not afirmacoes_saude_emocional:
             st.warning("⚠️ Nenhuma afirmação relacionada à saúde emocional foi identificada.")
