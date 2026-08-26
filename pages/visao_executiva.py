@@ -300,11 +300,11 @@ def aplicar_filtros_dashboard_query(query, filtros_consulta):
     if isinstance(emaillider, list):
         lideres = [str(v).strip().lower() for v in emaillider if str(v or "").strip()]
         if lideres:
-            query = query.in_("emailLider", lideres)
+            query = query.in_("emaillider", lideres)
     else:
         email = str(emaillider or "").strip().lower()
         if email and email != "Todos":
-            query = query.ilike("emailLider", email)
+            query = query.ilike("emaillider", email)
 
     return query
 
