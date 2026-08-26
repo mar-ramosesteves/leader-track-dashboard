@@ -210,6 +210,45 @@ def exibir_resposta_parecer_organizacional(resposta):
         exibir_bloco_parecer_organizacional(valor)
 
 
+def enviar_parecer_organizacional_para_wordpress(resposta, pacote):
+    if not isinstance(resposta, dict):
+        return
+
+    devolutiva = resposta.get("devolutiva")
+    if not isinstance(devolutiva, dict):
+        return
+
+    payload = {
+        "tipo": "hrkey_leadertrack_devolutiva_executiva",
+        "versao": "v1",
+        "gerado_em": datetime.utcnow().isoformat() + "Z",
+        "contexto": resposta.get("contexto") or (pacote or {}).get("contexto") or {},
+        "filtros": resposta.get("filtros") or (pacote or {}).get("filtros") or {},
+        "amostra": resposta.get("amostra") or (pacote or {}).get("amostra") or {},
+        "governanca": resposta.get("governanca") or (pacote or {}).get("governanca") or {},
+        "geracao_ia": resposta.get("geracao_ia") or {},
+        "devolutiva": devolutiva,
+    }
+
+    components.html(
+        f"""
+        <script>
+        (function () {{
+          const payload = {json.dumps(payload, ensure_ascii=False, default=str)};
+          try {{
+            window.parent.postMessage({{
+              type: "hrkey:leadertrack:devolutiva-executiva",
+              payload
+            }}, "https://gestor.thehrkey.tech");
+          }} catch (e) {{}}
+        }})();
+        </script>
+        """,
+        height=0,
+        width=0,
+    )
+
+
 def exibir_bloco_parecer_organizacional(valor, nivel=0):
     if valor is None:
         st.caption("Sem informação suficiente no pacote analítico.")
@@ -2817,6 +2856,7 @@ if matriz_arq is not None and matriz_micro is not None:
 
             resposta_salva = st.session_state.get("parecer_corporativo_resposta")
             if isinstance(resposta_salva, dict):
+                enviar_parecer_organizacional_para_wordpress(resposta_salva, pacote_salvo)
                 st.divider()
                 st.subheader("Parecer gerado pelo Leadertrackbot")
                 exibir_resposta_parecer_organizacional(resposta_salva)
