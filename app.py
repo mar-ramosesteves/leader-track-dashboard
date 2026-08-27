@@ -421,6 +421,255 @@ def exibir_visao_visual_parecer_organizacional(pacote):
             idx += 1
 
 
+def _fmt_pct_org(valor):
+    try:
+        return f"{float(valor):.1f}%"
+    except Exception:
+        return "—"
+
+
+def exibir_conceitos_leadertrack_organizacional():
+    st.subheader("Caderno conceitual LeaderTrack")
+    col_c1, col_c2, col_c3 = st.columns(3)
+    with col_c1:
+        st.markdown(
+            """
+            **Arquétipos de gestão**
+
+            Os arquétipos representam padrões comportamentais percebidos na liderança. Eles não são rótulos fixos de personalidade: indicam repertórios que podem aparecer com mais ou menos força conforme contexto, pressão, maturidade da equipe e momento organizacional.
+
+            Na leitura organizacional, o objetivo não é classificar um líder, mas observar quais repertórios aparecem com mais presença na cultura de gestão do recorte selecionado.
+            """
+        )
+    with col_c2:
+        st.markdown(
+            """
+            **Microambiente**
+
+            O microambiente compara duas percepções: como a equipe percebe a experiência real e como entende que ela deveria ser. O gap é a distância entre prática percebida e expectativa coletiva.
+
+            Na devolutiva executiva, o gap médio mostra onde a cultura está mais distante do ambiente desejável para colaboração, clareza, reconhecimento, responsabilidade, adaptabilidade e performance.
+            """
+        )
+    with col_c3:
+        st.markdown(
+            """
+            **Saúde emocional organizacional**
+
+            A saúde emocional é tratada somente em nível agregado. Ela observa sinais coletivos de segurança psicológica percebida, reconhecimento, suporte, comunicação positiva e equilíbrio.
+
+            Este bloco não deve ser usado para diagnóstico clínico nem para devolutiva individual. A leitura serve para orientar perguntas de governança, cuidado institucional e qualidade das relações de trabalho.
+            """
+        )
+
+
+def _linhas_arquetipos_por_questao(df_filtrado_arq, matriz_arq):
+    if df_filtrado_arq is None or df_filtrado_arq.empty or matriz_arq is None or matriz_arq.empty:
+        return []
+    df_equipe_arq = df_filtrado_arq[df_filtrado_arq["tipo"] == "Avaliação Equipe"]
+    if df_equipe_arq.empty:
+        return []
+    linhas = []
+    matriz_base = matriz_arq[["COD_AFIRMACAO", "AFIRMACAO", "ARQUETIPO"]].drop_duplicates()
+    for _, row in matriz_base.iterrows():
+        codigo = row.get("COD_AFIRMACAO")
+        arquetipo = row.get("ARQUETIPO")
+        percentual, tendencia, n_resp = calcular_tendencia_arquetipos_por_questao(
+            df_equipe_arq, matriz_arq, codigo, arquetipo
+        )
+        if percentual is None:
+            continue
+        linhas.append({
+            "Questão": codigo,
+            "Afirmação": row.get("AFIRMACAO"),
+            "Arquétipo": arquetipo,
+            "% Tendência": round(float(percentual), 1),
+            "Tendência": tendencia,
+            "N": n_resp,
+        })
+    return sorted(linhas, key=lambda item: abs(float(item.get("% Tendência") or 0)), reverse=True)
+
+
+def _linhas_microambiente_por_questao(df_filtrado_micro, matriz_micro):
+    if df_filtrado_micro is None or df_filtrado_micro.empty or matriz_micro is None or matriz_micro.empty:
+        return []
+    df_equipe_micro = df_filtrado_micro[df_filtrado_micro["tipo"] == "Avaliação Equipe"]
+    if df_equipe_micro.empty:
+        return []
+    linhas = []
+    matriz_base = matriz_micro[["COD", "AFIRMACAO", "DIMENSAO", "SUBDIMENSAO"]].drop_duplicates()
+    for _, row in matriz_base.iterrows():
+        real, ideal, gap = calcular_real_ideal_gap_por_questao(df_equipe_micro, matriz_micro, row.get("COD"))
+        if real is None:
+            continue
+        linhas.append({
+            "Questão": _MAP_MATRIZ_TO_FORM.get(row.get("COD"), row.get("COD")),
+            "Afirmação": row.get("AFIRMACAO"),
+            "Dimensão": row.get("DIMENSAO"),
+            "Subdimensão": row.get("SUBDIMENSAO"),
+            "Real (%)": round(float(real), 1),
+            "Ideal (%)": round(float(ideal), 1),
+            "Gap": round(float(gap), 1),
+        })
+    return sorted(linhas, key=lambda item: float(item.get("Gap") or 0), reverse=True)
+
+
+def _grafico_waterfall_gaps(linhas_micro):
+    top = [linha for linha in linhas_micro if float(linha.get("Gap") or 0) > 0][:12]
+    if not top:
+        return None
+    fig = go.Figure(go.Waterfall(
+        orientation="v",
+        measure=["relative"] * len(top),
+        x=[linha["Questão"] for linha in top],
+        y=[linha["Gap"] for linha in top],
+        text=[f"{linha['Gap']:.1f}" for linha in top],
+        connector={"line": {"color": "rgba(15,23,42,0.25)"}},
+        increasing={"marker": {"color": "#ef4444"}},
+        decreasing={"marker": {"color": "#0f766e"}},
+    ))
+    fig.update_layout(
+        title="Waterfall dos maiores gaps de microambiente",
+        yaxis_title="Gap médio",
+        height=420,
+        showlegend=False,
+    )
+    return fig
+
+
+def exibir_entrega_executiva_organizacional(
+    pacote,
+    matriz_arq,
+    matriz_micro,
+    df_arquetipos,
+    df_microambiente,
+    filtros,
+):
+    st.divider()
+    st.header("Devolutiva executiva ampliada")
+    st.caption(
+        "Camada calculada com os mesmos fundamentos da devolutiva individual, "
+        "mas agregada para o filtro organizacional selecionado."
+    )
+
+    exibir_conceitos_leadertrack_organizacional()
+
+    (
+        arquétipos,
+        medias_auto,
+        medias_equipe,
+        df_filtrado_arq,
+    ) = calcular_medias_arquetipos(df_arquetipos, filtros)
+    (
+        dimensoes,
+        _medias_real_auto,
+        _medias_ideal_auto,
+        medias_real_equipe,
+        medias_ideal_equipe,
+        _medias_sub_real,
+        _medias_sub_ideal,
+        df_filtrado_micro,
+    ) = calcular_medias_microambiente(df_microambiente, filtros)
+
+    linhas_arq = _linhas_arquetipos_por_questao(df_filtrado_arq, matriz_arq)
+    linhas_micro = _linhas_microambiente_por_questao(df_filtrado_micro, matriz_micro)
+    gaps_relevantes = [linha for linha in linhas_micro if float(linha.get("Gap") or 0) >= 20]
+    gap_medio_questoes = float(np.mean([linha["Gap"] for linha in linhas_micro])) if linhas_micro else 0.0
+    termo_label = "ALTO ESTÍMULO" if gap_medio_questoes <= 5 else "ESTÍMULO" if gap_medio_questoes <= 10 else "NEUTRO" if gap_medio_questoes <= 15 else "BAIXO ESTÍMULO" if gap_medio_questoes <= 20 else "DESMOTIVAÇÃO"
+
+    col_m1, col_m2, col_m3, col_m4 = st.columns(4)
+    with col_m1:
+        st.metric("Gap médio das questões", _fmt_pct_org(gap_medio_questoes))
+    with col_m2:
+        st.metric("Questões com gap >= 20", len(gaps_relevantes))
+    with col_m3:
+        st.metric("Termômetro médio", termo_label)
+    with col_m4:
+        score_saude = ((pacote or {}).get("saude_emocional") or {}).get("score_final")
+        st.metric("Saúde emocional", "—" if score_saude is None else _fmt_pct_org(score_saude))
+
+    aba_conceito, aba_arq, aba_micro, aba_saude = st.tabs([
+        "Base conceitual",
+        "Arquétipos por questão",
+        "Microambiente e gaps",
+        "Saúde emocional",
+    ])
+
+    with aba_conceito:
+        st.markdown(
+            """
+            Esta versão organizacional não substitui a devolutiva individual do líder. Ela muda a unidade de leitura: sai a pessoa específica e entra o recorte selecionado no dashboard, como holding, empresa, filial, região, área, cargo, geração, gênero, etnia ou combinação protegida por amostra mínima.
+
+            A interpretação deve sempre separar três camadas: o dado medido, a hipótese prudente e a pergunta executiva. Quando o dado não existir, a página deve apontar a limitação em vez de preencher lacuna com suposição.
+            """
+        )
+
+    with aba_arq:
+        st.plotly_chart(
+            gerar_grafico_arquetipos(
+                medias_auto,
+                medias_equipe,
+                arquétipos,
+                "Arquétipos médios do recorte selecionado",
+                "📈 Gráfico Simples",
+            ),
+            use_container_width=True,
+        )
+        if linhas_arq:
+            st.subheader("Relatório analítico por questão de arquétipos")
+            df_arq_questoes = pd.DataFrame(linhas_arq)
+            st.dataframe(df_arq_questoes, use_container_width=True, hide_index=True)
+        else:
+            st.info("Sem questões de arquétipos suficientes para o recorte selecionado.")
+
+    with aba_micro:
+        st.plotly_chart(
+            gerar_grafico_microambiente_linha(
+                medias_real_equipe,
+                medias_ideal_equipe,
+                dimensoes,
+                "Microambiente médio do recorte selecionado",
+            ),
+            use_container_width=True,
+        )
+        fig_waterfall = _grafico_waterfall_gaps(linhas_micro)
+        if fig_waterfall:
+            st.plotly_chart(fig_waterfall, use_container_width=True)
+        if linhas_micro:
+            st.subheader("Relatório analítico por questão de microambiente")
+            df_micro_questoes = pd.DataFrame(linhas_micro)
+            st.dataframe(df_micro_questoes, use_container_width=True, hide_index=True)
+        else:
+            st.info("Sem questões de microambiente suficientes para o recorte selecionado.")
+
+    with aba_saude:
+        saude = (pacote or {}).get("saude_emocional") or {}
+        categorias = saude.get("categorias") or {}
+        if isinstance(categorias, dict) and categorias:
+            df_saude = pd.DataFrame([
+                {"Categoria": nome, "Score": valor}
+                for nome, valor in categorias.items()
+                if valor is not None
+            ])
+            if not df_saude.empty:
+                fig_saude = px.bar(
+                    df_saude,
+                    x="Score",
+                    y="Categoria",
+                    orientation="h",
+                    text="Score",
+                    title="Score de saúde emocional por categoria",
+                )
+                fig_saude.update_traces(texttemplate="%{text:.1f}%", marker_color="#0f766e")
+                fig_saude.update_layout(xaxis=dict(range=[0, 100]), height=420)
+                st.plotly_chart(fig_saude, use_container_width=True)
+                st.dataframe(df_saude, use_container_width=True, hide_index=True)
+        st.warning(
+            "Saúde emocional é apresentada somente em nível agregado. "
+            "Não use este bloco como diagnóstico individual nem como julgamento clínico."
+        )
+
+
 st.set_page_config(page_title="🎯 LeaderTrack Dashboard", page_icon="", layout="wide")
 
 SUPABASE_URL = "https://xmsjjknpnowsswwrbvpc.supabase.co"
@@ -2851,6 +3100,15 @@ if matriz_arq is not None and matriz_micro is not None:
                 with col_m3:
                     score_se = saude_salva.get("score_final")
                     st.metric("Saúde Emocional", "—" if score_se is None else f"{float(score_se):.1f}%")
+
+                exibir_entrega_executiva_organizacional(
+                    pacote_salvo,
+                    matriz_arq,
+                    matriz_micro,
+                    df_arquetipos,
+                    df_microambiente,
+                    filtros,
+                )
 
                 exibir_visao_visual_parecer_organizacional(pacote_salvo)
 
