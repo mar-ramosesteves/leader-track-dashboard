@@ -538,9 +538,214 @@ def _grafico_waterfall_gaps(linhas_micro):
     return fig
 
 
+def _valor_float_org(valor, padrao=0.0):
+    try:
+        if valor is None or valor == "":
+            return padrao
+        return float(valor)
+    except Exception:
+        return padrao
+
+
+def _texto_curto_org(valor, limite=140):
+    texto = str(valor or "").strip()
+    if len(texto) <= limite:
+        return texto
+    return texto[: limite - 1].rstrip() + "…"
+
+
+def _chunks_org(lista, tamanho):
+    for idx in range(0, len(lista), tamanho):
+        yield lista[idx: idx + tamanho]
+
+
+def _card_metrica_html_org(label, valor, nota=""):
+    nota_html = f"<small>{html.escape(str(nota))}</small>" if nota else ""
+    return (
+        '<div class="metric-card">'
+        f'<span>{html.escape(str(label))}</span>'
+        f'<strong>{html.escape(str(valor))}</strong>'
+        f"{nota_html}</div>"
+    )
+
+
+def _barra_dupla_html_org(titulo, labels, serie_a, serie_b, nome_a, nome_b):
+    if not labels:
+        return ""
+    linhas = []
+    for label, valor_a, valor_b in zip(labels, serie_a, serie_b):
+        va = max(0, min(100, _valor_float_org(valor_a)))
+        vb = max(0, min(100, _valor_float_org(valor_b)))
+        linhas.append(
+            '<div class="bar-row">'
+            f'<div class="bar-label">{html.escape(str(label))}</div>'
+            '<div class="bar-track">'
+            f'<i class="bar-a" style="width:{va:.1f}%"></i>'
+            f'<b>{va:.1f}%</b>'
+            '</div>'
+            '<div class="bar-track">'
+            f'<i class="bar-b" style="width:{vb:.1f}%"></i>'
+            f'<b>{vb:.1f}%</b>'
+            '</div>'
+            '</div>'
+        )
+    return (
+        '<section class="page page-white">'
+        f'<h2>{html.escape(titulo)}</h2>'
+        f'<p class="legend"><span class="dot blue"></span>{html.escape(nome_a)} '
+        f'<span class="dot orange"></span>{html.escape(nome_b)}</p>'
+        '<div class="chart-card bar-chart">'
+        + "".join(linhas)
+        + '</div></section>'
+    )
+
+
+def _radar_svg_html_org(titulo, labels, serie_a, serie_b, nome_a, nome_b):
+    if not labels:
+        return ""
+    cx, cy, raio = 300, 255, 160
+    total = len(labels)
+
+    def ponto(idx, valor):
+        ang = -np.pi / 2 + (2 * np.pi * idx / max(total, 1))
+        r = raio * max(0, min(100, _valor_float_org(valor))) / 100
+        return cx + np.cos(ang) * r, cy + np.sin(ang) * r
+
+    def poligono(valores):
+        return " ".join(f"{x:.1f},{y:.1f}" for x, y in [ponto(i, v) for i, v in enumerate(valores)])
+
+    grade = []
+    for pct in [20, 40, 60, 80, 100]:
+        pts = []
+        for i in range(total):
+            ang = -np.pi / 2 + (2 * np.pi * i / max(total, 1))
+            r = raio * pct / 100
+            pts.append(f"{cx + np.cos(ang) * r:.1f},{cy + np.sin(ang) * r:.1f}")
+        grade.append(f'<polygon points="{" ".join(pts)}" fill="none" stroke="#d8e1ec" stroke-width="1"/>')
+
+    eixos = []
+    textos = []
+    for i, label in enumerate(labels):
+        ang = -np.pi / 2 + (2 * np.pi * i / max(total, 1))
+        x = cx + np.cos(ang) * raio
+        y = cy + np.sin(ang) * raio
+        tx = cx + np.cos(ang) * (raio + 46)
+        ty = cy + np.sin(ang) * (raio + 30)
+        eixos.append(f'<line x1="{cx}" y1="{cy}" x2="{x:.1f}" y2="{y:.1f}" stroke="#e2e8f0"/>')
+        textos.append(
+            f'<text x="{tx:.1f}" y="{ty:.1f}" text-anchor="middle" '
+            f'font-size="11" font-weight="700" fill="#172033">{html.escape(str(label))}</text>'
+        )
+
+    return (
+        '<section class="page page-white">'
+        + f'<h2>{html.escape(titulo)}</h2>'
+        + '<p class="legend">'
+        + f'<span class="dot blue"></span>{html.escape(nome_a)} '
+        + f'<span class="dot orange"></span>{html.escape(nome_b)}</p>'
+        + '<div class="chart-card radar-card">'
+        + '<svg viewBox="0 0 600 520" role="img">'
+        + "".join(grade)
+        + "".join(eixos)
+        + f'<polygon points="{poligono(serie_a)}" fill="rgba(55,151,228,.18)" stroke="#3797e4" stroke-width="4"/>'
+        + f'<polygon points="{poligono(serie_b)}" fill="rgba(255,128,29,.18)" stroke="#ff801d" stroke-width="4"/>'
+        + "".join(textos)
+        + '</svg></div></section>'
+    )
+
+
+def _linha_svg_html_org(titulo, labels, real, ideal):
+    if not labels:
+        return ""
+    largura, altura = 760, 360
+    margem_x, margem_y = 70, 48
+    plot_w, plot_h = largura - 2 * margem_x, altura - 2 * margem_y
+
+    def pontos(valores):
+        pts = []
+        for i, valor in enumerate(valores):
+            x = margem_x + (plot_w * i / max(len(labels) - 1, 1))
+            y = margem_y + plot_h - (plot_h * max(0, min(100, _valor_float_org(valor))) / 100)
+            pts.append((x, y))
+        return pts
+
+    pts_real = pontos(real)
+    pts_ideal = pontos(ideal)
+
+    linhas_grade = []
+    for pct in [0, 25, 50, 75, 100]:
+        y = margem_y + plot_h - (plot_h * pct / 100)
+        linhas_grade.append(f'<line x1="{margem_x}" y1="{y:.1f}" x2="{largura-margem_x}" y2="{y:.1f}" stroke="#e5edf5"/>')
+        linhas_grade.append(f'<text x="28" y="{y+4:.1f}" font-size="10" fill="#64748b">{pct}%</text>')
+
+    rotulos = []
+    for i, label in enumerate(labels):
+        x = margem_x + (plot_w * i / max(len(labels) - 1, 1))
+        rotulos.append(
+            f'<text x="{x:.1f}" y="{altura-18}" text-anchor="middle" font-size="10" '
+            f'font-weight="700" fill="#334155">{html.escape(_texto_curto_org(label, 16))}</text>'
+        )
+
+    def poly(pts):
+        return " ".join(f"{x:.1f},{y:.1f}" for x, y in pts)
+
+    circulos = []
+    for pts, cor in [(pts_real, "#ff801d"), (pts_ideal, "#1e3a8a")]:
+        for x, y in pts:
+            circulos.append(f'<circle cx="{x:.1f}" cy="{y:.1f}" r="5" fill="{cor}"/>')
+
+    return (
+        '<section class="page page-white">'
+        f'<h2>{html.escape(titulo)}</h2>'
+        '<p class="legend"><span class="dot orange"></span>Como é percebido '
+        '<span class="dot navy"></span>Como deveria ser</p>'
+        '<div class="chart-card">'
+        f'<svg viewBox="0 0 {largura} {altura}" role="img">'
+        + "".join(linhas_grade)
+        + f'<polyline points="{poly(pts_real)}" fill="none" stroke="#ff801d" stroke-width="4"/>'
+        + f'<polyline points="{poly(pts_ideal)}" fill="none" stroke="#1e3a8a" stroke-width="4"/>'
+        + "".join(circulos)
+        + "".join(rotulos)
+        + '</svg></div></section>'
+    )
+
+
+def _waterfall_html_org(titulo, linhas):
+    top = [linha for linha in (linhas or []) if _valor_float_org(linha.get("Gap")) > 0][:12]
+    if not top:
+        return ""
+    max_gap = max([_valor_float_org(item.get("Gap")) for item in top] + [1])
+    barras = []
+    for item in top:
+        gap = _valor_float_org(item.get("Gap"))
+        largura = min(100, gap / max_gap * 100)
+        barras.append(
+            '<div class="water-row">'
+            f'<span>{html.escape(str(item.get("Questão") or ""))}</span>'
+            f'<i style="width:{largura:.1f}%"></i>'
+            f'<b>{gap:.1f} p.p.</b>'
+            '</div>'
+        )
+    return (
+        '<section class="page page-white">'
+        f'<h2>{html.escape(titulo)}</h2>'
+        '<p>Maiores distâncias entre experiência real percebida e ambiente desejável no recorte selecionado.</p>'
+        '<div class="chart-card waterfall">'
+        + "".join(barras)
+        + '</div></section>'
+    )
+
+
+def _estrelas_html_org(percentual):
+    estrelas = int(round(max(0, min(100, _valor_float_org(percentual))) / 100 * 6))
+    cheias = "&#9733;" * estrelas
+    vazias = "&#9734;" * (6 - estrelas)
+    return f'<span class="stars">{cheias}<span>{vazias}</span></span>'
+
+
 def _tabela_html_org(titulo, linhas, colunas):
     if not linhas:
-        return f"<section><h2>{html.escape(titulo)}</h2><p>Sem dados suficientes para este bloco.</p></section>"
+        return f'<section class="page page-white"><h2>{html.escape(titulo)}</h2><p>Sem dados suficientes para este bloco.</p></section>'
     head = "".join(f"<th>{html.escape(str(col))}</th>" for col in colunas)
     body_rows = []
     for linha in linhas:
@@ -550,9 +755,208 @@ def _tabela_html_org(titulo, linhas, colunas):
             cells.append(f"<td>{html.escape(str(valor))}</td>")
         body_rows.append("<tr>" + "".join(cells) + "</tr>")
     return (
-        f"<section><h2>{html.escape(titulo)}</h2>"
+        f'<section class="page page-white table-page"><h2>{html.escape(titulo)}</h2>'
         f"<table><thead><tr>{head}</tr></thead><tbody>{''.join(body_rows)}</tbody></table></section>"
     )
+
+
+def _tabela_paginas_html_org(titulo, linhas, colunas, por_pagina=18):
+    if not linhas:
+        return _tabela_html_org(titulo, linhas, colunas)
+    partes = []
+    for idx, bloco in enumerate(_chunks_org(linhas, por_pagina), start=1):
+        sufixo = "" if idx == 1 else f" continuação {idx}"
+        partes.append(_tabela_html_org(f"{titulo}{sufixo}", bloco, colunas))
+    return "".join(partes)
+
+
+def _render_parecer_ia_html_org(resposta):
+    if not isinstance(resposta, dict):
+        return ""
+    ignorar = {"contexto", "filtros", "amostra", "governanca", "pacote_analitico", "status", "erro"}
+    blocos = []
+    for chave, valor in resposta.items():
+        if chave in ignorar or valor in (None, "", [], {}):
+            continue
+        titulo = str(chave).replace("_", " ").title()
+        if isinstance(valor, dict):
+            itens = []
+            for sub, conteudo in valor.items():
+                if conteudo in (None, "", [], {}):
+                    continue
+                if isinstance(conteudo, list):
+                    texto = "; ".join(str(x) for x in conteudo[:6])
+                elif isinstance(conteudo, dict):
+                    texto = "; ".join(f"{k}: {v}" for k, v in list(conteudo.items())[:8])
+                else:
+                    texto = str(conteudo)
+                itens.append(f"<p><strong>{html.escape(str(sub).replace('_', ' ').title())}:</strong> {html.escape(texto)}</p>")
+            conteudo_html = "".join(itens)
+        elif isinstance(valor, list):
+            lis = []
+            for item in valor[:8]:
+                if isinstance(item, dict):
+                    texto = "; ".join(f"{k}: {v}" for k, v in list(item.items())[:8])
+                else:
+                    texto = str(item)
+                lis.append(f"<li>{html.escape(texto)}</li>")
+            conteudo_html = "<ul>" + "".join(lis) + "</ul>"
+        else:
+            conteudo_html = f"<p>{html.escape(str(valor))}</p>"
+        if conteudo_html:
+            blocos.append(f'<section class="page page-white insight-page"><h2>{html.escape(titulo)}</h2>{conteudo_html}</section>')
+    return "".join(blocos)
+
+
+def _linha_perfil_micro_org(item, rotulo=None):
+    comparacao = item.get("comparacao_contexto") or {}
+    maior_gap = item.get("maior_gap") or {}
+    return {
+        "Recorte": rotulo or item.get("rotulo") or item.get("valor") or "Contexto",
+        "N": item.get("n", ""),
+        "Gap médio": item.get("gap_medio", ""),
+        "Vs contexto": comparacao.get("delta_gap_medio_vs_contexto", ""),
+        "Maior gap": maior_gap.get("dimensao", ""),
+        "Real": maior_gap.get("real", ""),
+        "Ideal": maior_gap.get("ideal", ""),
+        "Gap": maior_gap.get("gap", ""),
+    }
+
+
+def _render_base_analitica_html_org(pacote):
+    analise = (pacote or {}).get("analise_profunda") or {}
+    if not isinstance(analise, dict):
+        return ""
+
+    partes = [
+        '<section class="page section-cover">'
+        '<div class="kicker">05</div>'
+        '<h1>Base analítica do parecer</h1>'
+        '<p class="cover-sub">Relatórios calculados a partir do filtro selecionado, com comparação contra a média do contexto quando disponível.</p>'
+        '</section>'
+    ]
+
+    referencia = analise.get("referencia_contexto") or {}
+    if isinstance(referencia, dict):
+        dims = referencia.get("dimensoes") or []
+        cards_ref = "".join([
+            _card_metrica_html_org("N do contexto", referencia.get("n", "—")),
+            _card_metrica_html_org("Gap médio do contexto", _fmt_pct_org(referencia.get("gap_medio"))),
+            _card_metrica_html_org("Maior gap", (referencia.get("maior_gap") or {}).get("dimensao", "—")),
+            _card_metrica_html_org("Menor gap", (referencia.get("menor_gap") or {}).get("dimensao", "—")),
+        ])
+        linhas_dims = [
+            {
+                "Dimensão": item.get("dimensao"),
+                "Real": item.get("real"),
+                "Ideal": item.get("ideal"),
+                "Gap": item.get("gap"),
+                "Nível": item.get("nivel_gap"),
+            }
+            for item in dims
+            if isinstance(item, dict)
+        ]
+        partes.append(
+            '<section class="page page-white"><h2>Referência média do contexto</h2>'
+            f'<div class="metric-grid">{cards_ref}</div>'
+            + _tabela_html_org("Dimensões do contexto", linhas_dims, ["Dimensão", "Real", "Ideal", "Gap", "Nível"]).replace('class="page page-white table-page"', 'class="inline-table"').replace('class="page page-white"', 'class="inline-table"')
+            + '</section>'
+        )
+
+    empresas = analise.get("comparativo_empresas_mesma_holding") or []
+    if isinstance(empresas, list) and empresas:
+        linhas_empresas = [_linha_perfil_micro_org(item, item.get("valor")) for item in empresas if isinstance(item, dict)]
+        partes.append(_tabela_paginas_html_org("Comparativo de empresas da mesma holding", linhas_empresas, ["Recorte", "N", "Gap médio", "Vs contexto", "Maior gap", "Real", "Ideal", "Gap"], por_pagina=16))
+
+    recortes = analise.get("microambiente_por_recorte") or {}
+    if isinstance(recortes, dict):
+        nomes = {
+            "geracao": "Microambiente por geração",
+            "sexo": "Microambiente por gênero",
+            "etnia": "Microambiente por etnia",
+            "departamento": "Microambiente por departamento",
+            "area": "Microambiente por área",
+            "cargo": "Microambiente por cargo",
+            "estado": "Microambiente por estado",
+            "cidade": "Microambiente por cidade",
+            "empresa": "Microambiente por empresa",
+            "filial_nome": "Microambiente por filial",
+            "branch_name": "Microambiente por unidade",
+        }
+        for chave, titulo in nomes.items():
+            linhas = recortes.get(chave) or []
+            if not isinstance(linhas, list) or not linhas:
+                continue
+            linhas_render = [
+                _linha_perfil_micro_org(item, f"{chave}: {item.get('valor')}")
+                for item in linhas
+                if isinstance(item, dict)
+            ]
+            partes.append(_tabela_paginas_html_org(titulo, linhas_render, ["Recorte", "N", "Gap médio", "Vs contexto", "Maior gap", "Real", "Ideal", "Gap"], por_pagina=16))
+
+    cruzamentos = analise.get("microambiente_por_interseccao") or {}
+    if isinstance(cruzamentos, dict):
+        linhas_cruzamentos = []
+        for _, linhas in cruzamentos.items():
+            if not isinstance(linhas, list):
+                continue
+            for item in linhas:
+                if isinstance(item, dict):
+                    linhas_cruzamentos.append(_linha_perfil_micro_org(item, item.get("rotulo")))
+        if linhas_cruzamentos:
+            partes.append(_tabela_paginas_html_org("Interseccionalidades e cruzamentos críticos", linhas_cruzamentos, ["Recorte", "N", "Gap médio", "Vs contexto", "Maior gap", "Real", "Ideal", "Gap"], por_pagina=16))
+
+    afirmacoes = analise.get("afirmacoes_mais_impactantes") or []
+    if isinstance(afirmacoes, list) and afirmacoes:
+        linhas_afirmacoes = [
+            {
+                "Código": item.get("codigo"),
+                "Afirmação": item.get("afirmacao"),
+                "Dimensão": item.get("dimensao"),
+                "Subdimensão": item.get("subdimensao"),
+                "N": item.get("n"),
+                "Real": item.get("real"),
+                "Ideal": item.get("ideal"),
+                "Gap": item.get("gap"),
+                "Severidade": item.get("severidade"),
+            }
+            for item in afirmacoes
+            if isinstance(item, dict)
+        ]
+        partes.append(_tabela_paginas_html_org("Afirmações mais impactantes", linhas_afirmacoes, ["Código", "Afirmação", "Dimensão", "Subdimensão", "N", "Real", "Ideal", "Gap", "Severidade"], por_pagina=14))
+
+    participacao = analise.get("participacao") or {}
+    if isinstance(participacao, dict):
+        partes_part = []
+        for chave, titulo in [
+            ("por_empresa", "Aderência por empresa"),
+            ("por_departamento", "Aderência por departamento"),
+            ("por_area", "Aderência por área"),
+            ("por_lider", "Líderes com maior volume de respostas"),
+        ]:
+            linhas = participacao.get(chave) or []
+            if not isinstance(linhas, list) or not linhas:
+                continue
+            linhas_render = [
+                {
+                    "Campo": item.get("campo"),
+                    "Valor": item.get("valor"),
+                    "Respostas": item.get("respostas"),
+                    "% amostra": item.get("percentual_da_amostra"),
+                }
+                for item in linhas
+                if isinstance(item, dict)
+            ]
+            partes_part.append(_tabela_html_org(titulo, linhas_render, ["Campo", "Valor", "Respostas", "% amostra"]).replace('class="page page-white table-page"', 'class="inline-table"').replace('class="page page-white"', 'class="inline-table"'))
+        if partes_part:
+            partes.append(
+                '<section class="page page-white"><h2>Participação e aderência</h2>'
+                f'<p>{html.escape(str(participacao.get("observacao") or ""))}</p>'
+                + "".join(partes_part)
+                + '</section>'
+            )
+
+    return "".join(partes)
 
 
 def gerar_caderno_executivo_organizacional_html(
@@ -563,6 +967,13 @@ def gerar_caderno_executivo_organizacional_html(
     termo_label,
     gap_medio_questoes,
     gaps_relevantes,
+    medias_auto=None,
+    medias_equipe=None,
+    arquetipos=None,
+    medias_real_equipe=None,
+    medias_ideal_equipe=None,
+    dimensoes=None,
+    resposta_ia=None,
 ):
     contexto = (pacote or {}).get("contexto") or {}
     amostra = (pacote or {}).get("amostra") or {}
@@ -586,6 +997,56 @@ def gerar_caderno_executivo_organizacional_html(
     top_arq = linhas_arq[:30]
     top_micro = linhas_micro[:30]
     top_gaps = gaps_relevantes[:12]
+    arquetipos = arquetipos or ["Imperativo", "Resoluto", "Cuidativo", "Consultivo", "Prescritivo", "Formador"]
+    medias_auto = medias_auto or [0] * len(arquetipos)
+    medias_equipe = medias_equipe or [0] * len(arquetipos)
+    dimensoes = dimensoes or ["Adaptabilidade", "Colaboração Mútua", "Nitidez", "Performance", "Reconhecimento", "Responsabilidade"]
+    medias_real_equipe = medias_real_equipe or [0] * len(dimensoes)
+    medias_ideal_equipe = medias_ideal_equipe or [0] * len(dimensoes)
+    data_emissao = datetime.now().strftime("%d/%m/%Y")
+    contexto_nome = contexto.get("contexto_nome") or contexto.get("holding_nome") or filtros.get("holding") or "Contexto selecionado"
+    rodada = filtros.get("codrodada") or contexto.get("codrodada") or "Todas"
+    empresa = filtros.get("empresa") or contexto.get("empresa_nome") or "Todas"
+
+    cards = "".join([
+        _card_metrica_html_org("Contexto", contexto_nome),
+        _card_metrica_html_org("Empresa", empresa),
+        _card_metrica_html_org("Rodada", rodada),
+        _card_metrica_html_org("Respondentes", amostra.get("respondentes", "—")),
+        _card_metrica_html_org("Líderes", amostra.get("lideres", "—")),
+        _card_metrica_html_org("Saúde emocional", _fmt_pct_org(saude.get("score_final"))),
+        _card_metrica_html_org("Gap médio", _fmt_pct_org(gap_medio_questoes)),
+        _card_metrica_html_org("Termômetro", termo_label),
+    ])
+
+    resumo_achados = "".join(
+        f'<li><strong>{html.escape(str(item.get("Questão") or item.get("Codigo") or ""))}</strong> '
+        f'{html.escape(_texto_curto_org(item.get("Afirmação") or item.get("afirmacao") or "", 190))} '
+        f'<span>{html.escape(str(item.get("Gap") or item.get("gap") or ""))} p.p.</span></li>'
+        for item in top_gaps[:8]
+        if isinstance(item, dict)
+    ) or "<li>Sem gaps relevantes no recorte selecionado.</li>"
+
+    arq_cards = "".join(
+        '<div class="question-card">'
+        f'<h3>{html.escape(str(item.get("Questão") or ""))} | {html.escape(str(item.get("Arquétipo") or ""))}</h3>'
+        f'<p>{html.escape(_texto_curto_org(item.get("Afirmação"), 210))}</p>'
+        f'<div>{_estrelas_html_org(item.get("% Tendência"))}<strong>{html.escape(str(item.get("% Tendência") or ""))}%</strong>'
+        f'<span>{html.escape(str(item.get("Tendência") or ""))}</span></div>'
+        '</div>'
+        for item in top_arq[:18]
+    )
+
+    micro_cards = "".join(
+        '<div class="question-card">'
+        f'<h3>{html.escape(str(item.get("Questão") or ""))} | {html.escape(str(item.get("Dimensão") or ""))}</h3>'
+        f'<p>{html.escape(_texto_curto_org(item.get("Afirmação"), 210))}</p>'
+        f'<div class="gap-line"><span>Real {_fmt_pct_org(item.get("Real (%)"))}</span>'
+        f'<span>Ideal {_fmt_pct_org(item.get("Ideal (%)"))}</span>'
+        f'<strong>Gap {_fmt_pct_org(item.get("Gap"))}</strong></div>'
+        '</div>'
+        for item in top_micro[:18]
+    )
 
     return f"""<!doctype html>
 <html lang="pt-BR">
@@ -593,54 +1054,147 @@ def gerar_caderno_executivo_organizacional_html(
   <meta charset="utf-8">
   <title>Caderno Executivo LeaderTrack</title>
   <style>
-    @page {{ size: A4; margin: 18mm; }}
-    body {{ font-family: Arial, sans-serif; color: #172033; margin: 0; background: #fff; }}
-    .cover {{ padding: 28px 0 22px; border-bottom: 3px solid #0f766e; margin-bottom: 22px; }}
-    .kicker {{ color: #0f766e; font-size: 10px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }}
-    h1 {{ font-size: 34px; line-height: 1.05; margin: 8px 0 10px; color: #0f172a; }}
-    h2 {{ font-size: 18px; margin: 26px 0 10px; color: #0f172a; }}
-    p {{ font-size: 12px; line-height: 1.55; color: #334155; }}
-    .grid {{ display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 16px 0; }}
-    .metric {{ border: 1px solid #d9e2ef; border-radius: 8px; padding: 10px; background: #f8fafc; }}
-    .metric span {{ display: block; font-size: 9px; text-transform: uppercase; color: #64748b; font-weight: 800; }}
-    .metric strong {{ display: block; margin-top: 4px; font-size: 20px; color: #0f172a; }}
-    .chips span {{ display: inline-block; border: 1px solid #d9e2ef; border-radius: 999px; padding: 6px 9px; margin: 0 6px 6px 0; font-size: 11px; }}
-    table {{ width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 10px; }}
-    th, td {{ border-bottom: 1px solid #e5e7eb; padding: 6px; text-align: left; vertical-align: top; }}
-    th {{ background: #f1f5f9; color: #475569; text-transform: uppercase; font-size: 9px; }}
-    section {{ break-inside: avoid; page-break-inside: avoid; }}
-    .note {{ padding: 12px; border: 1px solid #fde68a; background: #fffbeb; border-radius: 8px; }}
-    @media print {{ .no-print {{ display: none; }} }}
+    @page {{ size: A4; margin: 0; }}
+    * {{ box-sizing: border-box; }}
+    body {{ margin: 0; background: #eef3f7; color: #24324a; font-family: Inter, Arial, sans-serif; }}
+    .page {{ width: 210mm; min-height: 297mm; margin: 0 auto 14px; padding: 18mm 20mm; background: #fff; page-break-after: always; position: relative; overflow: hidden; }}
+    .page::after {{ content: "LeaderTrack | Página " counter(page); position: absolute; right: 18mm; bottom: 10mm; color: #64748b; font-size: 10px; font-weight: 700; }}
+    .cover, .section-cover {{ color: #fff; background: linear-gradient(135deg, #1d2a3b 0%, #0f8f80 52%, #2f71c9 100%); padding: 28mm 23mm; }}
+    .cover::before, .section-cover::before {{ content: ""; position: absolute; inset: 0; background: radial-gradient(circle at 84% 18%, rgba(255,255,255,.20) 0 50px, transparent 51px), radial-gradient(circle at 18% 82%, rgba(0,70,74,.28) 0 150px, transparent 151px); }}
+    .cover > *, .section-cover > * {{ position: relative; z-index: 1; }}
+    .kicker {{ letter-spacing: .16em; text-transform: uppercase; font-size: 12px; font-weight: 800; opacity: .88; }}
+    h1 {{ font-size: 38px; line-height: 1.05; margin: 16px 0 10px; color: inherit; }}
+    h2 {{ color: #233b6e; font-size: 24px; line-height: 1.18; margin: 0 0 16px; }}
+    h3 {{ color: #00826f; font-size: 15px; margin: 14px 0 8px; }}
+    p {{ font-size: 14px; line-height: 1.65; margin: 0 0 14px; }}
+    .cover-sub {{ font-size: 20px; max-width: 650px; }}
+    .cover-grid {{ display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; position: absolute; left: 23mm; right: 23mm; bottom: 27mm; }}
+    .cover-box, .metric-card {{ border: 1px solid rgba(255,255,255,.32); border-radius: 8px; padding: 12px; background: rgba(255,255,255,.10); }}
+    .cover-box span, .metric-card span {{ display: block; text-transform: uppercase; letter-spacing: .08em; font-size: 10px; font-weight: 900; color: inherit; opacity: .78; }}
+    .cover-box strong, .metric-card strong {{ display: block; margin-top: 7px; font-size: 16px; line-height: 1.15; color: inherit; }}
+    .metric-grid {{ display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin: 22px 0; }}
+    .metric-grid .metric-card {{ color: #14213d; border-color: #cbd7e4; background: #f7fafc; }}
+    .metric-card small {{ display: block; color: #64748b; margin-top: 6px; font-size: 10px; }}
+    .chips span {{ display: inline-block; border: 1px solid #d8e1ec; border-radius: 999px; padding: 7px 10px; margin: 0 6px 8px 0; font-size: 11px; background: #f8fafc; }}
+    .concept-table, table {{ width: 100%; border-collapse: collapse; margin-top: 14px; font-size: 11px; }}
+    th, td {{ border: 1px solid #d6dee8; padding: 8px; text-align: left; vertical-align: top; }}
+    th {{ background: #f0f4f8; color: #3b4a62; text-transform: uppercase; font-size: 9px; letter-spacing: .06em; }}
+    .chart-card {{ border: 1px solid #d5dee9; border-radius: 12px; background: #fff; padding: 18px; box-shadow: 0 18px 36px rgba(15,23,42,.08); }}
+    .legend {{ font-size: 12px; color: #52627a; font-weight: 700; }}
+    .dot {{ display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin: 0 6px 0 14px; }}
+    .dot:first-child {{ margin-left: 0; }}
+    .blue {{ background: #3797e4; }} .orange {{ background: #ff801d; }} .navy {{ background: #1e3a8a; }}
+    .bar-row {{ display: grid; grid-template-columns: 115px 1fr 1fr; gap: 9px; align-items: center; margin: 12px 0; }}
+    .bar-label {{ font-size: 11px; font-weight: 800; color: #22324b; }}
+    .bar-track {{ height: 26px; background: #eef3f7; border-radius: 5px; position: relative; overflow: hidden; }}
+    .bar-track i {{ display: block; height: 100%; border-radius: 5px; }}
+    .bar-track b {{ position: absolute; right: 7px; top: 6px; font-size: 10px; color: #18283f; }}
+    .bar-a {{ background: #3797e4; }} .bar-b {{ background: #ff9a3d; }}
+    .water-row {{ display: grid; grid-template-columns: 72px 1fr 70px; gap: 10px; align-items: center; margin: 12px 0; }}
+    .water-row span {{ font-weight: 900; color: #00826f; }}
+    .water-row i {{ display: block; height: 25px; background: linear-gradient(90deg, #ffb15c, #ef4444); border-radius: 5px; }}
+    .water-row b {{ font-size: 11px; }}
+    .question-grid {{ display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }}
+    .question-card {{ border: 1px solid #d6dee8; border-radius: 10px; padding: 12px; background: #fbfdff; break-inside: avoid; }}
+    .question-card p {{ font-size: 11px; line-height: 1.45; }}
+    .question-card div {{ display: flex; gap: 10px; align-items: center; font-size: 11px; }}
+    .stars {{ color: #ff801d; font-size: 18px; letter-spacing: 1px; white-space: nowrap; }}
+    .stars span {{ color: #dbe2ea; }}
+    .gap-line {{ justify-content: space-between; }}
+    .note {{ padding: 14px; border: 1px solid #f4cf74; background: #fff8dc; border-radius: 10px; }}
+    .qr {{ width: 118px; height: 118px; border: 1px solid #cbd5e1; border-radius: 10px; float: right; margin-left: 18px; background: repeating-linear-gradient(45deg, #111 0 4px, #fff 4px 8px); }}
+    .print-hint {{ margin: 0 auto 16px; width: 210mm; background: #0f766e; color: white; padding: 12px 16px; font-weight: 800; }}
+    @media print {{
+      body {{ background: #fff; }}
+      .print-hint {{ display: none; }}
+      .page {{ margin: 0; box-shadow: none; }}
+    }}
   </style>
 </head>
 <body>
-  <div class="cover">
+  <div class="print-hint no-print">Use Ctrl+P ou o comando Imprimir do navegador e salve como PDF.</div>
+  <section class="page cover">
     <div class="kicker">The HR Key | LeaderTrack</div>
     <h1>Devolutiva Executiva Organizacional</h1>
-    <p>Relatório formal gerado a partir do contexto selecionado no dashboard LeaderTrack. A leitura é agregada e deve ser usada para análise executiva, não para avaliação individual.</p>
-    <div class="chips">{filtros_html}</div>
-  </div>
-  <div class="grid">
-    <div class="metric"><span>Contexto</span><strong>{html.escape(str(contexto.get("contexto_nome") or contexto.get("holding_nome") or "—"))}</strong></div>
-    <div class="metric"><span>Respondentes</span><strong>{html.escape(str(amostra.get("respondentes", "—")))}</strong></div>
-    <div class="metric"><span>Líderes</span><strong>{html.escape(str(amostra.get("lideres", "—")))}</strong></div>
-    <div class="metric"><span>Saúde emocional</span><strong>{html.escape(_fmt_pct_org(saude.get("score_final")))}</strong></div>
-    <div class="metric"><span>Gap médio</span><strong>{html.escape(_fmt_pct_org(gap_medio_questoes))}</strong></div>
-    <div class="metric"><span>Gaps >= 20</span><strong>{len(gaps_relevantes)}</strong></div>
-    <div class="metric"><span>Termômetro</span><strong>{html.escape(str(termo_label))}</strong></div>
-    <div class="metric"><span>Fonte</span><strong>Dados reais</strong></div>
-  </div>
-  <section>
-    <h2>Fundamentos técnicos</h2>
-    <p><strong>Arquétipos:</strong> padrões comportamentais percebidos na liderança, tratados como repertórios situacionais, não como rótulos fixos de personalidade.</p>
-    <p><strong>Microambiente:</strong> comparação entre experiência real percebida e ambiente desejável. O gap mostra a distância entre prática atual e expectativa coletiva.</p>
-    <p><strong>Saúde emocional:</strong> leitura agregada de segurança, reconhecimento, suporte e qualidade das relações. Não é diagnóstico clínico nem devolutiva individual.</p>
+    <p class="cover-sub">Leitura corporativa agregada do microambiente, arquétipos de liderança, saúde emocional organizacional e comparativos do recorte selecionado.</p>
+    <div class="cover-grid">
+      <div class="cover-box"><span>Contexto</span><strong>{html.escape(str(contexto_nome))}</strong></div>
+      <div class="cover-box"><span>Empresa</span><strong>{html.escape(str(empresa))}</strong></div>
+      <div class="cover-box"><span>Rodada</span><strong>{html.escape(str(rodada))}</strong></div>
+      <div class="cover-box"><span>Emissão</span><strong>{html.escape(data_emissao)}</strong></div>
+    </div>
   </section>
-  {_tabela_html_org("Arquétipos por questão", top_arq, ["Questão", "Afirmação", "Arquétipo", "% Tendência", "Tendência", "N"])}
-  {_tabela_html_org("Maiores gaps de microambiente", top_gaps, ["Questão", "Afirmação", "Dimensão", "Subdimensão", "Real (%)", "Ideal (%)", "Gap"])}
-  {_tabela_html_org("Microambiente por questão", top_micro, ["Questão", "Afirmação", "Dimensão", "Subdimensão", "Real (%)", "Ideal (%)", "Gap"])}
-  {_tabela_html_org("Saúde emocional agregada", linhas_saude, ["Categoria", "Score"])}
-  <section class="note">
+  <section class="page section-cover">
+    <div class="kicker">01</div>
+    <h1>Guia executivo de leitura</h1>
+    <p class="cover-sub">Este caderno foi desenhado para apoiar CEO, diretoria, RH e lideranças autorizadas na leitura do contexto organizacional, sem expor pessoas individualmente.</p>
+  </section>
+  <section class="page page-white">
+    <h2>Fundamentos técnicos</h2>
+    <p><strong>Arquétipos:</strong> padrões comportamentais percebidos na liderança, tratados como repertórios situacionais. A leitura executiva observa quais formas de liderar ganham força no recorte, sem reduzir a análise a rótulo individual.</p>
+    <p><strong>Microambiente:</strong> compara a experiência real percebida pela equipe com o ambiente considerado desejável. O gap é a distância entre prática percebida e expectativa coletiva.</p>
+    <p><strong>Saúde emocional:</strong> leitura agregada de segurança psicológica, reconhecimento, suporte, comunicação positiva, equilíbrio e qualidade relacional. Em linguagem inspirada por Daniel Goleman, a análise observa sinais coletivos de autoconsciência, autorregulação, empatia, motivação e qualidade das relações no ambiente de trabalho.</p>
+    <div class="qr"></div>
+    <h3>Como a IA entra nesta entrega</h3>
+    <p>A base do caderno é calculada a partir dos dados reais do filtro. A IA atua como camada interpretativa: organiza hipóteses prudentes, perguntas executivas e sugestões de investigação, sempre subordinada aos indicadores e às regras de amostra mínima.</p>
+    <div class="note">Saúde emocional é sempre agregada. Este material não é diagnóstico clínico, avaliação individual, nem ranking de pessoas.</div>
+  </section>
+  <section class="page page-white">
+    <h2>Resumo executivo do recorte</h2>
+    <div class="chips">{filtros_html}</div>
+    <div class="metric-grid">{cards}</div>
+    <h3>Questões mais sensíveis para decisão executiva</h3>
+    <ul class="summary-list">{resumo_achados}</ul>
+  </section>
+  {_render_parecer_ia_html_org(resposta_ia)}
+  <section class="page section-cover">
+    <div class="kicker">02</div>
+    <h1>Arquétipos</h1>
+    <p class="cover-sub">Repertório de liderança observado no recorte selecionado.</p>
+  </section>
+  <section class="page page-white">
+    <h2>Guia rápido dos arquétipos</h2>
+    <table class="concept-table"><thead><tr><th>Arquétipo</th><th>O que costuma ativar</th><th>Quando funciona bem</th><th>Quando pede equilíbrio</th></tr></thead><tbody>
+      <tr><td>Resoluto</td><td>Direção, clareza de rumo e foco em prioridades.</td><td>Quando a equipe precisa entender para onde ir.</td><td>Sem escuta suficiente, pode parecer unilateral.</td></tr>
+      <tr><td>Consultivo</td><td>Escuta, participação e construção conjunta.</td><td>Quando há maturidade para envolver a equipe.</td><td>Em excesso, pode tornar decisões lentas.</td></tr>
+      <tr><td>Formador</td><td>Desenvolvimento, autonomia progressiva e aprendizagem.</td><td>Quando o objetivo é fortalecer capacidade.</td><td>Em urgências, precisa ser combinado com direção.</td></tr>
+      <tr><td>Cuidativo</td><td>Vínculo, acolhimento, confiança e cuidado.</td><td>Quando a equipe precisa de segurança relacional.</td><td>Pode adiar conversas difíceis se virar padrão único.</td></tr>
+      <tr><td>Prescritivo</td><td>Padrão, método e qualidade de execução.</td><td>Quando há pessoas novas ou processo crítico.</td><td>Pode reduzir autonomia quando domina.</td></tr>
+      <tr><td>Imperativo</td><td>Comando, decisão rápida e correção imediata.</td><td>Quando há urgência operacional.</td><td>Como padrão frequente, pode reduzir abertura e confiança.</td></tr>
+    </tbody></table>
+  </section>
+  {_barra_dupla_html_org("Comparativo de Arquétipos", arquetipos, medias_auto, medias_equipe, "Autoavaliações médias", "Percepção média das equipes")}
+  {_radar_svg_html_org("Arquétipos | Spider de repertório", arquetipos, medias_auto, medias_equipe, "Autoavaliações médias", "Percepção média das equipes")}
+  <section class="page page-white"><h2>Afirmações de arquétipos mais marcantes</h2><div class="question-grid">{arq_cards}</div></section>
+  {_tabela_paginas_html_org("Relatório analítico por questão de arquétipos", linhas_arq, ["Questão", "Afirmação", "Arquétipo", "% Tendência", "Tendência", "N"])}
+  <section class="page section-cover">
+    <div class="kicker">03</div>
+    <h1>Microambiente</h1>
+    <p class="cover-sub">Distância entre experiência real percebida e ambiente desejável.</p>
+  </section>
+  {_linha_svg_html_org("Microambiente | Real versus ideal", dimensoes, medias_real_equipe, medias_ideal_equipe)}
+  {_waterfall_html_org("Waterfall dos maiores gaps", top_micro)}
+  <section class="page page-white"><h2>Questões críticas de microambiente</h2><div class="question-grid">{micro_cards}</div></section>
+  {_tabela_paginas_html_org("Maiores gaps de microambiente", gaps_relevantes, ["Questão", "Afirmação", "Dimensão", "Subdimensão", "Real (%)", "Ideal (%)", "Gap"])}
+  {_tabela_paginas_html_org("Relatório analítico por questão de microambiente", linhas_micro, ["Questão", "Afirmação", "Dimensão", "Subdimensão", "Real (%)", "Ideal (%)", "Gap"])}
+  <section class="page section-cover">
+    <div class="kicker">04</div>
+    <h1>Saúde emocional</h1>
+    <p class="cover-sub">Clima emocional agregado e protegido por amostra mínima.</p>
+  </section>
+  <section class="page page-white">
+    <h2>Leitura técnica de saúde emocional</h2>
+    <p>A saúde emocional organizacional observa sinais coletivos de segurança para falar, percepção de suporte, reconhecimento, equilíbrio, comunicação e qualidade das relações. O objetivo é orientar governança e investigação, não produzir diagnóstico individual.</p>
+    <div class="metric-grid">
+      {_card_metrica_html_org("Score agregado", _fmt_pct_org(saude.get("score_final")))}
+      {_card_metrica_html_org("Amostra", amostra.get("respondentes", "—"))}
+      {_card_metrica_html_org("Recorte", contexto_nome)}
+      {_card_metrica_html_org("Cuidado", "Agregado")}
+    </div>
+  </section>
+  {_tabela_paginas_html_org("Score de saúde emocional por categoria", linhas_saude, ["Categoria", "Score"], por_pagina=22)}
+  {_render_base_analitica_html_org(pacote)}
+  <section class="page page-white note">
     <h2>Cuidados de leitura</h2>
     <p>Este caderno usa somente dados carregados no filtro atual. Recortes com amostra pequena devem ser lidos como sinais de investigação, não como conclusão fechada. A saúde emocional é sempre agregada.</p>
   </section>
@@ -794,15 +1348,20 @@ def exibir_entrega_executiva_organizacional(
             termo_label,
             gap_medio_questoes,
             gaps_relevantes,
+            medias_auto=medias_auto,
+            medias_equipe=medias_equipe,
+            arquetipos=arquétipos,
+            medias_real_equipe=medias_real_equipe,
+            medias_ideal_equipe=medias_ideal_equipe,
+            dimensoes=dimensoes,
+            resposta_ia=st.session_state.get("parecer_corporativo_resposta"),
         )
-        st.success("Conteúdo disponível para impressão: base conceitual, indicadores, arquétipos, microambiente e saúde emocional.")
-        components.html(
-            """
-            <button onclick="window.parent.print()" style="background:#0f766e;color:white;border:0;border-radius:8px;padding:10px 14px;font-weight:800;cursor:pointer;">
-              Imprimir / salvar PDF
-            </button>
-            """,
-            height=48,
+        st.success(
+            "Caderno HTML premium disponível: capa, fundamentos, IA, gráficos, relatórios analíticos, microambiente, arquétipos e saúde emocional."
+        )
+        st.info(
+            "Fluxo recomendado: baixar o HTML, abrir no navegador e usar Ctrl+P para salvar como PDF. "
+            "Esse caminho preserva melhor o layout editorial do que imprimir a página do dashboard."
         )
         st.download_button(
             label="Baixar caderno HTML",
