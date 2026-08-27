@@ -167,8 +167,8 @@ def chamar_parecer_organizacional(pacote_analitico, gerar_com_ia=True):
         "gerarComIA": bool(gerar_com_ia),
         "persistir": False,
         "modelo": "gpt-4o-mini",
-        "maxTokens": 2600,
-        "timeout": 30,
+        "maxTokens": 3400,
+        "timeout": 45,
     }
 
     def enviar(payload_atual):
