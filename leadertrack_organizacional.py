@@ -147,7 +147,12 @@ def _apply_filters(df: pd.DataFrame, filtros: dict[str, Any] | None) -> pd.DataF
         value = _clean_text(raw_value)
         if not value or value.lower() in {"todos", "todas"}:
             continue
-        filtered = filtered[filtered[col].astype(str).str.lower() == value.lower()]
+        col_values = filtered[col].apply(_clean_text)
+        if not col_values.any():
+            continue
+        candidate = filtered[col_values.str.lower() == value.lower()]
+        if not candidate.empty:
+            filtered = candidate
 
     return filtered
 

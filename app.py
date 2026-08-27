@@ -1004,12 +1004,26 @@ def gerar_caderno_executivo_organizacional_html(
     medias_real_equipe = medias_real_equipe or [0] * len(dimensoes)
     medias_ideal_equipe = medias_ideal_equipe or [0] * len(dimensoes)
     data_emissao = datetime.now().strftime("%d/%m/%Y")
-    contexto_nome = contexto.get("contexto_nome") or contexto.get("holding_nome") or filtros.get("holding") or "Contexto selecionado"
+    nivel_contexto = (
+        contexto.get("nivel_contexto")
+        or filtros.get("nivel_contexto")
+        or "contexto"
+    )
+    contexto_nome = (
+        contexto.get("contexto_nome")
+        or contexto.get("holding_nome")
+        or contexto.get("empresa_nome")
+        or contexto.get("filial_nome")
+        or filtros.get("holding")
+        or filtros.get("empresa")
+        or "Contexto selecionado"
+    )
     rodada = filtros.get("codrodada") or contexto.get("codrodada") or "Todas"
     empresa = filtros.get("empresa") or contexto.get("empresa_nome") or "Todas"
 
     cards = "".join([
         _card_metrica_html_org("Contexto", contexto_nome),
+        _card_metrica_html_org("Nível", str(nivel_contexto).title()),
         _card_metrica_html_org("Empresa", empresa),
         _card_metrica_html_org("Rodada", rodada),
         _card_metrica_html_org("Respondentes", amostra.get("respondentes", "—")),
@@ -1119,9 +1133,9 @@ def gerar_caderno_executivo_organizacional_html(
     <p class="cover-sub">Leitura corporativa agregada do microambiente, arquétipos de liderança, saúde emocional organizacional e comparativos do recorte selecionado.</p>
     <div class="cover-grid">
       <div class="cover-box"><span>Contexto</span><strong>{html.escape(str(contexto_nome))}</strong></div>
+      <div class="cover-box"><span>Nível</span><strong>{html.escape(str(nivel_contexto).title())}</strong></div>
       <div class="cover-box"><span>Empresa</span><strong>{html.escape(str(empresa))}</strong></div>
       <div class="cover-box"><span>Rodada</span><strong>{html.escape(str(rodada))}</strong></div>
-      <div class="cover-box"><span>Emissão</span><strong>{html.escape(data_emissao)}</strong></div>
     </div>
   </section>
   <section class="page section-cover">
@@ -1339,6 +1353,17 @@ def exibir_entrega_executiva_organizacional(
         st.subheader("Caderno LeaderTrack")
         st.caption(
             "Versão para impressão ou PDF, montada com os dados reais do filtro atual."
+        )
+        rodada_exportacao = str((filtros or {}).get("codrodada") or "").strip()
+        if not rodada_exportacao or rodada_exportacao.lower() in {"todas", "todos"}:
+            st.warning(
+                "Selecione uma rodada específica e encerrada para gerar a devolutiva executiva. "
+                "O caderno executivo não deve ser emitido com rodadas abertas ou com todas as rodadas combinadas."
+            )
+            st.stop()
+        st.info(
+            "Use esta exportação somente após o encerramento da rodada selecionada. "
+            "Como a rodada encerrada é estática, o HTML reflete exatamente o contexto e os filtros atuais."
         )
         caderno_html = gerar_caderno_executivo_organizacional_html(
             pacote,
@@ -2365,28 +2390,35 @@ def processar_dados_microambiente(consolidado_micro, matriz, pontos_max_dimensao
 
 # ==================== CALCULAR MÉDIAS COM FILTROS ====================
 
+def aplicar_filtro_seguro_dashboard(df, coluna, valor):
+    if df is None or df.empty or coluna not in df.columns:
+        return df
+    texto = str(valor or "").strip()
+    if not texto or texto.lower() in {"todos", "todas"}:
+        return df
+    serie = df[coluna].fillna("").astype(str).str.strip()
+    if not serie.any():
+        return df
+    candidato = df[serie.str.lower() == texto.lower()]
+    return candidato if not candidato.empty else df
+
+
 def calcular_medias_arquetipos(df_respondentes, filtros):
     df_filtrado = df_respondentes.copy()
-    if filtros['empresa'] != "Todas":
-        df_filtrado = df_filtrado[df_filtrado['empresa'] == filtros['empresa']]
-    if filtros['codrodada'] != "Todas":
-        df_filtrado = df_filtrado[df_filtrado['codrodada'] == filtros['codrodada']]
-    if filtros['emaillider'] != "Todos":
-        df_filtrado = df_filtrado[df_filtrado['emailLider'] == filtros['emaillider']]
-    if filtros['estado'] != "Todos":
-        df_filtrado = df_filtrado[df_filtrado['estado'] == filtros['estado']]
-    if filtros['sexo'] != "Todos":
-        df_filtrado = df_filtrado[df_filtrado['sexo'] == filtros['sexo']]
-    if filtros['etnia'] != "Todas":
-        df_filtrado = df_filtrado[df_filtrado['etnia'] == filtros['etnia']]
-    if filtros['departamento'] != "Todos":
-        df_filtrado = df_filtrado[df_filtrado['departamento'] == filtros['departamento']]
-    if filtros['cargo'] != "Todos":
-        df_filtrado = df_filtrado[df_filtrado['cargo'] == filtros['cargo']]
-    if 'holding' in filtros and filtros['holding'] != "Todas":
-        if 'holding' in df_filtrado.columns:
-            holding_filtro = str(filtros['holding']).upper().strip()
-            df_filtrado = df_filtrado[df_filtrado['holding'].astype(str).str.upper().str.strip() == holding_filtro]
+    for coluna, chave in [
+        ("empresa", "empresa"),
+        ("codrodada", "codrodada"),
+        ("emailLider", "emaillider"),
+        ("estado", "estado"),
+        ("sexo", "sexo"),
+        ("etnia", "etnia"),
+        ("departamento", "departamento"),
+        ("cargo", "cargo"),
+        ("area", "area"),
+        ("holding", "holding"),
+    ]:
+        if chave in filtros:
+            df_filtrado = aplicar_filtro_seguro_dashboard(df_filtrado, coluna, filtros.get(chave))
     df_auto = df_filtrado[df_filtrado['tipo'] == 'Autoavaliação']
     df_equipe = df_filtrado[df_filtrado['tipo'] == 'Avaliação Equipe']
     arquétipos = ['Imperativo', 'Resoluto', 'Cuidativo', 'Consultivo', 'Prescritivo', 'Formador']
@@ -2403,26 +2435,20 @@ def calcular_medias_arquetipos(df_respondentes, filtros):
 
 def calcular_medias_microambiente(df_respondentes, filtros):
     df_filtrado = df_respondentes.copy()
-    if filtros['empresa'] != "Todas":
-        df_filtrado = df_filtrado[df_filtrado['empresa'] == filtros['empresa']]
-    if filtros['codrodada'] != "Todas":
-        df_filtrado = df_filtrado[df_filtrado['codrodada'] == filtros['codrodada']]
-    if filtros['emaillider'] != "Todos":
-        df_filtrado = df_filtrado[df_filtrado['emailLider'] == filtros['emaillider']]
-    if filtros['estado'] != "Todos":
-        df_filtrado = df_filtrado[df_filtrado['estado'] == filtros['estado']]
-    if filtros['sexo'] != "Todos":
-        df_filtrado = df_filtrado[df_filtrado['sexo'] == filtros['sexo']]
-    if filtros['etnia'] != "Todas":
-        df_filtrado = df_filtrado[df_filtrado['etnia'] == filtros['etnia']]
-    if filtros['departamento'] != "Todos":
-        df_filtrado = df_filtrado[df_filtrado['departamento'] == filtros['departamento']]
-    if filtros['cargo'] != "Todos":
-        df_filtrado = df_filtrado[df_filtrado['cargo'] == filtros['cargo']]
-    if 'holding' in filtros and filtros['holding'] != "Todas":
-        if 'holding' in df_filtrado.columns:
-            holding_filtro = str(filtros['holding']).upper().strip()
-            df_filtrado = df_filtrado[df_filtrado['holding'].astype(str).str.upper().str.strip() == holding_filtro]
+    for coluna, chave in [
+        ("empresa", "empresa"),
+        ("codrodada", "codrodada"),
+        ("emailLider", "emaillider"),
+        ("estado", "estado"),
+        ("sexo", "sexo"),
+        ("etnia", "etnia"),
+        ("departamento", "departamento"),
+        ("cargo", "cargo"),
+        ("area", "area"),
+        ("holding", "holding"),
+    ]:
+        if chave in filtros:
+            df_filtrado = aplicar_filtro_seguro_dashboard(df_filtrado, coluna, filtros.get(chave))
     df_auto = df_filtrado[df_filtrado['tipo'] == 'Autoavaliação']
     df_equipe = df_filtrado[df_filtrado['tipo'] == 'Avaliação Equipe']
     dimensoes = ['Adaptabilidade', 'Colaboração Mútua', 'Nitidez', 'Performance', 'Reconhecimento', 'Responsabilidade']
