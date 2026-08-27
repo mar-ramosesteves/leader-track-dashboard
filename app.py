@@ -8,6 +8,7 @@ import plotly.graph_objects as go
 from datetime import datetime
 import numpy as np
 import openpyxl
+import time
 import urllib.error
 import urllib.request
 from urllib.parse import quote
@@ -166,32 +167,52 @@ def chamar_parecer_organizacional(pacote_analitico, gerar_com_ia=True):
         "gerarComIA": bool(gerar_com_ia),
         "persistir": False,
         "modelo": "gpt-4o-mini",
-        "maxTokens": 1800,
-        "timeout": 18,
+        "maxTokens": 2600,
+        "timeout": 30,
     }
-    body = json.dumps(payload, ensure_ascii=False, default=str).encode("utf-8")
-    req = urllib.request.Request(
-        PARECER_INTELIGENTE_ORG_URL,
-        data=body,
-        method="POST",
-        headers={
-            "Content-Type": "application/json",
-            "Origin": "https://gestor.thehrkey.tech",
-        },
-    )
 
-    try:
-        with urllib.request.urlopen(req, timeout=120) as resp:
+    def enviar(payload_atual):
+        body = json.dumps(payload_atual, ensure_ascii=False, default=str).encode("utf-8")
+        req = urllib.request.Request(
+            PARECER_INTELIGENTE_ORG_URL,
+            data=body,
+            method="POST",
+            headers={
+                "Content-Type": "application/json",
+                "Origin": "https://gestor.thehrkey.tech",
+            },
+        )
+        with urllib.request.urlopen(req, timeout=140) as resp:
             texto = resp.read().decode("utf-8")
-            return json.loads(texto), None
-    except urllib.error.HTTPError as e:
+            return json.loads(texto)
+
+    ultimo_erro = None
+    for tentativa in range(1, 3):
         try:
-            detalhe = e.read().decode("utf-8")
-        except Exception:
-            detalhe = str(e)
-        return None, f"Erro HTTP {e.code} ao chamar o bot: {detalhe}"
-    except Exception as e:
-        return None, f"Erro ao chamar o bot: {str(e)}"
+            resposta = enviar(payload)
+            if tentativa > 1 and isinstance(resposta, dict):
+                resposta.setdefault("geracao_ia", {})
+                resposta["geracao_ia"]["tentativas_dashboard"] = tentativa
+            return resposta, None
+        except urllib.error.HTTPError as e:
+            try:
+                detalhe = e.read().decode("utf-8")
+            except Exception:
+                detalhe = str(e)
+            ultimo_erro = f"Erro HTTP {e.code} ao chamar o bot: {detalhe}"
+            if e.code < 500 or tentativa == 2:
+                break
+        except Exception as e:
+            ultimo_erro = f"Erro ao chamar o bot: {str(e)}"
+            if tentativa == 2:
+                break
+        time.sleep(3)
+
+    return None, (
+        f"{ultimo_erro}\n\n"
+        "A primeira tentativa pode falhar quando o Render acorda ou quando a IA demora. "
+        "Tente novamente; se repetir, gere sem IA para manter os dados e depois rode a camada executiva."
+    )
 
 
 def exibir_resposta_parecer_organizacional(resposta):
