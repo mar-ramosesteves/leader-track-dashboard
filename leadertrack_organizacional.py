@@ -933,7 +933,32 @@ def gerar_pacote_organizacional(
     }
 
 
-def pacote_organizacional_para_ia(pacote: dict[str, Any], limite_achados: int = 40) -> dict[str, Any]:
+def _compactar_perfil_para_ia(item: dict[str, Any]) -> dict[str, Any]:
+    if not isinstance(item, dict):
+        return {}
+
+    comparacao = item.get("comparacao_contexto") or {}
+    maior_gap = item.get("maior_gap") or {}
+    return {
+        "campo": item.get("campo"),
+        "valor": item.get("valor"),
+        "campos": item.get("campos"),
+        "valores": item.get("valores"),
+        "rotulo": item.get("rotulo"),
+        "n": item.get("n"),
+        "gap_medio": item.get("gap_medio"),
+        "delta_gap_medio_vs_contexto": comparacao.get("delta_gap_medio_vs_contexto"),
+        "maior_gap": {
+            "dimensao": maior_gap.get("dimensao"),
+            "real": maior_gap.get("real"),
+            "ideal": maior_gap.get("ideal"),
+            "gap": maior_gap.get("gap"),
+            "delta_gap_vs_contexto": maior_gap.get("delta_gap_vs_contexto"),
+        } if isinstance(maior_gap, dict) else None,
+    }
+
+
+def pacote_organizacional_para_ia(pacote: dict[str, Any], limite_achados: int = 18) -> dict[str, Any]:
     if not isinstance(pacote, dict):
         return {}
 
@@ -951,25 +976,54 @@ def pacote_organizacional_para_ia(pacote: dict[str, Any], limite_achados: int = 
 
     analise = pacote.get("analise_profunda") or {}
     analise_resumida = {
-        "referencia_contexto": analise.get("referencia_contexto") or {},
+        "referencia_contexto": {
+            "n": (analise.get("referencia_contexto") or {}).get("n"),
+            "gap_medio": (analise.get("referencia_contexto") or {}).get("gap_medio"),
+            "maior_gap": (analise.get("referencia_contexto") or {}).get("maior_gap"),
+        },
         "microambiente_por_recorte": {},
-        "microambiente_por_interseccao": {},
+        "microambiente_por_interseccao_prioritaria": [],
         "comparativo_empresas_mesma_holding": [],
         "afirmacoes_mais_impactantes": [],
-        "participacao": analise.get("participacao") or {},
+        "participacao": {},
     }
     for campo, linhas in (analise.get("microambiente_por_recorte") or {}).items():
         if isinstance(linhas, list):
-            analise_resumida["microambiente_por_recorte"][campo] = linhas[:8]
+            analise_resumida["microambiente_por_recorte"][campo] = [
+                _compactar_perfil_para_ia(item) for item in linhas[:5]
+            ]
+
+    interseccoes = []
     for campo, linhas in (analise.get("microambiente_por_interseccao") or {}).items():
         if isinstance(linhas, list):
-            analise_resumida["microambiente_por_interseccao"][campo] = linhas[:8]
+            for item in linhas[:3]:
+                compactado = _compactar_perfil_para_ia(item)
+                compactado["tipo_cruzamento"] = campo
+                interseccoes.append(compactado)
+    interseccoes = sorted(
+        interseccoes,
+        key=lambda item: abs(float(item.get("delta_gap_medio_vs_contexto") or 0)),
+        reverse=True,
+    )
+    analise_resumida["microambiente_por_interseccao_prioritaria"] = interseccoes[:12]
+
     if isinstance(analise.get("comparativo_empresas_mesma_holding"), list):
-        analise_resumida["comparativo_empresas_mesma_holding"] = analise[
-            "comparativo_empresas_mesma_holding"
-        ][:12]
+        analise_resumida["comparativo_empresas_mesma_holding"] = [
+            _compactar_perfil_para_ia(item)
+            for item in analise["comparativo_empresas_mesma_holding"][:8]
+        ]
     if isinstance(analise.get("afirmacoes_mais_impactantes"), list):
-        analise_resumida["afirmacoes_mais_impactantes"] = analise["afirmacoes_mais_impactantes"][:15]
+        analise_resumida["afirmacoes_mais_impactantes"] = analise["afirmacoes_mais_impactantes"][:10]
+
+    participacao = analise.get("participacao") or {}
+    analise_resumida["participacao"] = {
+        "observacao": participacao.get("observacao"),
+        "total_respostas_equipe": participacao.get("total_respostas_equipe"),
+        "por_departamento": (participacao.get("por_departamento") or [])[:6],
+        "por_area": (participacao.get("por_area") or [])[:6],
+        "por_lider": (participacao.get("por_lider") or [])[:8],
+        "por_empresa": (participacao.get("por_empresa") or [])[:8],
+    }
 
     return {
         "tipo": pacote.get("tipo"),
