@@ -3,6 +3,7 @@ import streamlit.components.v1 as components
 from supabase import create_client, Client
 import pandas as pd
 import json
+import html
 import plotly.express as px
 import plotly.graph_objects as go
 from datetime import datetime
@@ -537,6 +538,116 @@ def _grafico_waterfall_gaps(linhas_micro):
     return fig
 
 
+def _tabela_html_org(titulo, linhas, colunas):
+    if not linhas:
+        return f"<section><h2>{html.escape(titulo)}</h2><p>Sem dados suficientes para este bloco.</p></section>"
+    head = "".join(f"<th>{html.escape(str(col))}</th>" for col in colunas)
+    body_rows = []
+    for linha in linhas:
+        cells = []
+        for col in colunas:
+            valor = linha.get(col, "")
+            cells.append(f"<td>{html.escape(str(valor))}</td>")
+        body_rows.append("<tr>" + "".join(cells) + "</tr>")
+    return (
+        f"<section><h2>{html.escape(titulo)}</h2>"
+        f"<table><thead><tr>{head}</tr></thead><tbody>{''.join(body_rows)}</tbody></table></section>"
+    )
+
+
+def gerar_caderno_executivo_organizacional_html(
+    pacote,
+    linhas_arq,
+    linhas_micro,
+    filtros,
+    termo_label,
+    gap_medio_questoes,
+    gaps_relevantes,
+):
+    contexto = (pacote or {}).get("contexto") or {}
+    amostra = (pacote or {}).get("amostra") or {}
+    saude = (pacote or {}).get("saude_emocional") or {}
+    categorias_saude = saude.get("categorias") or {}
+    linhas_saude = [
+        {"Categoria": nome, "Score": _fmt_pct_org(valor)}
+        for nome, valor in categorias_saude.items()
+        if valor is not None
+    ] if isinstance(categorias_saude, dict) else []
+
+    filtros_ativos = {
+        k: v for k, v in (filtros or {}).items()
+        if str(v or "").strip() and str(v).strip().lower() not in {"todos", "todas"}
+    }
+    filtros_html = "".join(
+        f"<span>{html.escape(str(k))}: <strong>{html.escape(str(v))}</strong></span>"
+        for k, v in filtros_ativos.items()
+    ) or "<span>Contexto consolidado sem filtro secundário.</span>"
+
+    top_arq = linhas_arq[:30]
+    top_micro = linhas_micro[:30]
+    top_gaps = gaps_relevantes[:12]
+
+    return f"""<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <title>Caderno Executivo LeaderTrack</title>
+  <style>
+    @page {{ size: A4; margin: 18mm; }}
+    body {{ font-family: Arial, sans-serif; color: #172033; margin: 0; background: #fff; }}
+    .cover {{ padding: 28px 0 22px; border-bottom: 3px solid #0f766e; margin-bottom: 22px; }}
+    .kicker {{ color: #0f766e; font-size: 10px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }}
+    h1 {{ font-size: 34px; line-height: 1.05; margin: 8px 0 10px; color: #0f172a; }}
+    h2 {{ font-size: 18px; margin: 26px 0 10px; color: #0f172a; }}
+    p {{ font-size: 12px; line-height: 1.55; color: #334155; }}
+    .grid {{ display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 16px 0; }}
+    .metric {{ border: 1px solid #d9e2ef; border-radius: 8px; padding: 10px; background: #f8fafc; }}
+    .metric span {{ display: block; font-size: 9px; text-transform: uppercase; color: #64748b; font-weight: 800; }}
+    .metric strong {{ display: block; margin-top: 4px; font-size: 20px; color: #0f172a; }}
+    .chips span {{ display: inline-block; border: 1px solid #d9e2ef; border-radius: 999px; padding: 6px 9px; margin: 0 6px 6px 0; font-size: 11px; }}
+    table {{ width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 10px; }}
+    th, td {{ border-bottom: 1px solid #e5e7eb; padding: 6px; text-align: left; vertical-align: top; }}
+    th {{ background: #f1f5f9; color: #475569; text-transform: uppercase; font-size: 9px; }}
+    section {{ break-inside: avoid; page-break-inside: avoid; }}
+    .note {{ padding: 12px; border: 1px solid #fde68a; background: #fffbeb; border-radius: 8px; }}
+    @media print {{ .no-print {{ display: none; }} }}
+  </style>
+</head>
+<body>
+  <div class="cover">
+    <div class="kicker">The HR Key | LeaderTrack</div>
+    <h1>Devolutiva Executiva Organizacional</h1>
+    <p>Relatório formal gerado a partir do contexto selecionado no dashboard LeaderTrack. A leitura é agregada e deve ser usada para análise executiva, não para avaliação individual.</p>
+    <div class="chips">{filtros_html}</div>
+  </div>
+  <div class="grid">
+    <div class="metric"><span>Contexto</span><strong>{html.escape(str(contexto.get("contexto_nome") or contexto.get("holding_nome") or "—"))}</strong></div>
+    <div class="metric"><span>Respondentes</span><strong>{html.escape(str(amostra.get("respondentes", "—")))}</strong></div>
+    <div class="metric"><span>Líderes</span><strong>{html.escape(str(amostra.get("lideres", "—")))}</strong></div>
+    <div class="metric"><span>Saúde emocional</span><strong>{html.escape(_fmt_pct_org(saude.get("score_final")))}</strong></div>
+    <div class="metric"><span>Gap médio</span><strong>{html.escape(_fmt_pct_org(gap_medio_questoes))}</strong></div>
+    <div class="metric"><span>Gaps >= 20</span><strong>{len(gaps_relevantes)}</strong></div>
+    <div class="metric"><span>Termômetro</span><strong>{html.escape(str(termo_label))}</strong></div>
+    <div class="metric"><span>Fonte</span><strong>Dados reais</strong></div>
+  </div>
+  <section>
+    <h2>Fundamentos técnicos</h2>
+    <p><strong>Arquétipos:</strong> padrões comportamentais percebidos na liderança, tratados como repertórios situacionais, não como rótulos fixos de personalidade.</p>
+    <p><strong>Microambiente:</strong> comparação entre experiência real percebida e ambiente desejável. O gap mostra a distância entre prática atual e expectativa coletiva.</p>
+    <p><strong>Saúde emocional:</strong> leitura agregada de segurança, reconhecimento, suporte e qualidade das relações. Não é diagnóstico clínico nem devolutiva individual.</p>
+  </section>
+  {_tabela_html_org("Arquétipos por questão", top_arq, ["Questão", "Afirmação", "Arquétipo", "% Tendência", "Tendência", "N"])}
+  {_tabela_html_org("Maiores gaps de microambiente", top_gaps, ["Questão", "Afirmação", "Dimensão", "Subdimensão", "Real (%)", "Ideal (%)", "Gap"])}
+  {_tabela_html_org("Microambiente por questão", top_micro, ["Questão", "Afirmação", "Dimensão", "Subdimensão", "Real (%)", "Ideal (%)", "Gap"])}
+  {_tabela_html_org("Saúde emocional agregada", linhas_saude, ["Categoria", "Score"])}
+  <section class="note">
+    <h2>Cuidados de leitura</h2>
+    <p>Este caderno usa somente dados carregados no filtro atual. Recortes com amostra pequena devem ser lidos como sinais de investigação, não como conclusão fechada. A saúde emocional é sempre agregada.</p>
+  </section>
+</body>
+</html>"""
+
+
 def exibir_entrega_executiva_organizacional(
     pacote,
     matriz_arq,
@@ -588,11 +699,12 @@ def exibir_entrega_executiva_organizacional(
         score_saude = ((pacote or {}).get("saude_emocional") or {}).get("score_final")
         st.metric("Saúde emocional", "—" if score_saude is None else _fmt_pct_org(score_saude))
 
-    aba_conceito, aba_arq, aba_micro, aba_saude = st.tabs([
+    aba_conceito, aba_arq, aba_micro, aba_saude, aba_export = st.tabs([
         "Base conceitual",
         "Arquétipos por questão",
         "Microambiente e gaps",
         "Saúde emocional",
+        "Exportações",
     ])
 
     with aba_conceito:
@@ -667,6 +779,37 @@ def exibir_entrega_executiva_organizacional(
         st.warning(
             "Saúde emocional é apresentada somente em nível agregado. "
             "Não use este bloco como diagnóstico individual nem como julgamento clínico."
+        )
+
+    with aba_export:
+        st.subheader("Caderno LeaderTrack")
+        st.caption(
+            "Versão para impressão ou PDF, montada com os dados reais do filtro atual."
+        )
+        caderno_html = gerar_caderno_executivo_organizacional_html(
+            pacote,
+            linhas_arq,
+            linhas_micro,
+            filtros,
+            termo_label,
+            gap_medio_questoes,
+            gaps_relevantes,
+        )
+        st.success("Conteúdo disponível para impressão: base conceitual, indicadores, arquétipos, microambiente e saúde emocional.")
+        components.html(
+            """
+            <button onclick="window.parent.print()" style="background:#0f766e;color:white;border:0;border-radius:8px;padding:10px 14px;font-weight:800;cursor:pointer;">
+              Imprimir / salvar PDF
+            </button>
+            """,
+            height=48,
+        )
+        st.download_button(
+            label="Baixar caderno HTML",
+            data=caderno_html,
+            file_name="caderno-executivo-leadertrack-organizacional.html",
+            mime="text/html",
+            key="download_caderno_organizacional_html",
         )
 
 
