@@ -495,6 +495,322 @@ def _micro_findings_by_crossing(
     ]
 
 
+def _micro_profile(df_micro: pd.DataFrame) -> dict[str, Any]:
+    scores = _micro_scores(df_micro)
+    dimensoes = []
+    for dim, values in (scores.get("dimensoes") or {}).items():
+        dimensoes.append({
+            "dimensao": dim,
+            "real": values.get("real"),
+            "ideal": values.get("ideal"),
+            "gap": values.get("gap"),
+            "nivel_gap": values.get("nivel_gap"),
+        })
+    dimensoes = sorted(dimensoes, key=lambda item: float(item.get("gap") or 0), reverse=True)
+    return {
+        "n": int(len(df_micro)) if df_micro is not None else 0,
+        "gap_medio": scores.get("gap_medio"),
+        "dimensoes": dimensoes,
+        "maior_gap": dimensoes[0] if dimensoes else None,
+        "menor_gap": dimensoes[-1] if dimensoes else None,
+    }
+
+
+def _profile_with_context_comparison(
+    profile: dict[str, Any],
+    baseline_profile: dict[str, Any] | None,
+) -> dict[str, Any]:
+    if not isinstance(profile, dict):
+        return {}
+    if not isinstance(baseline_profile, dict):
+        return profile
+
+    baseline_dims = {
+        item.get("dimensao"): item
+        for item in baseline_profile.get("dimensoes", [])
+        if isinstance(item, dict) and item.get("dimensao")
+    }
+
+    compared_dims = []
+    for item in profile.get("dimensoes", []):
+        if not isinstance(item, dict):
+            continue
+        dim = item.get("dimensao")
+        baseline = baseline_dims.get(dim) or {}
+        compared = dict(item)
+        compared["media_contexto_real"] = baseline.get("real")
+        compared["media_contexto_ideal"] = baseline.get("ideal")
+        compared["media_contexto_gap"] = baseline.get("gap")
+        if item.get("real") is not None and baseline.get("real") is not None:
+            compared["delta_real_vs_contexto"] = round(
+                float(item.get("real")) - float(baseline.get("real")), 1
+            )
+        if item.get("gap") is not None and baseline.get("gap") is not None:
+            compared["delta_gap_vs_contexto"] = round(
+                float(item.get("gap")) - float(baseline.get("gap")), 1
+            )
+        compared_dims.append(compared)
+
+    result = dict(profile)
+    result["dimensoes"] = compared_dims
+    result["comparacao_contexto"] = {
+        "gap_medio_contexto": baseline_profile.get("gap_medio"),
+        "delta_gap_medio_vs_contexto": (
+            round(float(profile.get("gap_medio")) - float(baseline_profile.get("gap_medio")), 1)
+            if profile.get("gap_medio") is not None and baseline_profile.get("gap_medio") is not None
+            else None
+        ),
+        "maior_gap_contexto": baseline_profile.get("maior_gap"),
+    }
+    return result
+
+
+def _micro_profiles_by_column(
+    df_micro: pd.DataFrame,
+    column: str,
+    rules: OrganizationalRules,
+    baseline_profile: dict[str, Any] | None = None,
+    limit: int = 12,
+) -> list[dict[str, Any]]:
+    if df_micro is None or df_micro.empty or column not in df_micro.columns:
+        return []
+
+    rows = []
+    for value, group in df_micro.groupby(column, dropna=True):
+        value = _clean_text(value)
+        if not value or len(group) < rules.min_sample:
+            continue
+        profile = _profile_with_context_comparison(_micro_profile(group), baseline_profile)
+        rows.append({
+            "campo": column,
+            "valor": value,
+            **profile,
+        })
+
+    return sorted(
+        rows,
+        key=lambda item: abs(float((item.get("comparacao_contexto") or {}).get("delta_gap_medio_vs_contexto") or item.get("gap_medio") or 0)),
+        reverse=True,
+    )[:limit]
+
+
+def _micro_profiles_by_crossing(
+    df_micro: pd.DataFrame,
+    columns: tuple[str, str],
+    rules: OrganizationalRules,
+    baseline_profile: dict[str, Any] | None = None,
+    limit: int = 15,
+) -> list[dict[str, Any]]:
+    if df_micro is None or df_micro.empty:
+        return []
+
+    col_a, col_b = columns
+    if col_a not in df_micro.columns or col_b not in df_micro.columns:
+        return []
+
+    rows = []
+    for (value_a, value_b), group in df_micro.groupby([col_a, col_b], dropna=True):
+        value_a = _clean_text(value_a)
+        value_b = _clean_text(value_b)
+        if not value_a or not value_b or len(group) < rules.min_sample:
+            continue
+        profile = _profile_with_context_comparison(_micro_profile(group), baseline_profile)
+        rows.append({
+            "campos": [col_a, col_b],
+            "valores": [value_a, value_b],
+            "rotulo": f"{col_a}={value_a} + {col_b}={value_b}",
+            **profile,
+        })
+
+    return sorted(
+        rows,
+        key=lambda item: abs(float((item.get("comparacao_contexto") or {}).get("delta_gap_medio_vs_contexto") or item.get("gap_medio") or 0)),
+        reverse=True,
+    )[:limit]
+
+
+def _question_gap_rows(
+    df_micro: pd.DataFrame,
+    matriz_micro: pd.DataFrame,
+    rules: OrganizationalRules,
+    limit: int = 20,
+) -> list[dict[str, Any]]:
+    if df_micro is None or df_micro.empty or matriz_micro is None or matriz_micro.empty:
+        return []
+    if "respostas" not in df_micro.columns:
+        return []
+
+    rows = []
+    matriz_questoes = matriz_micro[[
+        "COD",
+        "AFIRMACAO",
+        "DIMENSAO",
+        "SUBDIMENSAO",
+        "name_real",
+        "name_ideal",
+        "CHAVE",
+        "PONTUACAO_REAL",
+        "PONTUACAO_IDEAL",
+    ]].drop_duplicates(subset=["COD", "name_real", "name_ideal"])
+
+    for _, questao in matriz_questoes.iterrows():
+        reais = []
+        ideais = []
+        real_key = _clean_text(questao.get("name_real"))
+        ideal_key = _clean_text(questao.get("name_ideal"))
+        codigo = _clean_text(questao.get("COD"))
+        if not real_key or not ideal_key:
+            continue
+
+        for _, resp in df_micro.iterrows():
+            respostas = resp.get("respostas") or {}
+            if not isinstance(respostas, dict):
+                continue
+            if real_key not in respostas or ideal_key not in respostas:
+                continue
+            try:
+                real = int(respostas.get(real_key))
+                ideal = int(respostas.get(ideal_key))
+            except Exception:
+                continue
+
+            chave = f"{codigo}_I{ideal}_R{real}"
+            linha = matriz_micro[matriz_micro["CHAVE"] == chave]
+            if linha.empty:
+                continue
+            reais.append(_safe_float(linha["PONTUACAO_REAL"].iloc[0], np.nan))
+            ideais.append(_safe_float(linha["PONTUACAO_IDEAL"].iloc[0], np.nan))
+
+        reais = [v for v in reais if not pd.isna(v)]
+        ideais = [v for v in ideais if not pd.isna(v)]
+        n = min(len(reais), len(ideais))
+        if n < rules.min_sample:
+            continue
+
+        real_media = round(float(np.mean(reais)), 1)
+        ideal_media = round(float(np.mean(ideais)), 1)
+        gap = round(ideal_media - real_media, 1)
+        rows.append({
+            "codigo": codigo,
+            "afirmacao": _clean_text(questao.get("AFIRMACAO")),
+            "dimensao": _clean_text(questao.get("DIMENSAO")),
+            "subdimensao": _clean_text(questao.get("SUBDIMENSAO")),
+            "n": int(n),
+            "real": real_media,
+            "ideal": ideal_media,
+            "gap": gap,
+            "severidade": "critico" if gap >= rules.critical_gap else "medio" if gap >= rules.medium_gap else "baixo",
+        })
+
+    return sorted(rows, key=lambda item: float(item.get("gap") or 0), reverse=True)[:limit]
+
+
+def _participation_summary(df_micro: pd.DataFrame, rules: OrganizationalRules) -> dict[str, Any]:
+    if df_micro is None or df_micro.empty:
+        return {}
+
+    df_equipe = df_micro[df_micro["tipo"] == "Avaliação Equipe"] if "tipo" in df_micro.columns else df_micro
+    total = max(len(df_equipe), 1)
+
+    def by_column(column: str, limit: int = 12) -> list[dict[str, Any]]:
+        if column not in df_equipe.columns:
+            return []
+        rows = []
+        for value, count in df_equipe[column].fillna("").astype(str).str.strip().value_counts().items():
+            if not value or int(count) < 1:
+                continue
+            rows.append({
+                "campo": column,
+                "valor": value,
+                "respostas": int(count),
+                "percentual_da_amostra": round(float(count) * 100.0 / total, 1),
+            })
+        return rows[:limit]
+
+    return {
+        "observacao": (
+            "Percentual calculado sobre as respostas de equipe carregadas no recorte. "
+            "Taxa exata sobre tokens enviados exige denominador de tokens emitidos por area/lider."
+        ),
+        "total_respostas_equipe": int(len(df_equipe)),
+        "por_departamento": by_column("departamento"),
+        "por_area": by_column("area"),
+        "por_lider": by_column("emailLider", limit=20),
+        "por_empresa": by_column("empresa"),
+    }
+
+
+def gerar_analise_profunda(
+    matriz_micro: pd.DataFrame,
+    df_micro: pd.DataFrame,
+    rules: OrganizationalRules,
+) -> dict[str, Any]:
+    df_equipe = df_micro[df_micro["tipo"] == "Avaliação Equipe"] if "tipo" in df_micro.columns else df_micro
+    baseline_profile = _micro_profile(df_equipe)
+
+    recortes = {}
+    recorte_columns = [
+        "empresa",
+        "filial_nome",
+        "branch_name",
+        "estado",
+        "cidade",
+        "geracao",
+        "sexo",
+        "etnia",
+        "departamento",
+        "area",
+        "cargo",
+    ]
+    for column in recorte_columns:
+        perfis = _micro_profiles_by_column(df_equipe, column, rules, baseline_profile=baseline_profile)
+        if perfis:
+            recortes[column] = perfis
+
+    cruzamentos = {}
+    crossing_candidates = [
+        "empresa",
+        "filial_nome",
+        "branch_name",
+        "estado",
+        "cidade",
+        "geracao",
+        "sexo",
+        "etnia",
+        "departamento",
+        "area",
+        "cargo",
+    ]
+    crossing_pairs = [
+        pair
+        for pair in combinations([col for col in crossing_candidates if col in df_equipe.columns], 2)
+        if pair not in {("cidade", "estado"), ("branch_name", "filial_nome")}
+    ]
+    for pair in crossing_pairs:
+        perfis = _micro_profiles_by_crossing(df_equipe, pair, rules, baseline_profile=baseline_profile, limit=8)
+        if perfis:
+            cruzamentos[" + ".join(pair)] = perfis
+    cruzamentos_priorizados = dict(
+        sorted(
+            cruzamentos.items(),
+            key=lambda item: max(
+                abs(float((row.get("comparacao_contexto") or {}).get("delta_gap_medio_vs_contexto") or 0))
+                for row in item[1]
+            ),
+            reverse=True,
+        )[:18]
+    )
+
+    return {
+        "referencia_contexto": baseline_profile,
+        "microambiente_por_recorte": recortes,
+        "microambiente_por_interseccao": cruzamentos_priorizados,
+        "comparativo_empresas_mesma_holding": recortes.get("empresa", []),
+        "afirmacoes_mais_impactantes": _question_gap_rows(df_equipe, matriz_micro, rules),
+        "participacao": _participation_summary(df_micro, rules),
+    }
+
+
 def detectar_achados_organizacionais(
     matriz_arq: pd.DataFrame,
     matriz_micro: pd.DataFrame,
@@ -591,6 +907,7 @@ def gerar_pacote_organizacional(
         filtros,
         rules,
     )
+    deep_analysis = gerar_analise_profunda(matriz_micro, df_micro, rules)
 
     return {
         "tipo": "devolutiva_organizacional_leadertrack",
@@ -612,6 +929,7 @@ def gerar_pacote_organizacional(
         "microambiente": micro,
         "arquetipos": archetypes,
         "achados_relevantes": findings,
+        "analise_profunda": deep_analysis,
     }
 
 
@@ -631,6 +949,28 @@ def pacote_organizacional_para_ia(pacote: dict[str, Any], limite_achados: int = 
             continue
         distribuicoes_resumidas[campo] = linhas[:12]
 
+    analise = pacote.get("analise_profunda") or {}
+    analise_resumida = {
+        "referencia_contexto": analise.get("referencia_contexto") or {},
+        "microambiente_por_recorte": {},
+        "microambiente_por_interseccao": {},
+        "comparativo_empresas_mesma_holding": [],
+        "afirmacoes_mais_impactantes": [],
+        "participacao": analise.get("participacao") or {},
+    }
+    for campo, linhas in (analise.get("microambiente_por_recorte") or {}).items():
+        if isinstance(linhas, list):
+            analise_resumida["microambiente_por_recorte"][campo] = linhas[:8]
+    for campo, linhas in (analise.get("microambiente_por_interseccao") or {}).items():
+        if isinstance(linhas, list):
+            analise_resumida["microambiente_por_interseccao"][campo] = linhas[:8]
+    if isinstance(analise.get("comparativo_empresas_mesma_holding"), list):
+        analise_resumida["comparativo_empresas_mesma_holding"] = analise[
+            "comparativo_empresas_mesma_holding"
+        ][:12]
+    if isinstance(analise.get("afirmacoes_mais_impactantes"), list):
+        analise_resumida["afirmacoes_mais_impactantes"] = analise["afirmacoes_mais_impactantes"][:15]
+
     return {
         "tipo": pacote.get("tipo"),
         "gerado_em": pacote.get("gerado_em"),
@@ -642,6 +982,7 @@ def pacote_organizacional_para_ia(pacote: dict[str, Any], limite_achados: int = 
         "saude_emocional": pacote.get("saude_emocional") or {},
         "microambiente": pacote.get("microambiente") or {},
         "arquetipos": pacote.get("arquetipos") or {},
+        "analise_profunda": analise_resumida,
         "achados_relevantes": achados,
         "observacao_de_resumo": (
             "Este pacote foi resumido para IA. O pacote completo permanece disponivel "

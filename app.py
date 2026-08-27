@@ -166,8 +166,8 @@ def chamar_parecer_organizacional(pacote_analitico, gerar_com_ia=True):
         "gerarComIA": bool(gerar_com_ia),
         "persistir": False,
         "modelo": "gpt-4o-mini",
-        "maxTokens": 1800,
-        "timeout": 15,
+        "maxTokens": 2600,
+        "timeout": 25,
     }
     body = json.dumps(payload, ensure_ascii=False, default=str).encode("utf-8")
     req = urllib.request.Request(
@@ -228,6 +228,14 @@ def enviar_parecer_organizacional_para_wordpress(resposta, pacote):
         "governanca": resposta.get("governanca") or (pacote or {}).get("governanca") or {},
         "geracao_ia": resposta.get("geracao_ia") or {},
         "devolutiva": devolutiva,
+        "base_analitica": {
+            "distribuicoes": (pacote or {}).get("distribuicoes") or {},
+            "saude_emocional": (pacote or {}).get("saude_emocional") or {},
+            "microambiente": (pacote or {}).get("microambiente") or {},
+            "arquetipos": (pacote or {}).get("arquetipos") or {},
+            "achados_relevantes": (pacote or {}).get("achados_relevantes") or [],
+            "analise_profunda": (pacote or {}).get("analise_profunda") or {},
+        },
     }
 
     components.html(
