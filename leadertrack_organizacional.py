@@ -59,7 +59,7 @@ class OrganizationalRules:
         default_factory=lambda: ("sexo", "etnia", "geracao", "estado", "cidade")
     )
     allowed_org_crossings: tuple[str, ...] = field(
-        default_factory=lambda: ("empresa", "departamento", "cargo", "emailLider")
+        default_factory=lambda: ("empresa", "departamento", "cargo", "area")
     )
 
 
@@ -712,16 +712,19 @@ def _participation_summary(df_micro: pd.DataFrame, rules: OrganizationalRules) -
     df_equipe = df_micro[df_micro["tipo"] == "Avaliação Equipe"] if "tipo" in df_micro.columns else df_micro
     total = max(len(df_equipe), 1)
 
-    def by_column(column: str, limit: int = 12) -> list[dict[str, Any]]:
+    def by_column(column: str, limit: int = 12, anonymize: bool = False) -> list[dict[str, Any]]:
         if column not in df_equipe.columns:
             return []
         rows = []
-        for value, count in df_equipe[column].fillna("").astype(str).str.strip().value_counts().items():
+        for idx, (value, count) in enumerate(
+            df_equipe[column].fillna("").astype(str).str.strip().value_counts().items(),
+            start=1,
+        ):
             if not value or int(count) < 1:
                 continue
             rows.append({
                 "campo": column,
-                "valor": value,
+                "valor": f"Lider {idx:02d}" if anonymize else value,
                 "respostas": int(count),
                 "percentual_da_amostra": round(float(count) * 100.0 / total, 1),
             })
@@ -735,7 +738,7 @@ def _participation_summary(df_micro: pd.DataFrame, rules: OrganizationalRules) -
         "total_respostas_equipe": int(len(df_equipe)),
         "por_departamento": by_column("departamento"),
         "por_area": by_column("area"),
-        "por_lider": by_column("emailLider", limit=20),
+        "por_lider": by_column("emailLider", limit=20, anonymize=True),
         "por_empresa": by_column("empresa"),
     }
 
