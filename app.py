@@ -2613,7 +2613,10 @@ def adicionar_holding_ao_dataframe(df, contexto_por_chave):
             or contexto_por_chave.get(empresa)
             or {}
         )
-        holding = primeiro_valido(row.get('holding'), contexto.get('holding'))
+        # O contexto historico da resposta deve prevalecer sobre o cadastro
+        # atual do respondente. Um profissional pode mudar de empresa/holding
+        # depois de responder a rodada sem que a resposta mude de contexto.
+        holding = primeiro_valido(row.get('holding'))
         if holding:
             holding = str(holding).upper().strip()
         if not holding:
@@ -2624,7 +2627,8 @@ def adicionar_holding_ao_dataframe(df, contexto_por_chave):
                any(x in empresa for x in ['astro34', 'spectral', 'fastco', 'futurex']):
                 holding = 'PROSPERA'
             else:
-                holding = empresa.upper() if empresa else 'N/A'
+                holding = primeiro_valido(contexto.get('holding'))
+                holding = str(holding).upper().strip() if holding else (empresa.upper() if empresa else 'N/A')
         holdings.append(str(holding).upper().strip() if holding else 'N/A')
         holding_ids.append(primeiro_valido(row.get('holding_id'), contexto.get('holding_id'), ''))
         empresa_ids.append(primeiro_valido(row.get('empresa_id'), contexto.get('empresa_id'), ''))
