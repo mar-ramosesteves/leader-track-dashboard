@@ -2281,9 +2281,9 @@ def processar_dados_arquetipos(consolidado_arq, matriz):
                 auto = dados['autoavaliacao']
                 arquétipos_auto = calcular_arquetipos_respondente(auto['respostas'], matriz)
                 respondentes_processados.append({
-                    'empresa': auto.get('empresa', 'N/A'),
-                    'codrodada': auto.get('codrodada', 'N/A'),
-                    'emailLider': auto.get('emailLider', 'N/A'),
+                    'empresa': primeiro_valido(auto.get('empresa'), item.get('empresa'), 'N/A'),
+                    'codrodada': primeiro_valido(auto.get('codrodada'), item.get('codrodada'), 'N/A'),
+                    'emailLider': primeiro_valido(auto.get('emailLider'), item.get('emaillider'), 'N/A'),
                     'nome': auto.get('nome', 'N/A'),
                     'email': auto.get('email', 'N/A'),
                     'sexo': auto.get('sexo', 'N/A'),
@@ -2303,9 +2303,9 @@ def processar_dados_arquetipos(consolidado_arq, matriz):
                     if 'respostas' in membro:
                         arquétipos_equipe = calcular_arquetipos_respondente(membro['respostas'], matriz)
                         respondentes_processados.append({
-                            'empresa': membro.get('empresa', 'N/A'),
-                            'codrodada': membro.get('codrodada', 'N/A'),
-                            'emailLider': membro.get('emailLider', 'N/A'),
+                            'empresa': primeiro_valido(membro.get('empresa'), item.get('empresa'), 'N/A'),
+                            'codrodada': primeiro_valido(membro.get('codrodada'), item.get('codrodada'), 'N/A'),
+                            'emailLider': primeiro_valido(membro.get('emailLider'), item.get('emaillider'), 'N/A'),
                             'nome': membro.get('nome', 'N/A'),
                             'email': membro.get('email', 'N/A'),
                             'sexo': membro.get('sexo', 'N/A'),
@@ -2343,9 +2343,9 @@ def processar_dados_microambiente(consolidado_micro, matriz, pontos_max_dimensao
                 auto = dados['autoavaliacao']
                 dimensoes_real, dimensoes_ideal, subdimensoes_real, subdimensoes_ideal = calcular_microambiente_respondente(auto, matriz, pontos_max_dimensao, pontos_max_subdimensao)
                 respondentes_processados.append({
-                    'empresa': auto.get('empresa', ''),
-                    'codrodada': auto.get('codrodada', ''),
-                    'emailLider': auto.get('emailLider', ''),
+                    'empresa': primeiro_valido(auto.get('empresa'), item.get('empresa'), ''),
+                    'codrodada': primeiro_valido(auto.get('codrodada'), item.get('codrodada'), ''),
+                    'emailLider': primeiro_valido(auto.get('emailLider'), item.get('emaillider'), ''),
                     'nome': auto.get('nome', ''),
                     'email': auto.get('email', ''),
                     'sexo': auto.get('sexo', ''),
@@ -2367,9 +2367,9 @@ def processar_dados_microambiente(consolidado_micro, matriz, pontos_max_dimensao
                 for membro in dados['avaliacoesEquipe']:
                     dimensoes_real, dimensoes_ideal, subdimensoes_real, subdimensoes_ideal = calcular_microambiente_respondente(membro, matriz, pontos_max_dimensao, pontos_max_subdimensao)
                     respondentes_processados.append({
-                        'empresa': membro.get('empresa', ''),
-                        'codrodada': membro.get('codrodada', ''),
-                        'emailLider': membro.get('emailLider', ''),
+                        'empresa': primeiro_valido(membro.get('empresa'), item.get('empresa'), ''),
+                        'codrodada': primeiro_valido(membro.get('codrodada'), item.get('codrodada'), ''),
+                        'emailLider': primeiro_valido(membro.get('emailLider'), item.get('emaillider'), ''),
                         'nome': membro.get('nome', ''),
                         'email': membro.get('email', ''),
                         'sexo': membro.get('sexo', ''),
