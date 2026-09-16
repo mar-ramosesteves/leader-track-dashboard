@@ -29,7 +29,7 @@ PARECER_INTELIGENTE_LEADERTRACK_URL = (
     "https://parecer-inteligente.onrender.com/"
     "gerar-devolutiva-leadertrack"
 )
-HRKEY_GRAFICO_API_URL = "https://hrkey-grafico-api.onrender.com"
+HRKEY_GRAFICO_API_URL = "https://hrkey-v2-grafico.onrender.com"
 
 # ==================== FUNÇÕES SAÚDE EMOCIONAL ====================
 
