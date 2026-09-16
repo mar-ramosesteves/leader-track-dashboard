@@ -25,6 +25,11 @@ PARECER_INTELIGENTE_ORG_URL = (
     "https://parecer-inteligente.onrender.com/"
     "gerar-devolutiva-organizacional-leadertrack"
 )
+PARECER_INTELIGENTE_LEADERTRACK_URL = (
+    "https://parecer-inteligente.onrender.com/"
+    "gerar-devolutiva-leadertrack"
+)
+HRKEY_GRAFICO_API_URL = "https://hrkey-grafico-api.onrender.com"
 
 # ==================== FUNÇÕES SAÚDE EMOCIONAL ====================
 
@@ -2433,6 +2438,98 @@ def calcular_medias_arquetipos(df_respondentes, filtros):
     return arquétipos, medias_auto, medias_equipe, df_filtrado
 
 
+def buscar_arquetipos_individual_api(filtros, ordem_arquetipos):
+    lider = str(filtros.get("emaillider") or "").strip().lower()
+    rodada = str(filtros.get("codrodada") or "").strip().lower()
+    empresa = str(filtros.get("empresa") or "").strip().lower()
+    if not lider or lider == "todos" or not rodada or rodada == "todas":
+        return None
+
+    payload = {
+        "empresa": empresa if empresa and empresa != "todas" else "Todas",
+        "codrodada": rodada,
+        "emailLider": lider,
+    }
+    data = json.dumps(payload).encode("utf-8")
+    request = urllib.request.Request(
+        f"{HRKEY_GRAFICO_API_URL}/gerar-graficos-comparativos",
+        data=data,
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=30) as response:
+            result = json.loads(response.read().decode("utf-8"))
+    except (urllib.error.URLError, TimeoutError, ValueError, json.JSONDecodeError):
+        return None
+
+    auto = result.get("autoavaliacao") or {}
+    equipe = result.get("mediaEquipe") or {}
+    if not isinstance(auto, dict) or not isinstance(equipe, dict) or not equipe:
+        return None
+
+    ordem = [arq for arq in ordem_arquetipos if arq in auto or arq in equipe]
+    if not ordem:
+        ordem = list(result.get("arquetipos") or [])
+    if not ordem:
+        return None
+
+    return {
+        "arquetipos": ordem,
+        "medias_auto": [float(auto.get(arq, 0) or 0) for arq in ordem],
+        "medias_equipe": [float(equipe.get(arq, 0) or 0) for arq in ordem],
+        "amostra": result.get("amostra") or {},
+        "info_avaliacoes": result.get("info_avaliacoes"),
+        "n_avaliacoes": result.get("n_avaliacoes"),
+    }
+
+
+def buscar_devolutiva_individual_api(filtros):
+    lider = str(filtros.get("emaillider") or "").strip().lower()
+    rodada = str(filtros.get("codrodada") or "").strip().lower()
+    empresa = str(filtros.get("empresa") or "").strip().lower()
+    if not lider or lider == "todos" or not rodada or rodada == "todas":
+        return None
+
+    payload = {
+        "empresa": empresa if empresa and empresa != "todas" else "Todas",
+        "codrodada": rodada,
+        "emailLider": lider,
+        "persistir": False,
+        "gerarPlanosComIA": False,
+        "incluirGuiasCaderno": True,
+        "limiteGaps": 0,
+    }
+    data = json.dumps(payload).encode("utf-8")
+    request = urllib.request.Request(
+        PARECER_INTELIGENTE_LEADERTRACK_URL,
+        data=data,
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=45) as response:
+            result = json.loads(response.read().decode("utf-8"))
+    except (urllib.error.URLError, TimeoutError, ValueError, json.JSONDecodeError):
+        return None
+    if not isinstance(result, dict) or result.get("erro"):
+        return None
+    return result
+
+
+def graficos_devolutiva_individual(devolutiva, guia, chave):
+    return (((devolutiva or {}).get("guias_caderno") or {}).get(guia) or {}).get("graficos", {}).get(chave) or {}
+
+
+def valores_micro_devolutiva(chart, campo, ordem):
+    rows = (chart or {}).get("dados") or []
+    por_nome = {str(row.get(campo) or "").strip(): row for row in rows if row.get(campo)}
+    return (
+        [float((por_nome.get(nome) or {}).get("REAL_%") or 0) for nome in ordem],
+        [float((por_nome.get(nome) or {}).get("IDEAL_%") or 0) for nome in ordem],
+    )
+
+
 def calcular_medias_microambiente(df_respondentes, filtros):
     df_filtrado = df_respondentes.copy()
     for coluna, chave in [
@@ -3049,6 +3146,7 @@ if matriz_arq is not None and matriz_micro is not None:
             'cargo': cargo_selecionado.lower() if cargo_selecionado != "Todos" else cargo_selecionado,
             'holding': holding_selecionada.upper() if holding_selecionada != "Todas" else holding_selecionada,
         }
+        devolutiva_individual_api = buscar_devolutiva_individual_api(filtros)
         tab1, tab2, tab3, tab4 = st.tabs([
             "📊 Arquétipos",
             "🏢 Microambiente",
@@ -3060,10 +3158,29 @@ if matriz_arq is not None and matriz_micro is not None:
         with tab1:
             st.header("📊 Análise de Arquétipos de Liderança")
             arquétipos, medias_auto, medias_equipe, df_filtrado_arq = calcular_medias_arquetipos(df_arquetipos, filtros)
+            arq_comparativo_api = graficos_devolutiva_individual(devolutiva_individual_api, "arquetipos", "comparativo")
+            if arq_comparativo_api:
+                auto_api = arq_comparativo_api.get("autoavaliacao") or {}
+                equipe_api = arq_comparativo_api.get("mediaEquipe") or {}
+                ordem_api = [arq for arq in arquétipos if arq in auto_api or arq in equipe_api]
+                if ordem_api and equipe_api:
+                    arquétipos = ordem_api
+                    medias_auto = [float(auto_api.get(arq, 0) or 0) for arq in ordem_api]
+                    medias_equipe = [float(equipe_api.get(arq, 0) or 0) for arq in ordem_api]
+            else:
+                arquetipos_api = buscar_arquetipos_individual_api(filtros, arquétipos)
+                if arquetipos_api:
+                    arquétipos = arquetipos_api["arquetipos"]
+                    medias_auto = arquetipos_api["medias_auto"]
+                    medias_equipe = arquetipos_api["medias_equipe"]
             if arquétipos:
                 titulo_parts = [f"{k}: {v}" for k, v in filtros.items() if v not in ["Todas", "Todos"]]
                 titulo = " | ".join(titulo_parts) if titulo_parts else "Média Geral de Todos os Respondentes"
                 st.markdown("**🎨 Escolha o tipo de visualização:**")
+                if arq_comparativo_api:
+                    info_api = arq_comparativo_api.get("info_avaliacoes") or ((arq_comparativo_api.get("amostra") or {}).get("respostas_utilizadas"))
+                    if info_api:
+                        st.caption(f"Fonte individual oficial de arquétipos: {info_api}")
                 tipo_visualizacao = st.radio("Tipo de Gráfico:", ["📊 Gráfico com Rótulos e Clique", "📈 Gráfico Simples"], horizontal=True, key="arquetipos")
                 fig = gerar_grafico_arquetipos(medias_auto, medias_equipe, arquétipos, titulo, tipo_visualizacao)
                 st.plotly_chart(fig, use_container_width=True)
@@ -3137,9 +3254,22 @@ if matriz_arq is not None and matriz_micro is not None:
         with tab2:
             st.header("🏢 Análise de Microambiente de Equipes")
             dimensoes, medias_real, medias_ideal, medias_equipe_real, medias_equipe_ideal, medias_subdimensoes_equipe_real, medias_subdimensoes_equipe_ideal, df_filtrado_micro = calcular_medias_microambiente(df_microambiente, filtros)
+            micro_auto_dim_api = graficos_devolutiva_individual(devolutiva_individual_api, "microambiente", "autoavaliacao_dimensao")
+            micro_equipe_dim_api = graficos_devolutiva_individual(devolutiva_individual_api, "microambiente", "mediaequipe_dimensao")
+            micro_auto_sub_api = graficos_devolutiva_individual(devolutiva_individual_api, "microambiente", "autoavaliacao_subdimensao")
+            micro_equipe_sub_api = graficos_devolutiva_individual(devolutiva_individual_api, "microambiente", "mediaequipe_subdimensao")
+            if micro_auto_dim_api:
+                medias_real, medias_ideal = valores_micro_devolutiva(micro_auto_dim_api, "DIMENSAO", dimensoes)
+            if micro_equipe_dim_api:
+                medias_equipe_real, medias_equipe_ideal = valores_micro_devolutiva(micro_equipe_dim_api, "DIMENSAO", dimensoes)
+            micro_sub_api_rows = None
             if dimensoes:
                 titulo_parts = [f"{k}: {v}" for k, v in filtros.items() if v not in ["Todas", "Todos"]]
                 titulo = " | ".join(titulo_parts) if titulo_parts else "Média Geral de Todos os Respondentes"
+                if micro_equipe_dim_api:
+                    info_api = micro_equipe_dim_api.get("info_avaliacoes") or ((micro_equipe_dim_api.get("amostra") or {}).get("respostas_utilizadas"))
+                    if info_api:
+                        st.caption(f"Fonte individual oficial de microambiente: {info_api}")
                 st.markdown("**🎯 Escolha o tipo de análise:**")
                 tipo_analise = st.radio("Tipo de Análise:", ["Autoavaliação", "Média da Equipe", "Comparativo (Auto vs Equipe)"], horizontal=True, key="tipo_analise_micro")
                 if tipo_analise == "Autoavaliação":
@@ -3161,8 +3291,12 @@ if matriz_arq is not None and matriz_micro is not None:
                 df_sub = df_auto if tipo_analise == "Autoavaliação" else df_equipe
                 col_real = 'subdimensoes_real'
                 col_ideal = 'subdimensoes_ideal'
-                medias_sub_real = [np.mean([r[col_real][s] for _, r in df_sub.iterrows() if col_real in r and isinstance(r[col_real], dict) and s in r[col_real]]) if any(col_real in r and isinstance(r[col_real], dict) and s in r[col_real] for _, r in df_sub.iterrows()) else 0 for s in subdimensoes]
-                medias_sub_ideal = [np.mean([r[col_ideal][s] for _, r in df_sub.iterrows() if col_ideal in r and isinstance(r[col_ideal], dict) and s in r[col_ideal]]) if any(col_ideal in r and isinstance(r[col_ideal], dict) and s in r[col_ideal] for _, r in df_sub.iterrows()) else 0 for s in subdimensoes]
+                micro_sub_api_rows = micro_auto_sub_api if tipo_analise == "Autoavaliação" else micro_equipe_sub_api
+                if micro_sub_api_rows:
+                    medias_sub_real, medias_sub_ideal = valores_micro_devolutiva(micro_sub_api_rows, "SUBDIMENSAO", subdimensoes)
+                else:
+                    medias_sub_real = [np.mean([r[col_real][s] for _, r in df_sub.iterrows() if col_real in r and isinstance(r[col_real], dict) and s in r[col_real]]) if any(col_real in r and isinstance(r[col_real], dict) and s in r[col_real] for _, r in df_sub.iterrows()) else 0 for s in subdimensoes]
+                    medias_sub_ideal = [np.mean([r[col_ideal][s] for _, r in df_sub.iterrows() if col_ideal in r and isinstance(r[col_ideal], dict) and s in r[col_ideal]]) if any(col_ideal in r and isinstance(r[col_ideal], dict) and s in r[col_ideal] for _, r in df_sub.iterrows()) else 0 for s in subdimensoes]
                 fig_sub = go.Figure()
                 fig_sub.add_trace(go.Scatter(x=subdimensoes, y=medias_sub_real, mode='lines+markers+text', name='Como é (Real)',
                     line=dict(color='orange', width=3), marker=dict(size=8), text=[f"{v:.1f}%" for v in medias_sub_real], textposition='top center'))
@@ -3232,6 +3366,11 @@ if matriz_arq is not None and matriz_micro is not None:
         # ==================== TAB SAÚDE EMOCIONAL ====================
         with tab3:
             st.header("💚 Análise de Saúde Emocional + Compliance NR-1")
+            if filtros.get("emaillider") not in ("Todos", None, ""):
+                st.info(
+                    "Saúde emocional é exibida aqui como score interno do dashboard para o líder selecionado. "
+                    "Ela permanece fora da devolutiva individual entregue ao líder."
+                )
             st.markdown("**🔍 Analisando afirmações existentes relacionadas à saúde emocional...**")
 
             with st.spinner("Identificando afirmações de saúde emocional..."):
@@ -3278,6 +3417,20 @@ if matriz_arq is not None and matriz_micro is not None:
                 'Q43':'Q38','Q44':'Q39','Q45':'Q40','Q46':'Q41','Q47':'Q42','Q48':'Q43'
             }
             REVERSO_FORM_SE = {can: form for form, can in MAPEAMENTO_QUESTOES_SE.items()}
+            arq_analitico_api = graficos_devolutiva_individual(devolutiva_individual_api, "arquetipos", "analitico")
+            micro_analitico_api = graficos_devolutiva_individual(devolutiva_individual_api, "microambiente", "analitico")
+            arq_api_por_codigo = {
+                str(row.get("codigo") or "").strip(): row
+                for row in (arq_analitico_api.get("analitico") or [])
+                if row.get("codigo")
+            } if arq_analitico_api else {}
+            micro_api_por_codigo = {
+                str(row.get("QUESTAO") or "").strip(): row
+                for row in (micro_analitico_api.get("dados") or [])
+                if row.get("QUESTAO")
+            } if micro_analitico_api else {}
+            if arq_api_por_codigo or micro_api_por_codigo:
+                st.caption("Score de saúde emocional usando a mesma fonte oficial da devolutiva individual para o líder selecionado.")
 
             for af in afirmacoes_saude_emocional:
                 codigo = af['chave']
@@ -3287,25 +3440,35 @@ if matriz_arq is not None and matriz_micro is not None:
 
                 if af['tipo'] == 'Arquétipo':
                     arquétipo = af['dimensao']
-                    # ✅ LÓGICA CORRETA: busca individualmente na tabela
-                    percentual_medio, tendencia_info, _ = calcular_tendencia_arquetipos_por_questao(
-                        df_arq_filtrado[df_arq_filtrado['tipo'] == 'Avaliação Equipe'], matriz_arq, codigo, arquétipo
-                    )
+                    api_row = arq_api_por_codigo.get(str(codigo).strip())
+                    if api_row:
+                        media_api = api_row.get("mediaEquipe") or {}
+                        percentual_medio = media_api.get("percentual")
+                        tendencia_info = str(media_api.get("tendencia") or "")
+                    else:
+                        percentual_medio, tendencia_info, _ = calcular_tendencia_arquetipos_por_questao(
+                            df_arq_filtrado[df_arq_filtrado['tipo'] == 'Avaliação Equipe'], matriz_arq, codigo, arquétipo
+                        )
                     if percentual_medio is not None and tendencia_info:
                         if 'DESFAVORÁVEL' in tendencia_info:
-                            valor = max(0, 100 - percentual_medio)
+                            valor = max(0, 100 - float(percentual_medio))
                         else:
-                            valor = percentual_medio
+                            valor = float(percentual_medio)
                         categoria_valores[categoria].append(valor)
 
                 else:  # Microambiente
                     codigo_canonico = af['chave']
-                    # ✅ LÓGICA CORRETA: busca individualmente na tabela
-                    real_pct, ideal_pct, gap = calcular_real_ideal_gap_por_questao(
-                        df_micro_filtrado, matriz_micro, codigo_canonico
-                    )
+                    api_row = micro_api_por_codigo.get(str(codigo_canonico).strip())
+                    if api_row:
+                        real_pct = api_row.get("PONTUACAO_REAL")
+                        ideal_pct = api_row.get("PONTUACAO_IDEAL")
+                        gap = api_row.get("GAP")
+                    else:
+                        real_pct, ideal_pct, gap = calcular_real_ideal_gap_por_questao(
+                            df_micro_filtrado, matriz_micro, codigo_canonico
+                        )
                     if real_pct is not None and gap is not None:
-                        valor = max(0.0, 100.0 - gap)
+                        valor = max(0.0, 100.0 - float(gap))
                         categoria_valores[categoria].append(valor)
 
             categoria_medias = {}
